@@ -8,7 +8,7 @@ import { cn, formatPrice } from '@/lib/utils';
 import { motion } from 'framer-motion';
 
 export const Dashboard = () => {
-    const { appointments, t } = useStore();
+    const { appointments, services, t } = useStore();
     const [period, setPeriod] = useState('month'); // 'week' | 'month' | 'all'
 
     // Filter appointments based on period
@@ -35,10 +35,10 @@ export const Dashboard = () => {
             .filter(a => a.status === 'completed')
             .reduce((acc, curr) => {
                 // Use locked price if available, otherwise find service price (legacy compatibility)
-                if (curr.price !== undefined) {
+                if (curr.price !== undefined && curr.price !== null) {
                     return acc + parseInt(curr.price);
                 }
-                const service = useStore.getState().services.find(s => s.id === curr.serviceId);
+                const service = services.find(s => s.id === curr.serviceId);
                 const price = service?.price || 0;
                 const numericPrice = typeof price === 'string' ? parseInt(price.replace(/\D/g, '')) : price;
                 return acc + (numericPrice || 0);
@@ -77,6 +77,9 @@ export const Dashboard = () => {
         },
         {
             title: 'Клиенты',
+            value: stats.uniqueClients,
+            icon: Users,
+            color: 'text-red-500',
             bg: 'bg-red-500/10'
         },
         {
