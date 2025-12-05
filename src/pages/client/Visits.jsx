@@ -12,7 +12,7 @@ import { format } from 'date-fns';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 
 export const Visits = () => {
-    const { appointments, t, user, updateAppointmentStatus, updateAppointment, salonSettings } = useStore();
+    const { appointments, t, user, updateAppointmentStatus, updateAppointment, salonSettings, language, locale } = useStore();
     const [activeTab, setActiveTab] = React.useState('upcoming');
     const [chatOpen, setChatOpen] = React.useState(null);
     const [rescheduleOpen, setRescheduleOpen] = React.useState(null); // ID of appointment to reschedule
@@ -37,6 +37,14 @@ export const Visits = () => {
     const displayed = activeTab === 'upcoming' ? upcoming : history;
 
     const getService = (id) => useStore.getState().services.find(s => s.id === id);
+
+    const getServiceName = (service) => {
+        if (!service) return '';
+        if (typeof service.name === 'object') {
+            return service.name[language] || service.name['ru'] || Object.values(service.name)[0];
+        }
+        return service.name;
+    };
 
     const handleCancelClick = (id) => {
         setCancelConfirmationId(id);
@@ -67,7 +75,7 @@ export const Visits = () => {
         setRescheduleOpen(null);
         setNewDate(null);
         setNewTime(null);
-        alert('Запись перенесена и отправлена на подтверждение мастеру');
+        alert(t('visits.rescheduleSuccess'));
     };
 
     return (
@@ -79,13 +87,13 @@ export const Visits = () => {
                     className={cn("flex-1 py-2 text-sm font-medium rounded-md transition-all", activeTab === 'upcoming' ? "bg-background shadow" : "text-muted-foreground")}
                     onClick={() => setActiveTab('upcoming')}
                 >
-                    Предстоящие ({upcoming.length})
+                    {t('visits.upcoming')} ({upcoming.length})
                 </button>
                 <button
                     className={cn("flex-1 py-2 text-sm font-medium rounded-md transition-all", activeTab === 'history' ? "bg-background shadow" : "text-muted-foreground")}
                     onClick={() => setActiveTab('history')}
                 >
-                    История ({history.length})
+                    {t('visits.history')} ({history.length})
                 </button>
             </div>
 
@@ -99,8 +107,10 @@ export const Visits = () => {
                             <CardContent className="p-4">
                                 <div className="flex justify-between items-start mb-2">
                                     <div>
-                                        <div className="font-bold">{service?.name}</div>
-                                        <div className="text-sm text-muted-foreground">{app.date} в {app.time}</div>
+                                        <div className="font-bold">{getServiceName(service)}</div>
+                                        <div className="text-sm text-muted-foreground capitalize">
+                                            {format(new Date(app.date), 'd MMMM yyyy', { locale: locale() })} {t('common.inTime')} {app.time}
+                                        </div>
                                     </div>
                                     <div className={cn(
                                         "px-2 py-1 rounded text-xs font-medium",
@@ -115,7 +125,7 @@ export const Visits = () => {
                                     <div className="text-sm font-medium">{formatPrice(app.price || service?.price || 0)} ₸</div>
                                     <Button variant="ghost" size="sm" onClick={() => setChatOpen(app.id)}>
                                         <MessageCircle className="h-4 w-4 mr-2" />
-                                        Чат
+                                        {t('visits.chat')}
                                     </Button>
                                 </div>
 
@@ -127,7 +137,7 @@ export const Visits = () => {
                                             className="flex-1"
                                             onClick={() => handleRescheduleStart(app)}
                                         >
-                                            Перенести
+                                            {t('visits.reschedule')}
                                         </Button>
                                         <Button
                                             variant="ghost"
@@ -135,7 +145,7 @@ export const Visits = () => {
                                             className="flex-1 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
                                             onClick={() => handleCancelClick(app.id)}
                                         >
-                                            Отменить
+                                            {t('visits.cancel')}
                                         </Button>
                                     </div>
                                 )}
@@ -145,16 +155,16 @@ export const Visits = () => {
                 })}
                 {displayed.length === 0 && (
                     <div className="text-center text-muted-foreground py-8">
-                        Нет записей
+                        {t('visits.noRecords')}
                     </div>
                 )}
             </div>
 
-            <Modal isOpen={!!chatOpen} onClose={() => setChatOpen(null)} title="Чат с мастером">
+            <Modal isOpen={!!chatOpen} onClose={() => setChatOpen(null)} title={t('visits.chatMaster')}>
                 <Chat appointmentId={chatOpen} onClose={() => setChatOpen(null)} />
             </Modal>
 
-            <Modal isOpen={!!rescheduleOpen} onClose={() => setRescheduleOpen(null)} title="Перенос записи">
+            <Modal isOpen={!!rescheduleOpen} onClose={() => setRescheduleOpen(null)} title={t('visits.rescheduleTitle')}>
                 <div className="space-y-6">
                     <DateTimeSelector
                         selectedDate={newDate}
@@ -164,7 +174,7 @@ export const Visits = () => {
                         salonSettings={salonSettings}
                     />
                     <Button className="w-full" onClick={handleRescheduleConfirm} disabled={!newDate || !newTime}>
-                        Подтвердить перенос
+                        {t('visits.confirmReschedule')}
                     </Button>
                 </div>
             </Modal>
@@ -173,8 +183,8 @@ export const Visits = () => {
                 isOpen={!!cancelConfirmationId}
                 onClose={() => setCancelConfirmationId(null)}
                 onConfirm={handleCancelConfirm}
-                title="Отмена записи"
-                description="Вы действительно хотите отменить эту запись? Это действие нельзя будет отменить."
+                title={t('visits.cancelTitle')}
+                description={t('visits.cancelDesc')}
             />
         </div>
     );

@@ -12,14 +12,20 @@ import { DateTimeSelector } from '@/components/features/DateTimeSelector';
 import { ClockWidget } from '@/components/features/ClockWidget';
 
 export const BookingWizard = () => {
-    const { t, addAppointment, user, salonSettings, services } = useStore();
+    const { t, addAppointment, user, salonSettings, services, language, locale } = useStore();
     const [step, setStep] = React.useState(1);
     const [selectedService, setSelectedService] = React.useState(null);
     const [selectedDate, setSelectedDate] = React.useState(null);
     const [selectedTime, setSelectedTime] = React.useState(null);
     const [showSuccess, setShowSuccess] = React.useState(false);
 
-
+    const getServiceName = (service) => {
+        if (!service) return '';
+        if (typeof service.name === 'object') {
+            return service.name[language] || service.name['ru'] || Object.values(service.name)[0];
+        }
+        return service.name;
+    };
 
     // Logic to calculate price with active campaign
     const getPriceWithCampaign = (service) => {
@@ -69,9 +75,6 @@ export const BookingWizard = () => {
         setSelectedTime(null);
     };
 
-    // Generate next 7 days
-
-
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -117,10 +120,10 @@ export const BookingWizard = () => {
                                     <CardContent className="p-4 flex justify-between items-center">
                                         <div>
                                             <div className="font-bold flex items-center gap-2">
-                                                {service.name}
+                                                {getServiceName(service)}
                                                 {activeCampaign && <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">{activeCampaign.name}</span>}
                                             </div>
-                                            <div className="text-sm text-muted-foreground">{service.duration} мин</div>
+                                            <div className="text-sm text-muted-foreground">{service.duration} {t('services.duration').split(' ')[0]}</div>
                                         </div>
                                         <div className="text-right">
                                             <div className={cn("font-bold", oldPrice && "text-red-500")}>{formatPrice(finalPrice)} ₸</div>
@@ -166,19 +169,19 @@ export const BookingWizard = () => {
                     <Card>
                         <CardContent className="p-4 space-y-2">
                             <div className="flex justify-between">
-                                <span className="text-muted-foreground">Услуга:</span>
-                                <span className="font-medium">{selectedService?.name}</span>
+                                <span className="text-muted-foreground">{t('booking.service')}:</span>
+                                <span className="font-medium">{getServiceName(selectedService)}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-muted-foreground">Дата:</span>
-                                <span className="font-medium">{selectedDate && format(selectedDate, 'dd.MM.yyyy')}</span>
+                                <span className="text-muted-foreground">{t('booking.date')}:</span>
+                                <span className="font-medium capitalize">{selectedDate && format(selectedDate, 'd MMMM yyyy', { locale: locale() })}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-muted-foreground">Время:</span>
+                                <span className="text-muted-foreground">{t('booking.time')}:</span>
                                 <span className="font-medium">{selectedTime}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-muted-foreground">Цена:</span>
+                                <span className="text-muted-foreground">{t('booking.price')}:</span>
                                 <span className="font-medium">{selectedService && formatPrice(getPriceWithCampaign(selectedService))} ₸</span>
                             </div>
                         </CardContent>
@@ -194,7 +197,7 @@ export const BookingWizard = () => {
                     </div>
                 </div>
             )}
-            {showSuccess && <SuccessAnimation onComplete={handleSuccessComplete} />}
+            {showSuccess && <SuccessAnimation onComplete={handleSuccessComplete} title={t('booking.success')} />}
         </div>
     );
 };

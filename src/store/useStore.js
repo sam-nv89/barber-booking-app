@@ -2,6 +2,13 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { TRANSLATIONS } from '../lib/i18n'
 import { MOCK_APPOINTMENTS, DEFAULT_SCHEDULE } from '../lib/constants'
+import { ru, enUS, kk } from 'date-fns/locale'
+
+const locales = {
+    ru: ru,
+    en: enUS,
+    kz: kk
+};
 
 export const useStore = create(
     persist(
@@ -94,7 +101,7 @@ export const useStore = create(
                     ...appointment,
                     price: priceSnapshot, // LOCK THE PRICE
                     id: Date.now().toString(),
-                    status: 'pending',
+                    status: appointment.status || 'pending', // Allow status override (e.g. for Master booking)
                     createdAt: new Date().toISOString(),
                     unreadChanges: true
                 };
@@ -221,7 +228,8 @@ export const useStore = create(
                     value = value?.[k];
                 }
                 return value || key;
-            }
+            },
+            locale: () => locales[get().language] || ru
         }),
         {
             name: 'barber-app-storage',

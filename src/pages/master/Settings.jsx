@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { cn, formatPrice } from '@/lib/utils';
-
 import { SuccessAnimation } from '@/components/features/SuccessAnimation';
 
 export const Settings = () => {
@@ -15,7 +14,7 @@ export const Settings = () => {
     const [isDirty, setIsDirty] = React.useState(false);
     const [isScheduleModalOpen, setIsScheduleModalOpen] = React.useState(false);
     const [scheduleData, setScheduleData] = React.useState(salonSettings.schedule);
-    const [successMessage, setSuccessMessage] = React.useState(null); // Title for success
+    const [successMessage, setSuccessMessage] = React.useState(null);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -25,13 +24,13 @@ export const Settings = () => {
     const handleSaveProfile = () => {
         setSalonSettings(formData);
         setIsDirty(false);
-        setSuccessMessage('Настройки сохранены');
+        setSuccessMessage(t('common.save'));
     };
 
     const handleSaveSchedule = () => {
         setSalonSettings({ ...salonSettings, schedule: scheduleData });
         setIsScheduleModalOpen(false);
-        setSuccessMessage('График обновлен');
+        setSuccessMessage(t('common.save'));
     };
 
     const toggleDayOff = (day) => {
@@ -46,7 +45,7 @@ export const Settings = () => {
     };
 
     const formatScheduleDisplay = (schedule) => {
-        if (!schedule.start || !schedule.end) return 'Выходной';
+        if (!schedule.start || !schedule.end) return t('settings.dayOff');
         return `${schedule.start} - ${schedule.end}`;
     };
 
@@ -63,15 +62,15 @@ export const Settings = () => {
 
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-lg">Профиль салона</CardTitle>
+                    <CardTitle className="text-lg">{t('settings.profile')}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Название</label>
+                        <label className="text-sm font-medium">{t('settings.name')}</label>
                         <Input name="name" value={formData.name} onChange={handleChange} />
                     </div>
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Адрес</label>
+                        <label className="text-sm font-medium">{t('settings.address')}</label>
                         <Input name="address" value={formData.address} onChange={handleChange} />
                     </div>
                     {isDirty && (
@@ -84,19 +83,19 @@ export const Settings = () => {
 
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-lg">График работы</CardTitle>
+                    <CardTitle className="text-lg">{t('settings.schedule')}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     {days.map(day => (
                         <div key={day.key} className="flex justify-between items-center">
-                            <span>{day.label}</span>
+                            <span>{t(`days.${day.key}`)}</span>
                             <span className={cn("text-muted-foreground", (!salonSettings.schedule[day.key].start) && "text-destructive")}>
                                 {formatScheduleDisplay(salonSettings.schedule[day.key])}
                             </span>
                         </div>
                     ))}
                     <Button variant="outline" className="w-full mt-4" onClick={() => setIsScheduleModalOpen(true)}>
-                        Изменить график
+                        {t('settings.editSchedule')}
                     </Button>
                 </CardContent>
             </Card>
@@ -104,7 +103,7 @@ export const Settings = () => {
             <ServicesManager onSuccess={setSuccessMessage} />
             <MarketingManager onSuccess={setSuccessMessage} />
 
-            <Modal isOpen={isScheduleModalOpen} onClose={() => setIsScheduleModalOpen(false)} title="Редактирование графика">
+            <Modal isOpen={isScheduleModalOpen} onClose={() => setIsScheduleModalOpen(false)} title={t('settings.editSchedule')}>
                 <div className="space-y-6">
                     <datalist id="time-options">
                         {timeOptions.map(time => <option key={time} value={time} />)}
@@ -113,20 +112,20 @@ export const Settings = () => {
                     {days.map(day => (
                         <div key={day.key} className="space-y-2 pb-4 border-b last:border-0">
                             <div className="flex justify-between items-center">
-                                <label className="font-medium">{day.label}</label>
+                                <label className="font-medium">{t(`days.${day.key}`)}</label>
                                 <Button
                                     variant="ghost"
                                     size="sm"
                                     className={cn("text-xs h-6", (!scheduleData[day.key].start) ? "text-destructive" : "text-muted-foreground")}
                                     onClick={() => toggleDayOff(day.key)}
                                 >
-                                    {(!scheduleData[day.key].start) ? 'Сделать рабочим' : 'Сделать выходным'}
+                                    {(!scheduleData[day.key].start) ? t('settings.makeWork') : t('settings.makeDayOff')}
                                 </Button>
                             </div>
 
                             {(!scheduleData[day.key].start) ? (
                                 <div className="p-2 bg-muted rounded-md text-center text-sm text-muted-foreground">
-                                    Выходной
+                                    {t('settings.dayOff')}
                                 </div>
                             ) : (
                                 <div className="flex gap-2 items-center">
@@ -158,7 +157,7 @@ export const Settings = () => {
                 <SuccessAnimation
                     onComplete={() => setSuccessMessage(null)}
                     title={successMessage}
-                    message="Изменения успешно применены"
+                    message={t('common.save')}
                 />
             )}
         </div>
@@ -166,7 +165,7 @@ export const Settings = () => {
 };
 
 const MarketingManager = ({ onSuccess }) => {
-    const { campaigns, addCampaign, deleteCampaign, services } = useStore();
+    const { campaigns, addCampaign, deleteCampaign, services, t, language } = useStore();
     const [isModalOpen, setIsModalOpen] = React.useState(false);
     const [formData, setFormData] = React.useState({
         name: '',
@@ -177,11 +176,18 @@ const MarketingManager = ({ onSuccess }) => {
         serviceIds: []
     });
 
+    const getServiceName = (service) => {
+        if (typeof service.name === 'object') {
+            return service.name[language] || service.name['ru'] || Object.values(service.name)[0];
+        }
+        return service.name;
+    };
+
     const handleSave = () => {
         if (!formData.name || !formData.value || !formData.startDate || !formData.endDate) return;
 
         addCampaign(formData);
-        onSuccess('Акция создана');
+        onSuccess(t('marketing.campaignCreated'));
         setIsModalOpen(false);
         setFormData({
             name: '',
@@ -194,9 +200,9 @@ const MarketingManager = ({ onSuccess }) => {
     };
 
     const handleDelete = (id) => {
-        if (confirm('Удалить акцию?')) {
+        if (confirm(t('marketing.deleteConfirm'))) {
             deleteCampaign(id);
-            onSuccess('Акция удалена');
+            onSuccess(t('marketing.campaignDeleted'));
         }
     };
 
@@ -215,8 +221,8 @@ const MarketingManager = ({ onSuccess }) => {
         <>
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle className="text-lg">Маркетинг и Акции</CardTitle>
-                    <Button size="sm" onClick={() => setIsModalOpen(true)}>Создать акцию</Button>
+                    <CardTitle className="text-lg">{t('settings.marketing')}</CardTitle>
+                    <Button size="sm" onClick={() => setIsModalOpen(true)}>{t('marketing.createCampaign')}</Button>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     {campaigns.map(campaign => (
@@ -224,7 +230,7 @@ const MarketingManager = ({ onSuccess }) => {
                             <div>
                                 <div className="font-medium">{campaign.name}</div>
                                 <div className="text-sm text-muted-foreground">
-                                    {campaign.type === 'discount' ? `Скидка ${campaign.value}%` : `Фикс. цена ${campaign.value} ₸`} • {campaign.startDate} - {campaign.endDate}
+                                    {campaign.type === 'discount' ? `${t('marketing.discount').split('(')[0]} ${campaign.value}%` : `${t('marketing.fixed').split('(')[0]} ${campaign.value} ₸`} • {campaign.startDate} - {campaign.endDate}
                                 </div>
                                 {campaign.serviceIds && campaign.serviceIds.length > 0 && (
                                     <div className="text-xs text-muted-foreground mt-1">
@@ -237,14 +243,14 @@ const MarketingManager = ({ onSuccess }) => {
                             </Button>
                         </div>
                     ))}
-                    {campaigns.length === 0 && <div className="text-center text-muted-foreground py-4">Нет активных акций</div>}
+                    {campaigns.length === 0 && <div className="text-center text-muted-foreground py-4">{t('marketing.empty')}</div>}
                 </CardContent>
             </Card>
 
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Новая акция">
+            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={t('marketing.createCampaign')}>
                 <div className="space-y-4">
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Название акции</label>
+                        <label className="text-sm font-medium">{t('marketing.name')}</label>
                         <Input
                             value={formData.name}
                             onChange={e => setFormData({ ...formData, name: e.target.value })}
@@ -253,18 +259,18 @@ const MarketingManager = ({ onSuccess }) => {
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">Тип</label>
+                            <label className="text-sm font-medium">{t('marketing.type')}</label>
                             <select
                                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                 value={formData.type}
                                 onChange={e => setFormData({ ...formData, type: e.target.value })}
                             >
-                                <option value="discount">Скидка (%)</option>
-                                <option value="fixed">Новая цена (₸)</option>
+                                <option value="discount">{t('marketing.discount')}</option>
+                                <option value="fixed">{t('marketing.fixed')}</option>
                             </select>
                         </div>
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">Значение</label>
+                            <label className="text-sm font-medium">{t('marketing.value')}</label>
                             <Input
                                 type="number"
                                 value={formData.value}
@@ -275,7 +281,7 @@ const MarketingManager = ({ onSuccess }) => {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Выберите услуги (пусто = все)</label>
+                        <label className="text-sm font-medium">{t('marketing.selectServices')}</label>
                         <div className="grid grid-cols-1 gap-2 border rounded-md p-3 max-h-48 overflow-y-auto bg-background">
                             {services && services.length > 0 ? services.map(service => (
                                 <label key={service.id} className="flex items-center space-x-2 cursor-pointer hover:bg-muted/50 p-1 rounded">
@@ -285,16 +291,16 @@ const MarketingManager = ({ onSuccess }) => {
                                         checked={formData.serviceIds.includes(service.id)}
                                         onChange={() => toggleService(service.id)}
                                     />
-                                    <span className="text-sm flex-1">{service.name}</span>
+                                    <span className="text-sm flex-1">{getServiceName(service)}</span>
                                     <span className="text-xs text-muted-foreground">{formatPrice(service.price)} ₸</span>
                                 </label>
-                            )) : <div className="text-sm text-muted-foreground text-center">Нет доступных услуг</div>}
+                            )) : <div className="text-sm text-muted-foreground text-center">{t('marketing.noServices')}</div>}
                         </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">Начало</label>
+                            <label className="text-sm font-medium">{t('marketing.start')}</label>
                             <Input
                                 type="date"
                                 value={formData.startDate}
@@ -302,7 +308,7 @@ const MarketingManager = ({ onSuccess }) => {
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">Конец</label>
+                            <label className="text-sm font-medium">{t('marketing.end')}</label>
                             <Input
                                 type="date"
                                 value={formData.endDate}
@@ -310,7 +316,7 @@ const MarketingManager = ({ onSuccess }) => {
                             />
                         </div>
                     </div>
-                    <Button className="w-full" onClick={handleSave}>Создать</Button>
+                    <Button className="w-full" onClick={handleSave}>{t('common.create')}</Button>
                 </div>
             </Modal>
         </>
@@ -318,48 +324,72 @@ const MarketingManager = ({ onSuccess }) => {
 };
 
 const ServicesManager = ({ onSuccess }) => {
-    const { services, addService, updateService, deleteService } = useStore();
+    const { services, addService, updateService, deleteService, t, language } = useStore();
     const [isModalOpen, setIsModalOpen] = React.useState(false);
     const [editingService, setEditingService] = React.useState(null);
-    const [formData, setFormData] = React.useState({ name: '', price: '', duration: '' });
+
+    // Store names for each language
+    const [formData, setFormData] = React.useState({
+        name: { ru: '', kz: '', en: '' },
+        price: '',
+        duration: ''
+    });
+
+    const getServiceName = (service) => {
+        if (typeof service.name === 'object') {
+            return service.name[language] || service.name['ru'] || Object.values(service.name)[0];
+        }
+        return service.name;
+    };
 
     const handleOpenAdd = () => {
         setEditingService(null);
-        setFormData({ name: '', price: '', duration: '' });
+        setFormData({ name: { ru: '', kz: '', en: '' }, price: '', duration: '' });
         setIsModalOpen(true);
     };
 
     const handleOpenEdit = (service) => {
         setEditingService(service);
-        setFormData({ name: service.name, price: service.price, duration: service.duration });
+        // Handle legacy string names by putting them in RU slot by default
+        const names = typeof service.name === 'object'
+            ? service.name
+            : { ru: service.name, kz: '', en: '' };
+
+        setFormData({ name: names, price: service.price, duration: service.duration });
         setIsModalOpen(true);
     };
 
     const handleSave = () => {
-        if (!formData.name || !formData.price || !formData.duration) return;
+        // Fallbacks for empty fields
+        const finalNames = { ...formData.name };
+        if (!finalNames.ru) finalNames.ru = finalNames.en || finalNames.kz || 'Service';
+        if (!finalNames.kz) finalNames.kz = finalNames.ru;
+        if (!finalNames.en) finalNames.en = finalNames.ru;
+
+        if (!formData.price || !formData.duration) return;
 
         if (editingService) {
             updateService(editingService.id, {
-                name: formData.name,
+                name: finalNames,
                 price: parseInt(formData.price),
                 duration: parseInt(formData.duration)
             });
-            onSuccess('Услуга обновлена');
+            onSuccess(t('services.serviceUpdated'));
         } else {
             addService({
-                name: formData.name,
+                name: finalNames,
                 price: parseInt(formData.price),
                 duration: parseInt(formData.duration)
             });
-            onSuccess('Услуга добавлена');
+            onSuccess(t('services.serviceAdded'));
         }
         setIsModalOpen(false);
     };
 
     const handleDelete = (id) => {
-        if (confirm('Вы уверены, что хотите удалить эту услугу?')) {
+        if (confirm(t('services.deleteConfirm'))) {
             deleteService(id);
-            onSuccess('Услуга удалена');
+            onSuccess(t('services.serviceDeleted'));
         }
     };
 
@@ -367,15 +397,15 @@ const ServicesManager = ({ onSuccess }) => {
         <>
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle className="text-lg">Услуги</CardTitle>
-                    <Button size="sm" onClick={handleOpenAdd}>Добавить</Button>
+                    <CardTitle className="text-lg">{t('settings.services')}</CardTitle>
+                    <Button size="sm" onClick={handleOpenAdd}>{t('common.add')}</Button>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     {services.map(service => (
                         <div key={service.id} className="flex justify-between items-center p-3 bg-muted rounded-lg border hover:border-primary/50 transition-colors">
                             <div>
-                                <div className="font-medium">{service.name}</div>
-                                <div className="text-sm text-muted-foreground">{service.duration} мин • {formatPrice(service.price)} ₸</div>
+                                <div className="font-medium">{getServiceName(service)}</div>
+                                <div className="text-sm text-muted-foreground">{service.duration} {t('services.duration').split(' ')[0]} • {formatPrice(service.price)} ₸</div>
                             </div>
                             <div className="flex gap-2">
                                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenEdit(service)}>
@@ -387,23 +417,40 @@ const ServicesManager = ({ onSuccess }) => {
                             </div>
                         </div>
                     ))}
-                    {services.length === 0 && <div className="text-center text-muted-foreground py-4">Нет услуг</div>}
+                    {services.length === 0 && <div className="text-center text-muted-foreground py-4">{t('services.empty')}</div>}
                 </CardContent>
             </Card>
 
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingService ? "Редактирование услуги" : "Новая услуга"}>
+            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingService ? t('services.editService') : t('services.newService')}>
                 <div className="space-y-4">
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Название</label>
+                        <label className="text-sm font-medium">{t('services.name')} (RU)</label>
                         <Input
-                            value={formData.name}
-                            onChange={e => setFormData({ ...formData, name: e.target.value })}
-                            placeholder="Например: Стрижка"
+                            value={formData.name.ru}
+                            onChange={e => setFormData({ ...formData, name: { ...formData.name, ru: e.target.value } })}
+                            placeholder="Стрижка"
                         />
                     </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">{t('services.name')} (KZ)</label>
+                        <Input
+                            value={formData.name.kz}
+                            onChange={e => setFormData({ ...formData, name: { ...formData.name, kz: e.target.value } })}
+                            placeholder="Шаш қию"
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">{t('services.name')} (EN)</label>
+                        <Input
+                            value={formData.name.en}
+                            onChange={e => setFormData({ ...formData, name: { ...formData.name, en: e.target.value } })}
+                            placeholder="Haircut"
+                        />
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">Цена (₸)</label>
+                            <label className="text-sm font-medium">{t('services.price')}</label>
                             <Input
                                 type="number"
                                 value={formData.price}
@@ -412,7 +459,7 @@ const ServicesManager = ({ onSuccess }) => {
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">Длительность (мин)</label>
+                            <label className="text-sm font-medium">{t('services.duration')}</label>
                             <Input
                                 type="number"
                                 value={formData.duration}
@@ -421,7 +468,7 @@ const ServicesManager = ({ onSuccess }) => {
                             />
                         </div>
                     </div>
-                    <Button className="w-full" onClick={handleSave}>Сохранить</Button>
+                    <Button className="w-full" onClick={handleSave}>{t('common.save')}</Button>
                 </div>
             </Modal>
         </>
