@@ -17,6 +17,7 @@ export const TRANSLATIONS = {
             select: 'Выберите',
             gotIt: 'Понятно',
             min: 'мин',
+            success: 'Успешно',
         },
         roles: {
             client: 'Клиент',
@@ -80,6 +81,8 @@ export const TRANSLATIONS = {
             rateLaterHint: 'Вы всегда можете оценить услугу в разделе "Визиты" (История)',
             ratePromptTitle: 'Как прошел визит?',
             ratePromptDesc: 'Мы будем рады вашей оценке!',
+            markAllRead: 'Прочитать все',
+            youReplied: 'Вы ответили:',
         },
         status: {
             pending: 'На согласовании',
@@ -94,6 +97,7 @@ export const TRANSLATIONS = {
             marketing: 'Маркетинг и Акции',
             name: 'Название',
             address: 'Адрес',
+            phone: 'Телефон',
             language: 'Язык',
             theme: 'Тема',
             dark: 'Темная',
@@ -104,6 +108,8 @@ export const TRANSLATIONS = {
             makeDayOff: 'Сделать выходным',
             dayOff: 'Выходной',
             workTime: 'Рабочее время',
+            profileSaved: 'Профиль сохранен',
+            scheduleSaved: 'График обновлен',
         },
         marketing: {
             createCampaign: 'Создать акцию',
@@ -182,9 +188,18 @@ export const TRANSLATIONS = {
             cancelledTitle: 'Запись отменена',
             cancelledMessageMaster: 'Запись клиента {clientName} на {date} была отменена',
             cancelledMessageClient: 'Запись на {date} в {time} была отменена.',
+            rescheduledTitle: 'Запись перенесена',
+            rescheduledMessage: 'Клиент {clientName} перенес запись на {date} {time}',
+            newReviewTitle: 'Новый отзыв',
+            newReviewTitle: 'Новый отзыв',
+            newReviewMessage: 'Оценка от {clientName}: {rating}',
+            reviewUpdatedTitle: 'Отзыв обновлен',
+            reviewUpdatedMessage: '{clientName} изменил отзыв: {rating}',
             title: 'Уведомления',
             markAllRead: 'Прочитать все',
             empty: 'Нет новых уведомлений',
+            replyTitle: 'Ответ на отзыв',
+            replyMessage: 'Мастер ответил на ваш отзыв',
         }
     },
     kz: {
@@ -205,6 +220,7 @@ export const TRANSLATIONS = {
             select: 'Таңдаңыз',
             gotIt: 'Түсінікті',
             min: 'мин',
+            success: 'Сәтті',
         },
         roles: {
             client: 'Клиент',
@@ -268,6 +284,8 @@ export const TRANSLATIONS = {
             rateLaterHint: 'Сіз қызметті кез келген уақытта "Сапарлар" (Тарих) бөлімінде бағалай аласыз',
             ratePromptTitle: 'Сапар қалай өтті?',
             ratePromptDesc: 'Біз сіздің бағаңызға қуаныштымыз!',
+            markAllRead: 'Барлығын оқу',
+            youReplied: 'Сіз жауап бердіңіз:',
         },
         status: {
             pending: 'Келісілуде',
@@ -282,6 +300,7 @@ export const TRANSLATIONS = {
             marketing: 'Маркетинг және Акциялар',
             name: 'Атауы',
             address: 'Мекенжай',
+            phone: 'Телефон',
             language: 'Тіл',
             theme: 'Тақырып',
             dark: 'Қараңғы',
@@ -292,6 +311,8 @@ export const TRANSLATIONS = {
             makeDayOff: 'Делыс қылу',
             dayOff: 'Демалыс',
             workTime: 'Жұмыс уақыты',
+            profileSaved: 'Профиль сақталды',
+            scheduleSaved: 'Кесте жаңартылды',
         },
         marketing: {
             createCampaign: 'Акция құру',
@@ -370,9 +391,18 @@ export const TRANSLATIONS = {
             cancelledTitle: 'Жазба болдырылмады',
             cancelledMessageMaster: '{clientName} клиентінің {date} күнгі жазбасы болдырылмады',
             cancelledMessageClient: '{date} күні сағат {time}-дегі жазба болдырылмады.',
+            rescheduledTitle: 'Жазба ауыстырылды',
+            rescheduledMessage: '{clientName} клиенті жазбаны {date} {time}-ге ауыстырды',
+            newReviewTitle: 'Жаңа пікір',
+            newReviewTitle: 'Жаңа пікір',
+            newReviewMessage: '{clientName} бағалады: {rating}',
+            reviewUpdatedTitle: 'Пікір жаңартылды',
+            reviewUpdatedMessage: '{clientName} пікірді өзгертті: {rating}',
             title: 'Хабарламалар',
             markAllRead: 'Барлығын оқу',
             empty: 'Жаңа хабарламалар жоқ',
+            replyTitle: 'Пікірге жауап',
+            replyMessage: 'Шебер сіздің пікіріңізге жауап берді',
         }
     },
     en: {
@@ -393,6 +423,7 @@ export const TRANSLATIONS = {
             select: 'Select',
             gotIt: 'Got it',
             min: 'min',
+            success: 'Success',
         },
         roles: {
             client: 'Client',
@@ -456,6 +487,8 @@ export const TRANSLATIONS = {
             rateLaterHint: 'You can always rate the service in the "Visits" (History) section',
             ratePromptTitle: 'How was your visit?',
             ratePromptDesc: 'We would love your feedback!',
+            markAllRead: 'Mark all as read',
+            youReplied: 'You replied:',
         },
         status: {
             pending: 'Pending',
@@ -470,6 +503,7 @@ export const TRANSLATIONS = {
             marketing: 'Marketing & Promotions',
             name: 'Name',
             address: 'Address',
+            phone: 'Phone',
             language: 'Language',
             theme: 'Theme',
             dark: 'Dark',
@@ -480,6 +514,8 @@ export const TRANSLATIONS = {
             makeDayOff: 'Set as Day Off',
             dayOff: 'Day Off',
             workTime: 'Working Hours',
+            profileSaved: 'Profile Saved',
+            scheduleSaved: 'Schedule Updated',
         },
         marketing: {
             createCampaign: 'Create Campaign',
@@ -558,9 +594,18 @@ export const TRANSLATIONS = {
             cancelledTitle: 'Booking Cancelled',
             cancelledMessageMaster: 'Booking for {clientName} on {date} was cancelled',
             cancelledMessageClient: 'Booking on {date} at {time} was cancelled.',
+            rescheduledTitle: 'Booking Rescheduled',
+            rescheduledMessage: 'Client {clientName} rescheduled to {date} {time}',
+            newReviewTitle: 'New Review',
+            newReviewTitle: 'New Review',
+            newReviewMessage: 'Rating from {clientName}: {rating}',
+            reviewUpdatedTitle: 'Review Updated',
+            reviewUpdatedMessage: '{clientName} updated review: {rating}',
             title: 'Notifications',
             markAllRead: 'Mark all as read',
             empty: 'No new notifications',
+            replyTitle: 'Reply to Review',
+            replyMessage: 'Master replied to your review',
         }
     }
 };

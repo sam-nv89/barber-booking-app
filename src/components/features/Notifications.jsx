@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { Bell, Check, Calendar, XCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -7,9 +8,10 @@ import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 
 export const Notifications = () => {
-    const { notifications, markNotificationAsRead, markAllNotificationsAsRead, user, t, locale } = useStore();
+    const { notifications, markNotificationAsRead, markAllNotificationsAsRead, user, t, locale, appointments, reviews } = useStore();
     const [isOpen, setIsOpen] = React.useState(false);
     const containerRef = React.useRef(null);
+    const navigate = useNavigate();
 
     const userNotifications = notifications.filter(n => n.recipient === user.role || (!n.recipient && user.role === 'master'));
     const unreadCount = userNotifications.filter(n => !n.read).length;
@@ -33,6 +35,38 @@ export const Notifications = () => {
             case 'rescheduled': return <Clock className="h-4 w-4 text-orange-500" />;
             case 'completed': return <Check className="h-4 w-4 text-purple-500" />; // Or a generic star/check
             default: return <Bell className="h-4 w-4" />;
+        }
+    };
+
+    const handleNotificationClick = (notification) => {
+        markNotificationAsRead(notification.id);
+        setIsOpen(false);
+
+        // 1. Visit Completed -> Rate (Client)
+        if (notification.type === 'completed' && user.role === 'client') {
+            const app = appointments.find(a => a.id === notification.appointmentId);
+            const isRated = reviews.some(r => r.appointmentId === notification.appointmentId);
+
+            navigate('/visits', {
+                state: {
+                    highlightId: notification.appointmentId,
+                    openFeedbackFor: !isRated ? notification.appointmentId : null
+                }
+            });
+            return;
+        }
+
+        // 2. New Booking / Confirmed / Cancelled -> Go to details
+        if (['new', 'confirmed', 'cancelled', 'rescheduled', 'completed'].includes(notification.type)) {
+            const targetPath = user.role === 'client' ? '/visits' : '/master/records';
+            navigate(targetPath, { state: { highlightId: notification.appointmentId } });
+            return;
+        }
+
+        // 3. New Review -> Go to reviews (Master)
+        if (notification.reviewId) {
+            navigate(`/master/reviews?reviewId=${notification.reviewId}`);
+            return;
         }
     };
 
@@ -87,7 +121,7 @@ export const Notifications = () => {
                                                 "p-4 hover:bg-muted/50 transition-colors cursor-pointer",
                                                 !notification.read && "bg-blue-50/50 dark:bg-blue-900/10"
                                             )}
-                                            onClick={() => markNotificationAsRead(notification.id)}
+                                            onClick={() => handleNotificationClick(notification)}
                                         >
                                             <div className="flex gap-3">
                                                 <div className={cn(
@@ -110,6 +144,7 @@ export const Notifications = () => {
                                                             ? t(notification.messageKey).replace('{clientName}', notification.params?.clientName || '')
                                                                 .replace('{date}', notification.params?.date || '')
                                                                 .replace('{time}', notification.params?.time || '')
+                                                                .replace('{rating}', '⭐'.repeat(notification.params?.rating || 0))
                                                             : notification.message}
                                                     </p>
                                                 </div>

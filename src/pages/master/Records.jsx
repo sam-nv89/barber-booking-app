@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -11,6 +12,7 @@ import { format } from 'date-fns';
 
 export const Records = () => {
     const { appointments, updateAppointmentStatus, t, language, locale } = useStore();
+    const location = useLocation();
     const [activeTab, setActiveTab] = React.useState('pending');
     const [chatOpen, setChatOpen] = React.useState(null);
     const [isBookingModalOpen, setIsBookingModalOpen] = React.useState(false);
@@ -30,6 +32,28 @@ export const Records = () => {
         }
         return service.name;
     };
+
+    // Handle navigation
+    useEffect(() => {
+        if (location.state?.highlightId) {
+            const app = appointments.find(a => a.id === location.state.highlightId);
+            if (app) {
+                // Switch tab
+                const tab = app.status === 'pending' ? 'pending' : app.status === 'confirmed' ? 'active' : 'archive';
+                setActiveTab(tab);
+
+                // Scroll
+                setTimeout(() => {
+                    const el = document.getElementById(`record-${app.id}`);
+                    if (el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        el.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
+                        setTimeout(() => el.classList.remove('ring-2', 'ring-primary', 'ring-offset-2'), 2000);
+                    }
+                }, 100);
+            }
+        }
+    }, [location.state, appointments]);
 
     return (
         <div className="space-y-6">
@@ -69,7 +93,8 @@ export const Records = () => {
                     return (
                         <Card
                             key={app.id}
-                            className={cn("transition-all", app.unreadChanges && "border-blue-500 shadow-md ring-1 ring-blue-500/20")}
+                            id={`record-${app.id}`}
+                            className={cn("transition-all duration-500", app.unreadChanges && "border-blue-500 shadow-md ring-1 ring-blue-500/20")}
                             onClick={handleInteraction}
                         >
                             <CardContent className="p-4 space-y-3 relative">

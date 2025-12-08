@@ -6,11 +6,24 @@ import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 
 export const FeedbackModal = ({ isOpen, onClose, appointment }) => {
-    const { t, addReview, user } = useStore();
+    const { t, addReview, user, reviews } = useStore();
     const [rating, setRating] = useState(0);
     const [hoverRating, setHoverRating] = useState(0);
     const [comment, setComment] = useState('');
     const [isSubmitted, setIsSubmitted] = useState(false);
+
+    React.useEffect(() => {
+        if (isOpen && appointment) {
+            const existingReview = reviews.find(r => r.appointmentId === appointment.id);
+            if (existingReview) {
+                setRating(existingReview.rating);
+                setComment(existingReview.comment || '');
+            } else {
+                setRating(0);
+                setComment('');
+            }
+        }
+    }, [isOpen, appointment, reviews]);
 
     const getEmoji = (r) => {
         if (r === 0) return '🤔';

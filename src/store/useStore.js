@@ -36,6 +36,7 @@ export const useStore = create(
             salonSettings: {
                 name: 'Barber Shop #1',
                 address: 'ул. Абая 150',
+                phone: '+7 777 000 00 00',
                 schedule: DEFAULT_SCHEDULE
             },
             setSalonSettings: (settings) => set((state) => ({ salonSettings: { ...state.salonSettings, ...settings } })),
@@ -93,35 +94,87 @@ export const useStore = create(
 
             // Review Actions
             addReview: (review) => {
-                set((state) => ({
-                    reviews: [{
-                        id: Date.now(),
-                        date: new Date().toISOString().split('T')[0],
-                        isRead: false,
-                        reply: null,
-                        ...review
-                    }, ...state.reviews]
-                }));
-                // Notify master
+                const existingReview = get().reviews.find(r => r.appointmentId === review.appointmentId);
                 const t = get().t;
-                get().addNotification({
-                    title: t('reviews.newReview'),
-                    message: `${review.clientName || 'Client'} - ${review.rating} ⭐`,
-                    type: 'info',
-                    recipient: 'master'
-                });
+
+                if (existingReview) {
+                    // Update existing
+                    set((state) => ({
+                        reviews: state.reviews.map(r => r.id === existingReview.id ? { ...r, ...review, isRead: false, date: new Date().toISOString().split('T')[0] } : r)
+                    }));
+
+                    // Notify master about update
+                    get().addNotification({
+                        titleKey: 'notifications.reviewUpdatedTitle',
+                        messageKey: 'notifications.reviewUpdatedMessage',
+                        params: { clientName: review.clientName || 'Client', rating: review.rating },
+                        title: t('notifications.reviewUpdatedTitle') || 'Отзыв обновлен',
+                        message: `${review.clientName || 'Client'} изменил отзыв: ${review.rating} ⭐`,
+                        type: 'info',
+                        recipient: 'master',
+                        reviewId: existingReview.id
+                    });
+
+                } else {
+                    // Create new
+                    const newReviewId = Date.now();
+                    set((state) => ({
+                        reviews: [{
+                            id: newReviewId,
+                            date: new Date().toISOString().split('T')[0],
+                            isRead: false,
+                            reply: null,
+                            ...review
+                        }, ...state.reviews]
+                    }));
+
+                    // Notify master
+                    get().addNotification({
+                        titleKey: 'notifications.newReviewTitle',
+                        messageKey: 'notifications.newReviewMessage',
+                        params: { clientName: review.clientName || 'Client', rating: review.rating },
+                        title: t('reviews.newReview'),
+                        message: `${review.clientName || 'Client'} - ${review.rating} ⭐`,
+                        type: 'info',
+                        recipient: 'master',
+                        reviewId: newReviewId
+                    });
+                }
             },
 
-            replyToReview: (reviewId, replyText) => set((state) => ({
-                reviews: state.reviews.map(r =>
-                    r.id === reviewId ? { ...r, reply: replyText, isRead: true } : r
-                )
-            })),
+            replyToReview: (reviewId, replyText) => {
+                const state = get();
+                const t = state.t;
+                const review = state.reviews.find(r => r.id === reviewId);
+
+                set((state) => ({
+                    reviews: state.reviews.map(r =>
+                        r.id === reviewId ? { ...r, reply: replyText, isRead: true } : r
+                    )
+                }));
+
+                // Notify Client
+                if (review) {
+                    get().addNotification({
+                        titleKey: 'notifications.replyTitle',
+                        messageKey: 'notifications.replyMessage',
+                        title: t('notifications.replyTitle'),
+                        message: t('notifications.replyMessage'),
+                        type: 'info',
+                        recipient: 'client',
+                        reviewId: reviewId
+                    });
+                }
+            },
 
             markReviewRead: (reviewId) => set((state) => ({
                 reviews: state.reviews.map(r =>
                     r.id === reviewId ? { ...r, isRead: true } : r
                 )
+            })),
+
+            markAllReviewsAsRead: () => set((state) => ({
+                reviews: state.reviews.map(r => ({ ...r, isRead: true }))
             })),
 
             dismissRatePrompt: (appointmentId) => set((state) => ({
@@ -265,6 +318,9 @@ export const useStore = create(
                         type: 'rescheduled',
                         recipient: 'master',
                         appointmentId: id,
+                        titleKey: 'notifications.rescheduledTitle',
+                        messageKey: 'notifications.rescheduledMessage',
+                        params: { clientName: app.clientName, date: updates.date, time: updates.time },
                         title: 'Запись перенесена',
                         message: `Клиент ${app.clientName} перенес запись на ${updates.date} ${updates.time}`,
                         date: new Date().toISOString(),

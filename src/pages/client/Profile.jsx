@@ -5,19 +5,37 @@ import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 
 import { SuccessAnimation } from '@/components/features/SuccessAnimation';
+import { formatPhoneNumber, isValidEmail } from '@/lib/utils';
 
 export const Profile = () => {
     const { user, setUser, t } = useStore();
     const [formData, setFormData] = React.useState(user);
+    const [title, setTitle] = React.useState('');
     const [isDirty, setIsDirty] = React.useState(false);
     const [showSuccess, setShowSuccess] = React.useState(false);
+    const [errors, setErrors] = React.useState({});
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        let { name, value } = e.target;
+
+        if (name === 'phone') {
+            value = formatPhoneNumber(value);
+        }
+
+        if (name === 'email') {
+            setErrors(prev => ({ ...prev, email: null }));
+        }
+
+        setFormData({ ...formData, [name]: value });
         setIsDirty(true);
     };
 
     const handleSave = () => {
+        if (formData.email && !isValidEmail(formData.email)) {
+            setErrors({ email: 'Некорректный email' });
+            return;
+        }
+
         setUser(formData);
         setIsDirty(false);
         setShowSuccess(true);
@@ -77,12 +95,26 @@ export const Profile = () => {
 
                     <div className="space-y-2">
                         <label className="text-sm font-medium">Телефон</label>
-                        <Input name="phone" value={formData.phone} onChange={handleChange} />
+                        <Input
+                            name="phone"
+                            type="tel"
+                            value={formData.phone}
+                            onChange={handleChange}
+                            placeholder="+7 700 000 00 00"
+                        />
                     </div>
 
                     <div className="space-y-2">
                         <label className="text-sm font-medium">Email</label>
-                        <Input name="email" value={formData.email || ''} onChange={handleChange} placeholder="example@mail.com" />
+                        <Input
+                            name="email"
+                            type="email"
+                            value={formData.email || ''}
+                            onChange={handleChange}
+                            placeholder="example@mail.com"
+                            className={errors.email ? "border-red-500" : ""}
+                        />
+                        {errors.email && <span className="text-xs text-red-500">{errors.email}</span>}
                     </div>
                 </CardContent>
             </Card>
@@ -97,8 +129,8 @@ export const Profile = () => {
             {showSuccess && (
                 <SuccessAnimation
                     onComplete={() => setShowSuccess(false)}
-                    title="Профиль обновлен!"
-                    message="Ваши данные успешно сохранены"
+                    title={t('common.success')}
+                    message={t('settings.profileSaved')}
                 />
             )}
         </div>

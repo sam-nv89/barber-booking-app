@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { cn, formatPrice } from '@/lib/utils';
+import { cn, formatPrice, formatPhoneNumber } from '@/lib/utils';
 import { SuccessAnimation } from '@/components/features/SuccessAnimation';
 
 export const Settings = () => {
@@ -17,20 +17,24 @@ export const Settings = () => {
     const [successMessage, setSuccessMessage] = React.useState(null);
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        let { name, value } = e.target;
+        if (name === 'phone') {
+            value = formatPhoneNumber(value);
+        }
+        setFormData({ ...formData, [name]: value });
         setIsDirty(true);
     };
 
     const handleSaveProfile = () => {
         setSalonSettings(formData);
         setIsDirty(false);
-        setSuccessMessage(t('common.save'));
+        setSuccessMessage(t('settings.profileSaved'));
     };
 
     const handleSaveSchedule = () => {
         setSalonSettings({ ...salonSettings, schedule: scheduleData });
         setIsScheduleModalOpen(false);
-        setSuccessMessage(t('common.save'));
+        setSuccessMessage(t('settings.scheduleSaved'));
     };
 
     const toggleDayOff = (day) => {
@@ -72,6 +76,16 @@ export const Settings = () => {
                     <div className="space-y-2">
                         <label className="text-sm font-medium">{t('settings.address')}</label>
                         <Input name="address" value={formData.address} onChange={handleChange} />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">{t('settings.phone')}</label>
+                        <Input
+                            name="phone"
+                            type="tel"
+                            value={formData.phone || ''}
+                            onChange={handleChange}
+                            placeholder="+7 700 000 00 00"
+                        />
                     </div>
                     {isDirty && (
                         <Button className="w-full" onClick={handleSaveProfile}>
@@ -156,8 +170,8 @@ export const Settings = () => {
             {successMessage && (
                 <SuccessAnimation
                     onComplete={() => setSuccessMessage(null)}
-                    title={successMessage}
-                    message={t('common.save')}
+                    title={t('common.success')}
+                    message={successMessage}
                 />
             )}
         </div>
