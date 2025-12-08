@@ -7,12 +7,14 @@ import { Modal } from '@/components/ui/Modal';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { cn, formatPrice, formatPhoneNumber } from '@/lib/utils';
 import { SuccessAnimation } from '@/components/features/SuccessAnimation';
+import { format } from 'date-fns';
 
 export const Settings = () => {
-    const { t, salonSettings, setSalonSettings } = useStore();
+    const { t, salonSettings, setSalonSettings, setWorkScheduleOverrides, workScheduleOverrides, language } = useStore();
     const [formData, setFormData] = React.useState(salonSettings);
     const [isDirty, setIsDirty] = React.useState(false);
     const [isScheduleModalOpen, setIsScheduleModalOpen] = React.useState(false);
+    const [isShiftModalOpen, setIsShiftModalOpen] = React.useState(false);
     const [scheduleData, setScheduleData] = React.useState(salonSettings.schedule);
     const [successMessage, setSuccessMessage] = React.useState(null);
 
@@ -102,17 +104,24 @@ export const Settings = () => {
                 <CardContent className="space-y-4">
                     {days.map(day => (
                         <div key={day.key} className="flex justify-between items-center">
-                            <span>{t(`days.${day.key}`)}</span>
+                            <span className={cn(!salonSettings.schedule[day.key].start && "text-destructive")}>{t(`days.${day.key}`)}</span>
                             <span className={cn("text-muted-foreground", (!salonSettings.schedule[day.key].start) && "text-destructive")}>
                                 {formatScheduleDisplay(salonSettings.schedule[day.key])}
                             </span>
                         </div>
                     ))}
-                    <Button variant="outline" className="w-full mt-4" onClick={() => setIsScheduleModalOpen(true)}>
-                        {t('settings.editSchedule')}
-                    </Button>
+                    <div className="flex gap-2 mt-4">
+                        <Button variant="outline" className="flex-1" onClick={() => setIsScheduleModalOpen(true)}>
+                            {t('settings.editSchedule')}
+                        </Button>
+                        <Button variant="secondary" className="flex-1" onClick={() => setIsShiftModalOpen(true)}>
+                            {t('settings.shiftGenerator')}
+                        </Button>
+                    </div>
                 </CardContent>
             </Card>
+
+            <GeneratedScheduleCalendar />
 
             <ServicesManager onSuccess={setSuccessMessage} />
             <MarketingManager onSuccess={setSuccessMessage} />
@@ -167,6 +176,16 @@ export const Settings = () => {
                 </div>
             </Modal>
 
+            <ShiftGeneratorModal
+                isOpen={isShiftModalOpen}
+                onClose={() => setIsShiftModalOpen(false)}
+                onSave={(overrides) => {
+                    setWorkScheduleOverrides(overrides);
+                    setSuccessMessage(t('settings.scheduleSaved'));
+                    setIsShiftModalOpen(false);
+                }}
+            />
+
             {successMessage && (
                 <SuccessAnimation
                     onComplete={() => setSuccessMessage(null)}
@@ -175,6 +194,185 @@ export const Settings = () => {
                 />
             )}
         </div>
+    );
+};
+
+// Shift Generator Modal with period selection
+const ShiftGeneratorModal = ({ isOpen, onClose, onSave }) => {
+    const { t, salonSettings } = useStore();
+    const [workDays, setWorkDays] = React.useState(2);
+    const [offDays, setOffDays] = React.useState(2);
+    const [startDate, setStartDate] = React.useState(format(new Date(), 'yyyy-MM-dd'));
+    const [periodMonths, setPeriodMonths] = React.useState(3);
+
+    const handleGenerate = () => {
+        const overrides = {};
+        const start = new Date(startDate);
+        const endDate = new Date(start);
+        endDate.setMonth(endDate.getMonth() + periodMonths);
+
+        let dayCounter = 0;
+        const cycleLength = workDays + offDays;
+
+        for (let d = new Date(start); d < endDate; d.setDate(d.getDate() + 1)) {
+            const dateStr = format(d, 'yyyy-MM-dd');
+            const positionInCycle = dayCounter % cycleLength;
+            const isWorking = positionInCycle < workDays;
+
+            overrides[dateStr] = {
+                isWorking,
+                start: isWorking ? (salonSettings.schedule.mon?.start || '10:00') : '',
+                end: isWorking ? (salonSettings.schedule.mon?.end || '20:00') : ''
+            };
+            dayCounter++;
+        }
+
+        onSave(overrides);
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title={t('settings.shiftGenerator')}>
+            <div className="space-y-4">
+                <div className="space-y-2">
+                    <label className="text-sm font-medium">{t('settings.shiftPattern')}</label>
+                    <div className="flex items-center gap-2">
+                        <Input
+                            type="number"
+                            min="1"
+                            max="7"
+                            value={workDays}
+                            onChange={(e) => setWorkDays(parseInt(e.target.value) || 1)}
+                            className="w-20"
+                        />
+                        <span className="text-muted-foreground">{t('settings.workingDays')}</span>
+                        <span>/</span>
+                        <Input
+                            type="number"
+                            min="1"
+                            max="7"
+                            value={offDays}
+                            onChange={(e) => setOffDays(parseInt(e.target.value) || 1)}
+                            className="w-20"
+                        />
+                        <span className="text-muted-foreground">{t('settings.daysOff')}</span>
+                    </div>
+                </div>
+
+                <div className="space-y-2">
+                    <label className="text-sm font-medium">{t('settings.startDate')}</label>
+                    <Input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                    />
+                </div>
+
+                <div className="space-y-2">
+                    <label className="text-sm font-medium">{t('settings.generationPeriod')}</label>
+                    <select
+                        value={periodMonths}
+                        onChange={(e) => setPeriodMonths(parseInt(e.target.value))}
+                        className="w-full p-2 rounded-md border bg-background"
+                    >
+                        <option value={1}>1 {t('common.month')}</option>
+                        <option value={3}>3 {t('common.months')}</option>
+                        <option value={6}>6 {t('common.months')}</option>
+                        <option value={12}>12 {t('common.months')}</option>
+                    </select>
+                </div>
+
+                <Button className="w-full" onClick={handleGenerate}>
+                    {t('settings.generate')}
+                </Button>
+            </div>
+        </Modal>
+    );
+};
+
+// Visual calendar for generated schedule
+const GeneratedScheduleCalendar = () => {
+    const { t, workScheduleOverrides, clearWorkScheduleOverrides, language } = useStore();
+
+    if (!workScheduleOverrides || Object.keys(workScheduleOverrides).length === 0) {
+        return null;
+    }
+
+    const dates = Object.keys(workScheduleOverrides).sort();
+    const startDate = dates[0];
+    const endDate = dates[dates.length - 1];
+
+    // Group by months
+    const monthGroups = {};
+    dates.forEach(date => {
+        const monthKey = date.substring(0, 7); // yyyy-MM
+        if (!monthGroups[monthKey]) {
+            monthGroups[monthKey] = [];
+        }
+        monthGroups[monthKey].push(date);
+    });
+
+    const formatMonthLabel = (monthKey) => {
+        const [year, month] = monthKey.split('-');
+        const date = new Date(parseInt(year), parseInt(month) - 1);
+        return date.toLocaleDateString(language === 'ru' ? 'ru-RU' : 'en-US', { month: 'long', year: 'numeric' });
+    };
+
+    return (
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-lg">{t('settings.generatedSchedule')}</CardTitle>
+                <Button size="sm" variant="outline" onClick={clearWorkScheduleOverrides}>
+                    {t('settings.clearSchedule')}
+                </Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                    {t('common.from')} {new Date(startDate).toLocaleDateString(language === 'ru' ? 'ru-RU' : 'en-US')} {t('common.to')} {new Date(endDate).toLocaleDateString(language === 'ru' ? 'ru-RU' : 'en-US')}
+                </p>
+
+                {Object.keys(monthGroups).map(monthKey => (
+                    <div key={monthKey} className="space-y-2">
+                        <h4 className="font-medium capitalize">{formatMonthLabel(monthKey)}</h4>
+                        {/* Weekday headers */}
+                        <div className="grid grid-cols-7 gap-1 text-center text-xs text-muted-foreground font-medium">
+                            {['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(day => (
+                                <div key={day} className="p-1">{day}</div>
+                            ))}
+                        </div>
+                        {/* Calendar grid */}
+                        <div className="grid grid-cols-7 gap-1 text-center text-xs">
+                            {/* Empty cells for offset to align with weekday */}
+                            {(() => {
+                                const firstDate = new Date(monthGroups[monthKey][0]);
+                                const dayOfWeek = firstDate.getDay();
+                                const offset = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Monday = 0
+                                return Array.from({ length: offset }, (_, i) => (
+                                    <div key={`offset-${i}`} className="p-2"></div>
+                                ));
+                            })()}
+                            {monthGroups[monthKey].map(date => {
+                                const override = workScheduleOverrides[date];
+                                const day = new Date(date).getDate();
+                                return (
+                                    <div
+                                        key={date}
+                                        className={cn(
+                                            "p-2 rounded-md text-xs font-bold",
+                                            override.isWorking
+                                                ? "bg-primary/20 text-primary"
+                                                : "bg-destructive/20 text-destructive"
+                                        )}
+                                        title={override.isWorking ? `${override.start} - ${override.end}` : t('settings.dayOff')}
+                                    >
+                                        {day}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                ))}
+            </CardContent>
+        </Card>
     );
 };
 

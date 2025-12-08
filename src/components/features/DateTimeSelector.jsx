@@ -1,34 +1,16 @@
 import React from 'react';
 import { Button } from '@/components/ui/Button';
 import { DAYS_OF_WEEK } from '@/lib/constants';
-import { cn } from '@/lib/utils';
+import { cn, getSlotsForDate } from '@/lib/utils';
 import { format, addDays } from 'date-fns';
 import { useStore } from '@/store/useStore';
 
-export const DateTimeSelector = ({ selectedDate, onDateSelect, selectedTime, onTimeSelect, salonSettings }) => {
+export const DateTimeSelector = ({ selectedDate, onDateSelect, selectedTime, onTimeSelect, salonSettings, appointments, services }) => {
     const { t, locale } = useStore();
 
-    const generateTimeSlots = (date) => {
-        if (!date || !salonSettings?.schedule) return [];
-
-        const daysMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-        const dayKey = daysMap[date.getDay()];
-        const schedule = salonSettings.schedule[dayKey];
-
-        if (!schedule || !schedule.start || !schedule.end) return [];
-
-        const slots = [];
-        let current = parseInt(schedule.start.split(':')[0]);
-        const end = parseInt(schedule.end.split(':')[0]);
-
-        while (current < end) {
-            slots.push(`${current.toString().padStart(2, '0')}:00`);
-            current++;
-        }
-        return slots;
-    };
-
-    const availableTimes = React.useMemo(() => generateTimeSlots(selectedDate), [selectedDate, salonSettings]);
+    const availableTimes = React.useMemo(() => {
+        return getSlotsForDate(selectedDate, salonSettings, appointments, services);
+    }, [selectedDate, salonSettings, appointments, services]);
 
     // Generate next 7 days
     const dates = Array.from({ length: 7 }, (_, i) => addDays(new Date(), i));

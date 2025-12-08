@@ -12,7 +12,7 @@ import { DateTimeSelector } from '@/components/features/DateTimeSelector';
 import { ClockWidget } from '@/components/features/ClockWidget';
 
 export const BookingWizard = () => {
-    const { t, addAppointment, user, salonSettings, services, language, locale } = useStore();
+    const { t, addAppointment, user, salonSettings, services, appointments, language, locale } = useStore();
     const [step, setStep] = React.useState(1);
     const [selectedService, setSelectedService] = React.useState(null);
     const [selectedDate, setSelectedDate] = React.useState(null);
@@ -149,6 +149,8 @@ export const BookingWizard = () => {
                         selectedTime={selectedTime}
                         onTimeSelect={setSelectedTime}
                         salonSettings={salonSettings}
+                        appointments={appointments}
+                        services={services}
                     />
 
                     <div className="flex gap-2 mt-6">

@@ -33,3 +33,74 @@ export const formatPhoneNumber = (value) => {
 export const isValidEmail = (email) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 };
+
+export const timeToMinutes = (time) => {
+    if (!time) return 0;
+    const [h, m] = time.split(':').map(Number);
+    return h * 60 + m;
+};
+
+export const getSlotsForDate = (date, salonSettings, appointments = [], services = []) => {
+    if (!date || !salonSettings || !salonSettings.schedule) return [];
+
+    const dateStr = date.toISOString().split('T')[0];
+    const daysMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayKey = daysMap[date.getDay()];
+
+    // 1. Determine Schedule (Weekly vs Override)
+    let schedule = { ...salonSettings.schedule[dayKey] };
+    const override = salonSettings.workScheduleOverrides?.[dateStr];
+
+    if (override) {
+        if (!override.isWorking) return []; // Explicitly OFF by override
+
+        // If ON by override, but weekly was OFF, use fallback defaults
+        if (!schedule.start) {
+            schedule = { start: '10:00', end: '20:00', breaks: [] };
+        }
+        // Note: We currently don't support custom hours in overrides, only ON/OFF status
+    } else {
+        // No override, enforce weekly schedule
+        if (!schedule.start || !schedule.end) return []; // Weekly OFF
+    }
+
+    // 2. Generate Raw Slots (Hourly)
+    const slots = [];
+    const startHour = parseInt(schedule.start.split(':')[0]);
+    const endHour = parseInt(schedule.end.split(':')[0]);
+
+    for (let h = startHour; h < endHour; h++) {
+        slots.push(`${h.toString().padStart(2, '0')}:00`);
+    }
+
+    // 3. Filter Availability
+    const finalSlots = slots.filter(slot => {
+        // A. Check Breaks
+        if (schedule.breaks?.length) {
+            for (const brk of schedule.breaks) {
+                if (slot >= brk.start && slot < brk.end) return false;
+            }
+        }
+
+        // B. Check Appointments (with Buffer)
+        const daysAppointments = appointments.filter(a => a.date === dateStr);
+        for (const appt of daysAppointments) {
+            // Find service duration
+            const service = services.find(s => s.id === appt.serviceId);
+            const duration = service?.duration || 60; // default 60 min if service not found
+            const buffer = salonSettings.bufferTime || 0;
+
+            const apptStartMin = timeToMinutes(appt.time);
+            const apptEndMin = apptStartMin + duration + buffer;
+
+            const slotStartMin = timeToMinutes(slot);
+
+            // Strict Block: If the slot START time falls within the [ApptStart, ApptEnd + Buffer) range
+            if (slotStartMin >= apptStartMin && slotStartMin < apptEndMin) return false;
+        }
+
+        return true;
+    });
+
+    return finalSlots;
+};

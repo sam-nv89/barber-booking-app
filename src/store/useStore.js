@@ -37,9 +37,18 @@ export const useStore = create(
                 name: 'Barber Shop #1',
                 address: 'ул. Абая 150',
                 phone: '+7 777 000 00 00',
+                bufferTime: 0, // minutes
                 schedule: DEFAULT_SCHEDULE
             },
             setSalonSettings: (settings) => set((state) => ({ salonSettings: { ...state.salonSettings, ...settings } })),
+
+            // Advanced Schedule State
+            workScheduleOverrides: {}, // { 'YYYY-MM-DD': { isWorking: boolean, start, end, breaks: [] } }
+            setWorkScheduleOverrides: (overrides) => set((state) => ({
+                workScheduleOverrides: { ...state.workScheduleOverrides, ...overrides }
+            })),
+            clearWorkScheduleOverrides: () => set({ workScheduleOverrides: {} }),
+
             setLanguage: (language) => set({ language }),
             setTheme: (theme) => set({ theme }),
 

@@ -3,11 +3,11 @@ import { useStore } from '@/store/useStore';
 import { Button } from '@/components/ui/Button';
 import { DateTimeSelector } from '@/components/features/DateTimeSelector';
 import { format } from 'date-fns';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, formatPhoneNumber } from '@/lib/utils';
 import { User, Phone, Calendar, Scissors, Calculator } from 'lucide-react';
 
 export const MasterBookingModal = ({ onClose }) => {
-    const { services, addAppointment, t, salonSettings, language, locale } = useStore();
+    const { services, addAppointment, appointments, t, salonSettings, language, locale } = useStore();
 
     const [selectedServiceId, setSelectedServiceId] = React.useState('');
     const [selectedDate, setSelectedDate] = React.useState(null);
@@ -26,7 +26,7 @@ export const MasterBookingModal = ({ onClose }) => {
     };
 
     const handleSave = () => {
-        if (!selectedService || !selectedDate || !selectedTime || !clientName || !clientPhone) return;
+        if (!selectedService || !selectedDate || !selectedTime || !clientName) return;
 
         addAppointment({
             serviceId: selectedService.id,
@@ -76,6 +76,8 @@ export const MasterBookingModal = ({ onClose }) => {
                             selectedTime={selectedTime}
                             onTimeSelect={setSelectedTime}
                             salonSettings={salonSettings}
+                            appointments={appointments}
+                            services={services}
                         />
                     </div>
                 </div>
@@ -101,7 +103,7 @@ export const MasterBookingModal = ({ onClose }) => {
                                 placeholder={t('booking.clientPhone')}
                                 className="w-full p-2 pl-9 border rounded-md"
                                 value={clientPhone}
-                                onChange={(e) => setClientPhone(e.target.value)}
+                                onChange={(e) => setClientPhone(formatPhoneNumber(e.target.value))}
                             />
                         </div>
                     </div>
@@ -128,7 +130,7 @@ export const MasterBookingModal = ({ onClose }) => {
                 <Button
                     className="flex-1"
                     onClick={handleSave}
-                    disabled={!selectedServiceId || !selectedDate || !selectedTime || !clientName || !clientPhone}
+                    disabled={!selectedServiceId || !selectedDate || !selectedTime || !clientName}
                 >
                     {t('common.save')}
                 </Button>

@@ -36,11 +36,11 @@ export const DAYS_OF_WEEK = [
 ];
 
 export const DEFAULT_SCHEDULE = {
-    monday: { start: '10:00', end: '20:00' },
-    tuesday: { start: '10:00', end: '20:00' },
-    wednesday: { start: '10:00', end: '20:00' },
-    thursday: { start: '10:00', end: '20:00' },
-    friday: { start: '10:00', end: '20:00' },
-    saturday: { start: '11:00', end: '18:00' },
-    sunday: { start: '', end: '' }
+    monday: { start: '10:00', end: '20:00', breaks: [] },
+    tuesday: { start: '10:00', end: '20:00', breaks: [] },
+    wednesday: { start: '10:00', end: '20:00', breaks: [] },
+    thursday: { start: '10:00', end: '20:00', breaks: [] },
+    friday: { start: '10:00', end: '20:00', breaks: [] },
+    saturday: { start: '11:00', end: '18:00', breaks: [] },
+    sunday: { start: '', end: '', breaks: [] }
 };
