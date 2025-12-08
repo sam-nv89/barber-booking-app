@@ -15,7 +15,7 @@ export const BottomNav = () => {
     ];
 
     const masterLinks = [
-        { href: '/master/dashboard', icon: LayoutDashboard, label: 'Студия' },
+        { href: '/master/dashboard', icon: LayoutDashboard, label: t('nav.studio') },
         { href: '/master/records', icon: List, label: t('nav.records') },
         { href: '/master/settings', icon: Settings, label: t('nav.settings') },
     ];

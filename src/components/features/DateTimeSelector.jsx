@@ -41,7 +41,10 @@ export const DateTimeSelector = ({ selectedDate, onDateSelect, selectedTime, onT
                     {dates.map((date) => {
                         const isOff = false; // TODO: Check schedule for day off
                         const isSelected = selectedDate?.toDateString() === date.toDateString();
-                        const dayLabel = format(date, 'EE', { locale: locale() });
+
+                        const daysMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+                        const dayKey = daysMap[date.getDay()];
+                        const dayLabel = t(`days.${dayKey}`);
 
                         return (
                             <button

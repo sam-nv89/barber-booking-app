@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { format } from 'date-fns';
-import { ru } from 'date-fns/locale';
+import { useStore } from '@/store/useStore';
 
 export const ClockWidget = () => {
     const [time, setTime] = useState(new Date());
+    const { locale } = useStore();
 
     useEffect(() => {
         const timer = setInterval(() => {
@@ -20,7 +21,7 @@ export const ClockWidget = () => {
                     {format(time, 'HH:mm')}
                 </div>
                 <div className="text-sm text-muted-foreground mt-1 font-medium capitalize">
-                    {format(time, 'EEEE, d MMMM', { locale: ru })}
+                    {format(time, 'EEEE, d MMMM yyyy', { locale: locale() })}
                 </div>
             </CardContent>
         </Card>

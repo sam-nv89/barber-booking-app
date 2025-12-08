@@ -132,6 +132,19 @@ export const TRANSLATIONS = {
             chatClient: 'Чат с клиентом',
             addAppointment: 'Записать клиента',
             newAppointment: 'Новая запись',
+        },
+        dashboard: {
+            week: 'Неделя',
+            month: 'Месяц',
+            allTime: 'Все время',
+            revenue: 'Доход',
+            clients: 'Клиенты',
+            requests: 'Заявки',
+            dynamics: 'Динамика записей',
+            conversion: 'Конверсия',
+            completedVsCancelled: 'Завершено vs Отменено',
+            successful: 'Успешно',
+            declined: 'Отказано',
         }
     },
     kz: {
@@ -267,6 +280,19 @@ export const TRANSLATIONS = {
             chatClient: 'Клиентпен чат',
             addAppointment: 'Клиентті жазу',
             newAppointment: 'Жаңа жазба',
+        },
+        dashboard: {
+            week: 'Апта',
+            month: 'Ай',
+            allTime: 'Барлық уақытта',
+            revenue: 'Табыс',
+            clients: 'Клиенттер',
+            requests: 'Өтінімдер',
+            dynamics: 'Жазбалар динамикасы',
+            conversion: 'Конверсия',
+            completedVsCancelled: 'Аяқталды vs Болдырылмады',
+            successful: 'Сәтті',
+            declined: 'Бас тартылды',
         }
     },
     en: {
@@ -402,6 +428,19 @@ export const TRANSLATIONS = {
             chatClient: 'Chat with Client',
             addAppointment: 'Add Appointment',
             newAppointment: 'New Appointment',
+        },
+        dashboard: {
+            week: 'Week',
+            month: 'Month',
+            allTime: 'All Time',
+            revenue: 'Revenue',
+            clients: 'Clients',
+            requests: 'Requests',
+            dynamics: 'Booking Dynamics',
+            conversion: 'Conversion',
+            completedVsCancelled: 'Completed vs Cancelled',
+            successful: 'Successful',
+            declined: 'Declined',
         }
     }
 };

@@ -69,21 +69,21 @@ export const Dashboard = () => {
 
     const statCards = [
         {
-            title: 'Доход',
+            title: t('dashboard.revenue'),
             value: `${formatPrice(stats.revenue)} ₸`,
             icon: CreditCard,
             color: 'text-green-500',
             bg: 'bg-green-500/10'
         },
         {
-            title: 'Клиенты',
+            title: t('dashboard.clients'),
             value: stats.uniqueClients,
             icon: Users,
             color: 'text-red-500',
             bg: 'bg-red-500/10'
         },
         {
-            title: 'Заявки',
+            title: t('dashboard.requests'),
             value: stats.pending,
             icon: Clock,
             color: 'text-orange-500',
@@ -95,7 +95,7 @@ export const Dashboard = () => {
 
     return (
         <div className="space-y-6 pb-20">
-            <h1 className="text-2xl font-bold">Студия</h1>
+            <h1 className="text-2xl font-bold">{t('nav.studio')}</h1>
 
             <ClockWidget />
 
@@ -110,7 +110,7 @@ export const Dashboard = () => {
                             period === p ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"
                         )}
                     >
-                        {p === 'week' ? 'Неделя' : p === 'month' ? 'Месяц' : 'Все время'}
+                        {p === 'week' ? t('dashboard.week') : p === 'month' ? t('dashboard.month') : t('dashboard.allTime')}
                     </button>
                 ))}
             </div>
@@ -153,7 +153,7 @@ export const Dashboard = () => {
             {(period !== 'all' && chartData.length > 0) && (
                 <Card>
                     <CardHeader>
-                        <CardTitle className="text-lg">Динамика записей</CardTitle>
+                        <CardTitle className="text-lg">{t('dashboard.dynamics')}</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="flex items-end justify-between h-32 gap-2 mt-2">
@@ -175,15 +175,14 @@ export const Dashboard = () => {
                 </Card>
             )}
 
-            {/* Efficiency Progress */}
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-lg">Конверсия</CardTitle>
+                    <CardTitle className="text-lg">{t('dashboard.conversion')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
                         <div className="flex justify-between items-center text-sm">
-                            <span className="text-muted-foreground">Завершено vs Отменено</span>
+                            <span className="text-muted-foreground">{t('dashboard.completedVsCancelled')}</span>
                             <span className="font-bold">{stats.total > 0 ? Math.round((stats.completed / (stats.total || 1)) * 100) : 0}%</span>
                         </div>
                         <div className="h-2 w-full bg-secondary rounded-full overflow-hidden flex">
@@ -199,8 +198,8 @@ export const Dashboard = () => {
                             />
                         </div>
                         <div className="flex justify-between text-[10px] text-muted-foreground uppercase font-medium">
-                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" />Успешно</span>
-                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" />Отказано</span>
+                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" />{t('dashboard.successful')}</span>
+                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" />{t('dashboard.declined')}</span>
                         </div>
                     </div>
                 </CardContent>

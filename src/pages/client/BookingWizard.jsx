@@ -115,7 +115,10 @@ export const BookingWizard = () => {
                                 <Card
                                     key={service.id}
                                     className={cn("cursor-pointer transition-colors hover:border-primary", selectedService?.id === service.id && "border-primary bg-accent")}
-                                    onClick={() => setSelectedService(service)}
+                                    onClick={() => {
+                                        setSelectedService(service);
+                                        setStep(2); // Auto-advance
+                                    }}
                                 >
                                     <CardContent className="p-4 flex justify-between items-center">
                                         <div>
@@ -134,9 +137,6 @@ export const BookingWizard = () => {
                             )
                         })}
                     </div>
-                    <Button className="w-full" disabled={!selectedService} onClick={() => setStep(2)}>
-                        {t('common.confirm')}
-                    </Button>
                 </div>
             )}
 
