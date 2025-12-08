@@ -1,6 +1,7 @@
 import React from 'react';
 import { Header } from './Header';
 import { BottomNav } from './BottomNav';
+import { FeedbackPrompt } from '@/components/features/FeedbackPrompt';
 
 export const Layout = ({ children }) => {
     return (
@@ -9,6 +10,7 @@ export const Layout = ({ children }) => {
             <main className="flex-1 container px-4 py-6 pb-24">
                 {children}
             </main>
+            <FeedbackPrompt />
             <BottomNav />
         </div>
     );

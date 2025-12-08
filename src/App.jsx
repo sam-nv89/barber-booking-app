@@ -9,6 +9,7 @@ import { Profile } from '@/pages/client/Profile'
 import { Records } from '@/pages/master/Records'
 import { Settings } from '@/pages/master/Settings'
 import { Dashboard } from '@/pages/master/Dashboard'
+import { Reviews } from '@/pages/master/Reviews'
 
 function App() {
     const { theme } = useStore();
@@ -48,6 +49,7 @@ function App() {
                     {/* Master Routes */}
                     <Route path="/master/records" element={<Records />} />
                     <Route path="/master/dashboard" element={<Dashboard />} />
+                    <Route path="/master/reviews" element={<Reviews />} />
                     <Route path="/master/settings" element={<Settings />} />
 
                     {/* Fallback */}

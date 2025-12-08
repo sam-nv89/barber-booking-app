@@ -4,7 +4,8 @@ import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Chat } from '@/components/features/Chat';
-import { MessageCircle } from 'lucide-react';
+import { FeedbackModal } from '@/components/features/FeedbackModal';
+import { MessageCircle, Star } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
 
 import { DateTimeSelector } from '@/components/features/DateTimeSelector';
@@ -15,6 +16,7 @@ export const Visits = () => {
     const { appointments, t, user, updateAppointmentStatus, updateAppointment, salonSettings, language, locale } = useStore();
     const [activeTab, setActiveTab] = React.useState('upcoming');
     const [chatOpen, setChatOpen] = React.useState(null);
+    const [feedbackOpen, setFeedbackOpen] = React.useState(null); // Appointment object to rate
     const [rescheduleOpen, setRescheduleOpen] = React.useState(null); // ID of appointment to reschedule
     const [cancelConfirmationId, setCancelConfirmationId] = React.useState(null);
 
@@ -128,6 +130,16 @@ export const Visits = () => {
                                         {t('visits.chat')}
                                     </Button>
                                 </div>
+                                {app.status === 'completed' && (
+                                    <Button
+                                        variant="outline"
+                                        className="w-full mt-2 gap-2 text-yellow-600 border-yellow-200 hover:bg-yellow-50"
+                                        onClick={() => setFeedbackOpen(app)}
+                                    >
+                                        <Star className="w-4 h-4" />
+                                        {t('reviews.title')}
+                                    </Button>
+                                )}
 
                                 {isEditable && (
                                     <div className="flex gap-2 mt-4 pt-4 border-t">
@@ -163,6 +175,12 @@ export const Visits = () => {
             <Modal isOpen={!!chatOpen} onClose={() => setChatOpen(null)} title={t('visits.chatMaster')}>
                 <Chat appointmentId={chatOpen} onClose={() => setChatOpen(null)} />
             </Modal>
+
+            <FeedbackModal
+                isOpen={!!feedbackOpen}
+                onClose={() => setFeedbackOpen(null)}
+                appointment={feedbackOpen}
+            />
 
             <Modal isOpen={!!rescheduleOpen} onClose={() => setRescheduleOpen(null)} title={t('visits.rescheduleTitle')}>
                 <div className="space-y-6">

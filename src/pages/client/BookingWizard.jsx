@@ -126,7 +126,7 @@ export const BookingWizard = () => {
                                                 {getServiceName(service)}
                                                 {activeCampaign && <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">{activeCampaign.name}</span>}
                                             </div>
-                                            <div className="text-sm text-muted-foreground">{service.duration} {t('services.duration').split(' ')[0]}</div>
+                                            <div className="text-sm text-muted-foreground">{service.duration} {t('common.min')}</div>
                                         </div>
                                         <div className="text-right">
                                             <div className={cn("font-bold", oldPrice && "text-red-500")}>{formatPrice(finalPrice)} ₸</div>

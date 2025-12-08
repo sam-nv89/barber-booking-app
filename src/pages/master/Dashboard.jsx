@@ -2,13 +2,14 @@ import React, { useState, useMemo } from 'react';
 import { useStore } from '@/store/useStore';
 import { ClockWidget } from '@/components/features/ClockWidget';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Users, CreditCard, CalendarCheck, XCircle, Clock } from 'lucide-react';
+import { Users, CreditCard, CalendarCheck, XCircle, Clock, Star } from 'lucide-react';
 import { format, isSameMonth, isSameWeek, parseISO } from 'date-fns';
+import { Link } from 'react-router-dom';
 import { cn, formatPrice } from '@/lib/utils';
 import { motion } from 'framer-motion';
 
 export const Dashboard = () => {
-    const { appointments, services, t } = useStore();
+    const { appointments, services, reviews, t } = useStore();
     const [period, setPeriod] = useState('month'); // 'week' | 'month' | 'all'
 
     // Filter appointments based on period
@@ -44,10 +45,16 @@ export const Dashboard = () => {
                 return acc + (numericPrice || 0);
             }, 0);
 
+
+
         const uniqueClients = new Set(filteredAppointments.map(a => a.clientPhone)).size;
 
-        return { total, completed, confirmed, cancelled, pending, revenue, uniqueClients };
-    }, [filteredAppointments]);
+        const averageRating = reviews.length > 0
+            ? (reviews.reduce((acc, curr) => acc + curr.rating, 0) / reviews.length).toFixed(1)
+            : '0.0';
+
+        return { total, completed, confirmed, cancelled, pending, revenue, uniqueClients, averageRating };
+    }, [filteredAppointments, reviews]);
 
     // Chart Data
     const chartData = useMemo(() => {
@@ -89,6 +96,14 @@ export const Dashboard = () => {
             color: 'text-orange-500',
             bg: 'bg-orange-500/10'
         },
+        {
+            title: t('reviews.rating'),
+            value: stats.averageRating,
+            icon: Star,
+            color: 'text-yellow-500',
+            bg: 'bg-yellow-500/10',
+            href: '/master/reviews'
+        },
     ];
 
     const maxChartValue = Math.max(...chartData.map(d => d.count), 5);
@@ -119,7 +134,7 @@ export const Dashboard = () => {
             <div className="grid grid-cols-2 gap-3">
                 {statCards.map((stat, index) => {
                     const Icon = stat.icon;
-                    return (
+                    const CardComponent = (
                         <Card key={index} className={cn("overflow-hidden border-none shadow-sm hover:shadow-md transition-shadow", index === 0 && "col-span-2")}>
                             <CardContent className={cn("p-4 flex items-center gap-4", index === 0 ? "flex-row justify-between" : "flex-col text-center space-y-2")}>
                                 {index === 0 ? (
@@ -146,6 +161,11 @@ export const Dashboard = () => {
                             </CardContent>
                         </Card>
                     );
+
+                    if (stat.href) {
+                        return <Link key={index} to={stat.href} className={index === 0 ? "col-span-2" : ""}>{CardComponent}</Link>;
+                    }
+                    return CardComponent;
                 })}
             </div>
 

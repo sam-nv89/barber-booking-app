@@ -5,10 +5,9 @@ import { Button } from '@/components/ui/Button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
-import { ru } from 'date-fns/locale';
 
 export const Notifications = () => {
-    const { notifications, markNotificationAsRead, markAllNotificationsAsRead, user } = useStore();
+    const { notifications, markNotificationAsRead, markAllNotificationsAsRead, user, t, locale } = useStore();
     const [isOpen, setIsOpen] = React.useState(false);
     const containerRef = React.useRef(null);
 
@@ -61,7 +60,7 @@ export const Notifications = () => {
                         className="absolute right-0 mt-2 w-80 sm:w-96 bg-card border rounded-xl shadow-xl z-50 overflow-hidden"
                     >
                         <div className="flex items-center justify-between p-4 border-b bg-muted/50">
-                            <h3 className="font-semibold">Уведомления</h3>
+                            <h3 className="font-semibold">{t('notifications.title')}</h3>
                             {unreadCount > 0 && (
                                 <Button
                                     variant="ghost"
@@ -69,7 +68,7 @@ export const Notifications = () => {
                                     className="text-xs h-auto py-1"
                                     onClick={() => markAllNotificationsAsRead(user.role)}
                                 >
-                                    Прочитать все
+                                    {t('notifications.markAllRead')}
                                 </Button>
                             )}
                         </div>
@@ -77,7 +76,7 @@ export const Notifications = () => {
                         <div className="max-h-[60vh] overflow-y-auto">
                             {userNotifications.length === 0 ? (
                                 <div className="p-8 text-center text-muted-foreground text-sm">
-                                    Нет новых уведомлений
+                                    {t('notifications.empty')}
                                 </div>
                             ) : (
                                 <div className="divide-y">
@@ -100,14 +99,18 @@ export const Notifications = () => {
                                                 <div className="flex-1 space-y-1">
                                                     <div className="flex justify-between items-start">
                                                         <p className={cn("text-sm font-medium leading-none", !notification.read && "text-primary")}>
-                                                            {notification.title}
+                                                            {notification.titleKey ? t(notification.titleKey) : notification.title}
                                                         </p>
                                                         <span className="text-[10px] text-muted-foreground whitespace-nowrap ml-2">
-                                                            {formatDistanceToNow(new Date(notification.date), { addSuffix: true, locale: ru })}
+                                                            {formatDistanceToNow(new Date(notification.date), { addSuffix: true, locale: locale() })}
                                                         </span>
                                                     </div>
                                                     <p className="text-xs text-muted-foreground line-clamp-2">
-                                                        {notification.message}
+                                                        {notification.messageKey
+                                                            ? t(notification.messageKey).replace('{clientName}', notification.params?.clientName || '')
+                                                                .replace('{date}', notification.params?.date || '')
+                                                                .replace('{time}', notification.params?.time || '')
+                                                            : notification.message}
                                                     </p>
                                                 </div>
                                                 {!notification.read && (

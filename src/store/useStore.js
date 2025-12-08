@@ -13,6 +13,13 @@ const locales = {
 export const useStore = create(
     persist(
         (set, get) => ({
+            // State
+            reviews: [
+                { id: 1, clientId: 'client1', clientName: 'Иван Петров', rating: 5, comment: 'Отличный мастер!', date: '2025-10-15', reply: null, isRead: false },
+                { id: 2, clientId: 'client2', clientName: 'Елена С.', rating: 4, comment: 'Все понравилось, но пришлось подождать.', date: '2025-10-20', reply: null, isRead: false }
+            ],
+            dismissedPrompts: [], // IDs of appointments where user clicked "Later"
+            dismissedPrompts: [], // IDs of appointments where user clicked "Later"
             // User State
             user: {
                 role: 'client', // 'client' | 'master'
@@ -84,6 +91,43 @@ export const useStore = create(
                 notifications: state.notifications.map(n => (n.recipient === role || !n.recipient) ? { ...n, read: true } : n)
             })),
 
+            // Review Actions
+            addReview: (review) => {
+                set((state) => ({
+                    reviews: [{
+                        id: Date.now(),
+                        date: new Date().toISOString().split('T')[0],
+                        isRead: false,
+                        reply: null,
+                        ...review
+                    }, ...state.reviews]
+                }));
+                // Notify master
+                const t = get().t;
+                get().addNotification({
+                    title: t('reviews.newReview'),
+                    message: `${review.clientName || 'Client'} - ${review.rating} ⭐`,
+                    type: 'info',
+                    recipient: 'master'
+                });
+            },
+
+            replyToReview: (reviewId, replyText) => set((state) => ({
+                reviews: state.reviews.map(r =>
+                    r.id === reviewId ? { ...r, reply: replyText, isRead: true } : r
+                )
+            })),
+
+            markReviewRead: (reviewId) => set((state) => ({
+                reviews: state.reviews.map(r =>
+                    r.id === reviewId ? { ...r, isRead: true } : r
+                )
+            })),
+
+            dismissRatePrompt: (appointmentId) => set((state) => ({
+                dismissedPrompts: [...state.dismissedPrompts, appointmentId]
+            })),
+
             // Appointments State
             appointments: MOCK_APPOINTMENTS,
             addAppointment: (appointment) => {
@@ -113,8 +157,14 @@ export const useStore = create(
                         type: 'new',
                         recipient: 'master',
                         appointmentId: newApp.id,
+                        titleKey: 'notifications.newBookingTitle',
+                        messageKey: 'notifications.newBookingMessage',
+                        params: { clientName: appointment.clientName, date: appointment.date, time: appointment.time },
+
+                        // Fallback for old system
                         title: 'Новая заявка',
                         message: `Новая запись от ${appointment.clientName} на ${appointment.date} ${appointment.time}`,
+
                         date: new Date().toISOString(),
                         read: false
                     }, ...state.notifications]
@@ -132,6 +182,10 @@ export const useStore = create(
                         type: 'confirmed',
                         recipient: 'client',
                         appointmentId: id,
+                        titleKey: 'notifications.confirmedTitle',
+                        messageKey: 'notifications.confirmedMessage',
+                        params: { date: app.date, time: app.time },
+
                         title: 'Запись подтверждена',
                         message: `Ваша запись на ${app.date} в ${app.time} подтверждена!`,
                         date: new Date().toISOString(),
@@ -143,6 +197,9 @@ export const useStore = create(
                         type: 'completed',
                         recipient: 'client',
                         appointmentId: id,
+                        titleKey: 'notifications.completedTitle',
+                        messageKey: 'notifications.completedMessage',
+
                         title: 'Визит завершен',
                         message: `Спасибо, что выбрали нас! Будем рады видеть вас снова.`,
                         date: new Date().toISOString(),
@@ -163,6 +220,10 @@ export const useStore = create(
                         type: 'cancelled',
                         recipient: 'master',
                         appointmentId: id,
+                        titleKey: 'notifications.cancelledTitle',
+                        messageKey: 'notifications.cancelledMessageMaster',
+                        params: { clientName: app.clientName, date: app.date },
+
                         title: 'Запись отменена',
                         message: `Запись клиента ${app.clientName} на ${app.date} была отменена`,
                         date: new Date().toISOString(),
@@ -176,6 +237,10 @@ export const useStore = create(
                         type: 'cancelled',
                         recipient: 'client',
                         appointmentId: id,
+                        titleKey: 'notifications.cancelledTitle',
+                        messageKey: 'notifications.cancelledMessageClient',
+                        params: { date: app.date, time: app.time },
+
                         title: 'Запись отменена',
                         message: `Запись на ${app.date} в ${app.time} была отменена.`,
                         date: new Date().toISOString(),
@@ -241,7 +306,9 @@ export const useStore = create(
                 appointments: state.appointments,
                 notifications: state.notifications,
                 services: state.services,
-                campaigns: state.campaigns
+                campaigns: state.campaigns,
+                reviews: state.reviews,
+                dismissedPrompts: state.dismissedPrompts
             }),
         }
     )
