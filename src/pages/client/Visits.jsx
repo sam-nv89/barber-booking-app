@@ -86,6 +86,17 @@ export const Visits = () => {
         return service.name;
     };
 
+    // Get all service names for multi-service appointments
+    const getServiceNames = (app) => {
+        const allServices = useStore.getState().services;
+        const ids = app.serviceIds || (app.serviceId ? [app.serviceId] : []);
+        if (ids.length === 0) return t('booking.service');
+        return ids.map(id => {
+            const service = allServices.find(s => s.id === id);
+            return getServiceName(service);
+        }).filter(Boolean).join(' + ');
+    };
+
     const handleCancelClick = (id) => {
         setCancelConfirmationId(id);
     };
@@ -146,7 +157,7 @@ export const Visits = () => {
                         <Card key={app.id} id={`appointment-${app.id}`} className="transition-all duration-500">
                             <CardContent className="p-4">
                                 <div className="flex justify-between items-start mb-3">
-                                    <div className="font-bold text-lg">{getServiceName(service)}</div>
+                                    <div className="font-bold text-lg">{getServiceNames(app)}</div>
                                     <div className={cn(
                                         "px-2.5 py-0.5 rounded-full text-xs font-medium",
                                         app.status === 'confirmed' ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :

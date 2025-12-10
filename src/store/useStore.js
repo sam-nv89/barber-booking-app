@@ -214,14 +214,23 @@ export const useStore = create(
             // Appointments State
             appointments: MOCK_APPOINTMENTS,
             addAppointment: (appointment) => {
-                // Snapshot the current price of the service
-                // If price is passed from booking wizard (e.g. campaign price), use it.
-                // Otherwise fallback to current service price.
-                let priceSnapshot = appointment.price;
+                // Handle both single serviceId and multi-service serviceIds
+                const serviceIds = appointment.serviceIds || (appointment.serviceId ? [appointment.serviceId] : []);
 
-                if (priceSnapshot === undefined || priceSnapshot === null) {
-                    const service = get().services.find(s => s.id === appointment.serviceId);
-                    priceSnapshot = service ? service.price : 0;
+                // Calculate total price and duration for multi-service
+                let priceSnapshot = appointment.totalPrice || appointment.price;
+                let totalDuration = appointment.totalDuration;
+
+                if ((priceSnapshot === undefined || priceSnapshot === null) && serviceIds.length > 0) {
+                    const allServices = get().services;
+                    priceSnapshot = serviceIds.reduce((sum, id) => {
+                        const service = allServices.find(s => s.id === id);
+                        return sum + (service?.price || 0);
+                    }, 0);
+                    totalDuration = serviceIds.reduce((sum, id) => {
+                        const service = allServices.find(s => s.id === id);
+                        return sum + (service?.duration || 60);
+                    }, 0);
                 }
 
                 // Check for suspicious booking (client has 2+ active bookings)
@@ -234,12 +243,15 @@ export const useStore = create(
 
                 const newApp = {
                     ...appointment,
-                    price: priceSnapshot, // LOCK THE PRICE
+                    serviceIds: serviceIds, // Store array of service IDs
+                    serviceId: serviceIds[0], // Keep first for backward compatibility
+                    price: priceSnapshot,
+                    totalDuration: totalDuration,
                     id: Date.now().toString(),
-                    status: appointment.status || 'pending', // Allow status override (e.g. for Master booking)
+                    status: appointment.status || 'pending',
                     createdAt: new Date().toISOString(),
                     unreadChanges: true,
-                    suspicious: isSuspicious // Flag for master
+                    suspicious: isSuspicious
                 };
 
                 const notifications = [{

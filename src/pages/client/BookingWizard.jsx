@@ -3,10 +3,10 @@ import { useStore } from '@/store/useStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { DAYS_OF_WEEK } from '@/lib/constants';
-import { cn, formatPrice } from '@/lib/utils';
+import { cn, formatPrice, formatDuration } from '@/lib/utils';
 import { format, addDays } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Check } from 'lucide-react';
 
 import { SuccessAnimation } from '@/components/features/SuccessAnimation';
 import { DateTimeSelector } from '@/components/features/DateTimeSelector';
@@ -15,7 +15,7 @@ import { ClockWidget } from '@/components/features/ClockWidget';
 export const BookingWizard = () => {
     const { t, addAppointment, user, salonSettings, services, appointments, language, locale, workScheduleOverrides, blockedPhones } = useStore();
     const [step, setStep] = React.useState(1);
-    const [selectedService, setSelectedService] = React.useState(null);
+    const [selectedServices, setSelectedServices] = React.useState([]);
     const [selectedDate, setSelectedDate] = React.useState(null);
     const [selectedTime, setSelectedTime] = React.useState(null);
     const [showSuccess, setShowSuccess] = React.useState(false);
@@ -29,8 +29,24 @@ export const BookingWizard = () => {
         return service.name;
     };
 
+    // Toggle service selection
+    const toggleService = (service) => {
+        setSelectedServices(prev => {
+            const exists = prev.find(s => s.id === service.id);
+            if (exists) {
+                return prev.filter(s => s.id !== service.id);
+            } else {
+                return [...prev, service];
+            }
+        });
+    };
+
+    // Calculate totals for selected services
+    const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration, 0);
+    const totalPrice = selectedServices.reduce((sum, s) => sum + getPriceWithCampaign(s), 0);
+
     // Logic to calculate price with active campaign
-    const getPriceWithCampaign = (service) => {
+    function getPriceWithCampaign(service) {
         if (!service) return 0;
 
         const activeCampaign = useStore.getState().campaigns?.find(c => {
@@ -50,7 +66,7 @@ export const BookingWizard = () => {
             }
         }
         return service.price;
-    };
+    }
 
     // Booking validation
     const validateBooking = () => {
@@ -75,34 +91,22 @@ export const BookingWizard = () => {
             return false;
         }
 
-        // Limit: max 2 same service per day
-        const dateStr = format(selectedDate, 'yyyy-MM-dd');
-        const sameServiceSameDay = clientActiveAppointments.filter(a =>
-            a.date === dateStr && a.serviceId === selectedService.id
-        );
-
-        if (sameServiceSameDay.length >= 2) {
-            setBookingError(t('warnings.duplicateService'));
-            return false;
-        }
-
         return true;
     };
 
     const handleBook = () => {
-        if (!selectedService || !selectedDate || !selectedTime) return;
+        if (selectedServices.length === 0 || !selectedDate || !selectedTime) return;
 
         if (!validateBooking()) return;
 
-        const finalPrice = getPriceWithCampaign(selectedService);
-
         addAppointment({
-            serviceId: selectedService.id,
+            serviceIds: selectedServices.map(s => s.id),
             date: format(selectedDate, 'yyyy-MM-dd'),
             time: selectedTime,
             clientName: user.name,
             clientPhone: user.phone,
-            price: finalPrice // Locking the discounted price
+            totalPrice: totalPrice,
+            totalDuration: totalDuration
         });
 
         setShowSuccess(true);
@@ -111,7 +115,7 @@ export const BookingWizard = () => {
     const handleSuccessComplete = () => {
         setShowSuccess(false);
         setStep(1);
-        setSelectedService(null);
+        setSelectedServices([]);
         setSelectedDate(null);
         setSelectedTime(null);
     };
@@ -128,7 +132,7 @@ export const BookingWizard = () => {
             {step === 1 && (
                 <div className="space-y-4">
                     <h2 className="text-lg font-semibold">{t('booking.selectService')}</h2>
-                    <div className="grid gap-4">
+                    <div className="grid gap-3">
                         {services.map((service) => {
                             // Campaign Logic
                             const activeCampaign = useStore.getState().campaigns?.find(c => {
@@ -152,32 +156,68 @@ export const BookingWizard = () => {
                                 }
                             }
 
+                            const isSelected = selectedServices.some(s => s.id === service.id);
+
                             return (
-                                <Card
+                                <div
                                     key={service.id}
-                                    className={cn("cursor-pointer transition-colors hover:border-primary", selectedService?.id === service.id && "border-primary bg-accent")}
-                                    onClick={() => {
-                                        setSelectedService(service);
-                                        setStep(2); // Auto-advance
-                                    }}
+                                    className={cn(
+                                        "p-4 rounded-lg border-2 cursor-pointer transition-all flex items-center gap-4",
+                                        isSelected
+                                            ? "border-primary bg-primary/5"
+                                            : "border-border hover:border-primary/50"
+                                    )}
+                                    onClick={() => toggleService(service)}
                                 >
-                                    <CardContent className="p-4 flex justify-between items-center">
-                                        <div>
-                                            <div className="font-bold flex items-center gap-2">
-                                                {getServiceName(service)}
-                                                {activeCampaign && <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">{activeCampaign.name}</span>}
-                                            </div>
-                                            <div className="text-sm text-muted-foreground">{service.duration} {t('common.min')}</div>
+                                    {/* Checkbox */}
+                                    <div className={cn(
+                                        "w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors shrink-0",
+                                        isSelected
+                                            ? "bg-primary border-primary text-primary-foreground"
+                                            : "border-muted-foreground"
+                                    )}>
+                                        {isSelected && <Check className="w-4 h-4" />}
+                                    </div>
+
+                                    {/* Service Info */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="font-bold flex items-center gap-2 flex-wrap">
+                                            {getServiceName(service)}
+                                            {activeCampaign && <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">{activeCampaign.name}</span>}
                                         </div>
-                                        <div className="text-right">
-                                            <div className={cn("font-bold", oldPrice && "text-red-500")}>{formatPrice(finalPrice)} ₸</div>
-                                            {oldPrice && <div className="text-xs text-muted-foreground line-through">{formatPrice(oldPrice)} ₸</div>}
-                                        </div>
-                                    </CardContent>
-                                </Card>
+                                        <div className="text-sm text-muted-foreground">{formatDuration(service.duration, t)}</div>
+                                    </div>
+
+                                    {/* Price */}
+                                    <div className="text-right shrink-0">
+                                        <div className={cn("font-bold", oldPrice && "text-red-500")}>{formatPrice(finalPrice)} ₸</div>
+                                        {oldPrice && <div className="text-xs text-muted-foreground line-through">{formatPrice(oldPrice)} ₸</div>}
+                                    </div>
+                                </div>
                             )
                         })}
                     </div>
+
+                    {/* Summary Card */}
+                    {selectedServices.length > 0 && (
+                        <Card className="bg-accent/50 border-primary/20">
+                            <CardContent className="p-4">
+                                <div className="flex justify-between items-center">
+                                    <div>
+                                        <div className="text-sm text-muted-foreground">
+                                            {t('common.selected')}: {selectedServices.length} {t('common.services')}
+                                        </div>
+                                        <div className="font-bold text-lg">
+                                            {formatDuration(totalDuration, t)} • {formatPrice(totalPrice)} ₸
+                                        </div>
+                                    </div>
+                                    <Button onClick={() => setStep(2)} size="lg">
+                                        {t('common.next')} →
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
                 </div>
             )}
 
@@ -193,6 +233,7 @@ export const BookingWizard = () => {
                         appointments={appointments}
                         services={services}
                         workScheduleOverrides={workScheduleOverrides}
+                        serviceDuration={totalDuration}
                     />
 
                     <div className="flex gap-2 mt-6">
@@ -211,12 +252,20 @@ export const BookingWizard = () => {
                 <div className="space-y-4">
                     <h2 className="text-lg font-semibold">{t('booking.confirmBooking')}</h2>
                     <Card>
-                        <CardContent className="p-4 space-y-2">
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">{t('booking.service')}:</span>
-                                <span className="font-medium">{getServiceName(selectedService)}</span>
+                        <CardContent className="p-4 space-y-3">
+                            {/* Services List */}
+                            <div>
+                                <span className="text-muted-foreground text-sm">{t('booking.service')}:</span>
+                                <div className="mt-1 space-y-1">
+                                    {selectedServices.map(s => (
+                                        <div key={s.id} className="flex justify-between">
+                                            <span className="font-medium">{getServiceName(s)}</span>
+                                            <span className="text-muted-foreground text-sm">{formatDuration(s.duration, t)}</span>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                            <div className="flex justify-between">
+                            <div className="border-t pt-2 flex justify-between">
                                 <span className="text-muted-foreground">{t('booking.date')}:</span>
                                 <span className="font-medium capitalize">{selectedDate && format(selectedDate, 'd MMMM yyyy', { locale: locale() })}</span>
                             </div>
@@ -224,9 +273,9 @@ export const BookingWizard = () => {
                                 <span className="text-muted-foreground">{t('booking.time')}:</span>
                                 <span className="font-medium">{selectedTime}</span>
                             </div>
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">{t('booking.price')}:</span>
-                                <span className="font-medium">{selectedService && formatPrice(getPriceWithCampaign(selectedService))} ₸</span>
+                            <div className="border-t pt-2 flex justify-between text-lg">
+                                <span className="font-bold">{t('common.total')}:</span>
+                                <span className="font-bold">{formatDuration(totalDuration, t)} • {formatPrice(totalPrice)} ₸</span>
                             </div>
                         </CardContent>
                     </Card>

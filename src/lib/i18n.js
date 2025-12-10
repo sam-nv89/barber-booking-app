@@ -17,12 +17,17 @@ export const TRANSLATIONS = {
             select: 'Выберите',
             gotIt: 'Понятно',
             min: 'мин',
+            hour: 'час',
             success: 'Успешно',
             months: 'мес.',
             for: 'на',
             month: 'месяц',
             from: 'с',
             to: 'по',
+            selected: 'Выбрано',
+            services: 'услуг',
+            total: 'Итого',
+            next: 'Далее',
         },
         roles: {
             client: 'Клиент',
@@ -240,6 +245,8 @@ export const TRANSLATIONS = {
             empty: 'Нет новых уведомлений',
             replyTitle: 'Ответ на отзыв',
             replyMessage: 'Мастер ответил на ваш отзыв',
+            suspiciousBookingTitle: '⚠️ Подозрительная запись',
+            suspiciousBookingMessage: '{clientName} уже имеет {countText}.\nНовая запись на {date} в {time}',
         }
     },
     kz: {
@@ -266,6 +273,11 @@ export const TRANSLATIONS = {
             month: 'ай',
             from: 'дан',
             to: 'дейін',
+            hour: 'сағ',
+            selected: 'Таңдалды',
+            services: 'қызмет',
+            total: 'Барлығы',
+            next: 'Келесі',
         },
         roles: {
             client: 'Клиент',
@@ -483,6 +495,8 @@ export const TRANSLATIONS = {
             empty: 'Жаңа хабарламалар жоқ',
             replyTitle: 'Пікірге жауап',
             replyMessage: 'Шебер сіздің пікіріңізге жауап берді',
+            suspiciousBookingTitle: '⚠️ Күдікті жазба',
+            suspiciousBookingMessage: '{clientName} клиентінде {count} жазба бар.\nЖаңа жазба {date} сағат {time}',
         }
     },
     en: {
@@ -509,6 +523,11 @@ export const TRANSLATIONS = {
             month: 'month',
             from: 'from',
             to: 'to',
+            hour: 'hr',
+            selected: 'Selected',
+            services: 'services',
+            total: 'Total',
+            next: 'Next',
         },
         roles: {
             client: 'Client',
@@ -726,6 +745,8 @@ export const TRANSLATIONS = {
             empty: 'No new notifications',
             replyTitle: 'Reply to Review',
             replyMessage: 'Master replied to your review',
+            suspiciousBookingTitle: '⚠️ Suspicious Booking',
+            suspiciousBookingMessage: '{clientName} already has {count} bookings.\nNew booking on {date} at {time}',
         }
     }
 };

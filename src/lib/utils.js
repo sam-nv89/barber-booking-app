@@ -10,6 +10,52 @@ export const formatPrice = (price) => {
     return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 };
 
+// Format duration: 60 -> "1 час", 90 -> "1 час 30 мин", 30 -> "30 мин"
+// With proper pluralization for Russian
+export const formatDuration = (minutes, t) => {
+    if (!minutes || minutes <= 0) return '0 ' + (t ? t('common.min') : 'мин');
+
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+
+    // Detect language from t('common.min')
+    const minWord = t ? t('common.min') : 'мин';
+    const isRu = minWord === 'мин';
+    const isKz = minWord === 'мин' && t && t('common.hour') === 'сағ';
+
+    // Russian pluralization helper
+    const pluralizeRu = (n, one, two, five) => {
+        const mod10 = n % 10;
+        const mod100 = n % 100;
+        if (mod100 >= 11 && mod100 <= 14) return five;
+        if (mod10 === 1) return one;
+        if (mod10 >= 2 && mod10 <= 4) return two;
+        return five;
+    };
+
+    let hourStr = '', minStr = '';
+
+    if (hours > 0) {
+        if (isRu && !isKz) {
+            hourStr = `${hours} ${pluralizeRu(hours, 'час', 'часа', 'часов')}`;
+        } else {
+            hourStr = `${hours} ${t ? t('common.hour') : 'hr'}`;
+        }
+    }
+
+    if (mins > 0) {
+        if (isRu && !isKz) {
+            minStr = `${mins} ${pluralizeRu(mins, 'минута', 'минуты', 'минут')}`;
+        } else {
+            minStr = `${mins} ${t ? t('common.min') : 'min'}`;
+        }
+    }
+
+    if (hours === 0) return minStr;
+    if (mins === 0) return hourStr;
+    return `${hourStr} ${minStr}`;
+};
+
 export const formatPhoneNumber = (value) => {
     if (!value) return value;
     const phoneNumber = value.replace(/\D/g, '');
@@ -40,7 +86,7 @@ export const timeToMinutes = (time) => {
     return h * 60 + m;
 };
 
-export const getSlotsForDate = (date, salonSettings, appointments = [], services = [], workScheduleOverrides = {}) => {
+export const getSlotsForDate = (date, salonSettings, appointments = [], services = [], workScheduleOverrides = {}, serviceDuration = 60) => {
     if (!date || !salonSettings) return [];
 
     const dateStr = date.toISOString().split('T')[0];
@@ -80,35 +126,47 @@ export const getSlotsForDate = (date, salonSettings, appointments = [], services
     const slots = [];
     const startHour = parseInt(schedule.start.split(':')[0]);
     const endHour = parseInt(schedule.end.split(':')[0]);
+    const endMinutes = timeToMinutes(schedule.end);
 
     for (let h = startHour; h < endHour; h++) {
         slots.push(`${h.toString().padStart(2, '0')}:00`);
     }
 
     // 3. Filter Availability
+    const buffer = salonSettings.bufferTime || 0;
+
     const finalSlots = slots.filter(slot => {
-        // A. Check Breaks
+        const slotStartMin = timeToMinutes(slot);
+        const slotEndMin = slotStartMin + serviceDuration + buffer;
+
+        // A. Check if slot fits within working hours
+        if (slotEndMin > endMinutes) return false;
+
+        // B. Check Breaks
         if (schedule.breaks?.length) {
             for (const brk of schedule.breaks) {
-                if (slot >= brk.start && slot < brk.end) return false;
+                const brkStart = timeToMinutes(brk.start);
+                const brkEnd = timeToMinutes(brk.end);
+                // Slot conflicts with break if slot overlaps with break time
+                if (slotStartMin < brkEnd && slotEndMin > brkStart) return false;
             }
         }
 
-        // B. Check Appointments (with Buffer)
-        const daysAppointments = appointments.filter(a => a.date === dateStr);
+        // C. Check Appointments (with Buffer)
+        const daysAppointments = appointments.filter(a => a.date === dateStr && a.status !== 'cancelled');
         for (const appt of daysAppointments) {
-            // Find service duration
-            const service = services.find(s => s.id === appt.serviceId);
-            const duration = service?.duration || 60; // default 60 min if service not found
-            const buffer = salonSettings.bufferTime || 0;
+            // Find service duration - support both single service and multi-service
+            let apptDuration = appt.totalDuration;
+            if (!apptDuration) {
+                const service = services.find(s => s.id === appt.serviceId);
+                apptDuration = service?.duration || 60;
+            }
 
             const apptStartMin = timeToMinutes(appt.time);
-            const apptEndMin = apptStartMin + duration + buffer;
+            const apptEndMin = apptStartMin + apptDuration + buffer;
 
-            const slotStartMin = timeToMinutes(slot);
-
-            // Strict Block: If the slot START time falls within the [ApptStart, ApptEnd + Buffer) range
-            if (slotStartMin >= apptStartMin && slotStartMin < apptEndMin) return false;
+            // Check if slot overlaps with appointment
+            if (slotStartMin < apptEndMin && slotEndMin > apptStartMin) return false;
         }
 
         return true;

@@ -6,7 +6,7 @@ import { ru, enUS } from 'date-fns/locale';
 import { useStore } from '@/store/useStore';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-export const DateTimeSelector = ({ selectedDate, onDateSelect, selectedTime, onTimeSelect, salonSettings, appointments = [], services = [], workScheduleOverrides = {} }) => {
+export const DateTimeSelector = ({ selectedDate, onDateSelect, selectedTime, onTimeSelect, salonSettings, appointments = [], services = [], workScheduleOverrides = {}, serviceDuration = 60 }) => {
     const { t, language } = useStore();
     const [currentMonth, setCurrentMonth] = React.useState(new Date());
 
@@ -18,8 +18,8 @@ export const DateTimeSelector = ({ selectedDate, onDateSelect, selectedTime, onT
     const maxDate = addMonths(today, bookingPeriodMonths);
 
     const availableTimes = React.useMemo(() => {
-        return getSlotsForDate(selectedDate, salonSettings, appointments, services, workScheduleOverrides);
-    }, [selectedDate, salonSettings, appointments, services, workScheduleOverrides]);
+        return getSlotsForDate(selectedDate, salonSettings, appointments, services, workScheduleOverrides, serviceDuration);
+    }, [selectedDate, salonSettings, appointments, services, workScheduleOverrides, serviceDuration]);
 
     // Generate calendar days for current month view
     const monthStart = startOfMonth(currentMonth);

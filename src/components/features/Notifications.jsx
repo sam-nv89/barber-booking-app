@@ -38,6 +38,16 @@ export const Notifications = () => {
         }
     };
 
+    // Russian pluralization for bookings count
+    const pluralizeBookings = (count) => {
+        const mod10 = count % 10;
+        const mod100 = count % 100;
+        if (mod100 >= 11 && mod100 <= 14) return `${count} записей`;
+        if (mod10 === 1) return `${count} запись`;
+        if (mod10 >= 2 && mod10 <= 4) return `${count} записи`;
+        return `${count} записей`;
+    };
+
     const handleNotificationClick = (notification) => {
         markNotificationAsRead(notification.id);
         setIsOpen(false);
@@ -139,11 +149,13 @@ export const Notifications = () => {
                                                             {formatDistanceToNow(new Date(notification.date), { addSuffix: true, locale: locale() })}
                                                         </span>
                                                     </div>
-                                                    <p className="text-xs text-muted-foreground line-clamp-2">
+                                                    <p className="text-xs text-muted-foreground line-clamp-3 whitespace-pre-line">
                                                         {notification.messageKey
                                                             ? t(notification.messageKey).replace('{clientName}', notification.params?.clientName || '')
                                                                 .replace('{date}', notification.params?.date || '')
                                                                 .replace('{time}', notification.params?.time || '')
+                                                                .replace('{countText}', pluralizeBookings(notification.params?.count || 0))
+                                                                .replace('{count}', notification.params?.count || '')
                                                                 .replace('{rating}', '⭐'.repeat(notification.params?.rating || 0))
                                                             : notification.message}
                                                     </p>

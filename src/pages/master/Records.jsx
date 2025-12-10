@@ -33,6 +33,32 @@ export const Records = () => {
         return service.name;
     };
 
+    // Get all service names for multi-service appointments
+    const getServiceNames = (app) => {
+        const allServices = useStore.getState().services;
+
+        // Support both new serviceIds[] and legacy serviceId
+        const ids = app.serviceIds || (app.serviceId ? [app.serviceId] : []);
+
+        if (ids.length === 0) return t('booking.service');
+
+        return ids.map(id => {
+            const service = allServices.find(s => s.id === id);
+            return getServiceName(service);
+        }).filter(Boolean).join(' + ');
+    };
+
+    // Get appointment price with fallback calculation
+    const getAppointmentPrice = (app) => {
+        if (app.price) return app.price;
+        const allServices = useStore.getState().services;
+        const ids = app.serviceIds || (app.serviceId ? [app.serviceId] : []);
+        return ids.reduce((sum, id) => {
+            const service = allServices.find(s => s.id === id);
+            return sum + (service?.price || 0);
+        }, 0);
+    };
+
     // Handle navigation
     useEffect(() => {
         if (location.state?.highlightId) {
@@ -115,7 +141,7 @@ export const Records = () => {
                                 </div>
 
                                 <div className="flex justify-between items-center bg-muted p-2 rounded">
-                                    <span className="text-sm">{getServiceName(service)} - {formatPrice(app.price || service?.price || 0)} ₸</span>
+                                    <span className="text-sm">{getServiceNames(app)} • {formatPrice(getAppointmentPrice(app))} ₸</span>
                                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => {
                                         e.stopPropagation();
                                         setChatOpen(app.id);

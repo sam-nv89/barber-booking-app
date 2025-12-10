@@ -3,19 +3,18 @@ import { useStore } from '@/store/useStore';
 import { Button } from '@/components/ui/Button';
 import { DateTimeSelector } from '@/components/features/DateTimeSelector';
 import { format } from 'date-fns';
-import { formatPrice, formatPhoneNumber } from '@/lib/utils';
-import { User, Phone, Calendar, Scissors, Calculator } from 'lucide-react';
+import { formatPrice, formatPhoneNumber, formatDuration } from '@/lib/utils';
+import { User, Phone, Calendar, Scissors, Check } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export const MasterBookingModal = ({ onClose }) => {
     const { services, addAppointment, appointments, t, salonSettings, language, locale, workScheduleOverrides } = useStore();
 
-    const [selectedServiceId, setSelectedServiceId] = React.useState('');
+    const [selectedServices, setSelectedServices] = React.useState([]);
     const [selectedDate, setSelectedDate] = React.useState(null);
     const [selectedTime, setSelectedTime] = React.useState(null);
     const [clientName, setClientName] = React.useState('');
     const [clientPhone, setClientPhone] = React.useState('');
-
-    const selectedService = services.find(s => s.id === selectedServiceId);
 
     const getServiceName = (service) => {
         if (!service) return '';
@@ -25,16 +24,33 @@ export const MasterBookingModal = ({ onClose }) => {
         return service.name;
     };
 
+    // Toggle service selection
+    const toggleService = (service) => {
+        setSelectedServices(prev => {
+            const exists = prev.find(s => s.id === service.id);
+            if (exists) {
+                return prev.filter(s => s.id !== service.id);
+            } else {
+                return [...prev, service];
+            }
+        });
+    };
+
+    // Calculate totals
+    const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration, 0);
+    const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
+
     const handleSave = () => {
-        if (!selectedService || !selectedDate || !selectedTime || !clientName) return;
+        if (selectedServices.length === 0 || !selectedDate || !selectedTime || !clientName) return;
 
         addAppointment({
-            serviceId: selectedService.id,
+            serviceIds: selectedServices.map(s => s.id),
             date: format(selectedDate, 'yyyy-MM-dd'),
             time: selectedTime,
             clientName,
             clientPhone,
-            price: selectedService.price,
+            totalPrice: totalPrice,
+            totalDuration: totalDuration,
             status: 'confirmed' // Auto-confirm since Master is booking
         });
         onClose();
@@ -43,24 +59,57 @@ export const MasterBookingModal = ({ onClose }) => {
     return (
         <div className="space-y-6">
             <div className="space-y-4">
-                {/* Service Selection */}
+                {/* Service Selection with Checkboxes */}
                 <div className="space-y-2">
                     <label className="text-sm font-medium flex items-center gap-2">
                         <Scissors className="w-4 h-4" />
                         {t('booking.selectService')}
                     </label>
-                    <select
-                        className="w-full p-2 border rounded-md bg-background"
-                        value={selectedServiceId}
-                        onChange={(e) => setSelectedServiceId(e.target.value)}
-                    >
-                        <option value="">{t('common.select')}</option>
-                        {services.map(service => (
-                            <option key={service.id} value={service.id}>
-                                {getServiceName(service)} - {formatPrice(service.price)} ₸
-                            </option>
-                        ))}
-                    </select>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {services.map(service => {
+                            const isSelected = selectedServices.some(s => s.id === service.id);
+                            return (
+                                <div
+                                    key={service.id}
+                                    className={cn(
+                                        "p-3 rounded-lg border-2 cursor-pointer transition-all flex items-center gap-3",
+                                        isSelected
+                                            ? "border-primary bg-primary/5"
+                                            : "border-border hover:border-primary/50"
+                                    )}
+                                    onClick={() => toggleService(service)}
+                                >
+                                    {/* Checkbox */}
+                                    <div className={cn(
+                                        "w-5 h-5 rounded border-2 flex items-center justify-center transition-colors shrink-0",
+                                        isSelected
+                                            ? "bg-primary border-primary text-primary-foreground"
+                                            : "border-muted-foreground"
+                                    )}>
+                                        {isSelected && <Check className="w-3 h-3" />}
+                                    </div>
+
+                                    {/* Service Info */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="font-medium text-sm">{getServiceName(service)}</div>
+                                        <div className="text-xs text-muted-foreground">{formatDuration(service.duration, t)}</div>
+                                    </div>
+
+                                    {/* Price */}
+                                    <div className="font-medium text-sm shrink-0">
+                                        {formatPrice(service.price)} ₸
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Selected Summary */}
+                    {selectedServices.length > 0 && (
+                        <div className="text-sm text-muted-foreground bg-muted p-2 rounded">
+                            {t('common.selected')}: {selectedServices.length} • {formatDuration(totalDuration, t)} • {formatPrice(totalPrice)} ₸
+                        </div>
+                    )}
                 </div>
 
                 {/* Date & Time */}
@@ -79,6 +128,7 @@ export const MasterBookingModal = ({ onClose }) => {
                             appointments={appointments}
                             services={services}
                             workScheduleOverrides={workScheduleOverrides}
+                            serviceDuration={totalDuration || 60}
                         />
                     </div>
                 </div>
@@ -111,11 +161,11 @@ export const MasterBookingModal = ({ onClose }) => {
                 </div>
 
                 {/* Summary */}
-                {selectedService && selectedDate && selectedTime && (
+                {selectedServices.length > 0 && selectedDate && selectedTime && (
                     <div className="bg-muted p-4 rounded-md space-y-2 text-sm">
                         <div className="flex justify-between font-medium">
-                            <span>{t('booking.total')}:</span>
-                            <span>{formatPrice(selectedService.price)} ₸</span>
+                            <span>{t('common.total')}:</span>
+                            <span>{formatDuration(totalDuration, t)} • {formatPrice(totalPrice)} ₸</span>
                         </div>
                         <div className="text-muted-foreground text-xs">
                             {format(selectedDate, 'd MMMM yyyy', { locale: locale() })} {t('common.at')} {selectedTime}
@@ -131,7 +181,7 @@ export const MasterBookingModal = ({ onClose }) => {
                 <Button
                     className="flex-1"
                     onClick={handleSave}
-                    disabled={!selectedServiceId || !selectedDate || !selectedTime || !clientName}
+                    disabled={selectedServices.length === 0 || !selectedDate || !selectedTime || !clientName}
                 >
                     {t('common.save')}
                 </Button>
