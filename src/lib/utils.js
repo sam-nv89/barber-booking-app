@@ -40,28 +40,40 @@ export const timeToMinutes = (time) => {
     return h * 60 + m;
 };
 
-export const getSlotsForDate = (date, salonSettings, appointments = [], services = []) => {
-    if (!date || !salonSettings || !salonSettings.schedule) return [];
+export const getSlotsForDate = (date, salonSettings, appointments = [], services = [], workScheduleOverrides = {}) => {
+    if (!date || !salonSettings) return [];
 
     const dateStr = date.toISOString().split('T')[0];
     const daysMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const dayKey = daysMap[date.getDay()];
 
-    // 1. Determine Schedule (Weekly vs Override)
-    let schedule = { ...salonSettings.schedule[dayKey] };
-    const override = salonSettings.workScheduleOverrides?.[dateStr];
+    // 1. Determine Schedule based on mode
+    let schedule = { start: '', end: '', breaks: [] };
+    const override = workScheduleOverrides[dateStr];
 
-    if (override) {
-        if (!override.isWorking) return []; // Explicitly OFF by override
-
-        // If ON by override, but weekly was OFF, use fallback defaults
-        if (!schedule.start) {
-            schedule = { start: '10:00', end: '20:00', breaks: [] };
-        }
-        // Note: We currently don't support custom hours in overrides, only ON/OFF status
+    if (salonSettings.scheduleMode === 'shift') {
+        // In shift mode, ONLY use overrides
+        if (!override || !override.isWorking) return []; // No override or OFF
+        // Use hours from override (which come from shiftPattern)
+        schedule = {
+            start: override.start || salonSettings.shiftPattern?.workHours?.start || '10:00',
+            end: override.end || salonSettings.shiftPattern?.workHours?.end || '20:00',
+            breaks: override.breaks || []
+        };
     } else {
-        // No override, enforce weekly schedule
-        if (!schedule.start || !schedule.end) return []; // Weekly OFF
+        // Weekly mode: use weekly schedule, allow overrides for exceptions
+        schedule = { ...salonSettings.schedule[dayKey] };
+
+        if (override) {
+            if (!override.isWorking) return []; // Explicitly OFF by override
+            // Use override hours if provided
+            if (override.start && override.end) {
+                schedule = { start: override.start, end: override.end, breaks: override.breaks || [] };
+            }
+        } else {
+            // No override, use weekly schedule
+            if (!schedule.start || !schedule.end) return []; // Weekly OFF
+        }
     }
 
     // 2. Generate Raw Slots (Hourly)

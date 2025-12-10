@@ -7,7 +7,7 @@ import { formatPrice, formatPhoneNumber } from '@/lib/utils';
 import { User, Phone, Calendar, Scissors, Calculator } from 'lucide-react';
 
 export const MasterBookingModal = ({ onClose }) => {
-    const { services, addAppointment, appointments, t, salonSettings, language, locale } = useStore();
+    const { services, addAppointment, appointments, t, salonSettings, language, locale, workScheduleOverrides } = useStore();
 
     const [selectedServiceId, setSelectedServiceId] = React.useState('');
     const [selectedDate, setSelectedDate] = React.useState(null);
@@ -78,6 +78,7 @@ export const MasterBookingModal = ({ onClose }) => {
                             salonSettings={salonSettings}
                             appointments={appointments}
                             services={services}
+                            workScheduleOverrides={workScheduleOverrides}
                         />
                     </div>
                 </div>

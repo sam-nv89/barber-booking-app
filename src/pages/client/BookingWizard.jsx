@@ -6,18 +6,20 @@ import { DAYS_OF_WEEK } from '@/lib/constants';
 import { cn, formatPrice } from '@/lib/utils';
 import { format, addDays } from 'date-fns';
 import { ru } from 'date-fns/locale';
+import { AlertTriangle } from 'lucide-react';
 
 import { SuccessAnimation } from '@/components/features/SuccessAnimation';
 import { DateTimeSelector } from '@/components/features/DateTimeSelector';
 import { ClockWidget } from '@/components/features/ClockWidget';
 
 export const BookingWizard = () => {
-    const { t, addAppointment, user, salonSettings, services, appointments, language, locale } = useStore();
+    const { t, addAppointment, user, salonSettings, services, appointments, language, locale, workScheduleOverrides, blockedPhones } = useStore();
     const [step, setStep] = React.useState(1);
     const [selectedService, setSelectedService] = React.useState(null);
     const [selectedDate, setSelectedDate] = React.useState(null);
     const [selectedTime, setSelectedTime] = React.useState(null);
     const [showSuccess, setShowSuccess] = React.useState(false);
+    const [bookingError, setBookingError] = React.useState(null);
 
     const getServiceName = (service) => {
         if (!service) return '';
@@ -50,8 +52,47 @@ export const BookingWizard = () => {
         return service.price;
     };
 
+    // Booking validation
+    const validateBooking = () => {
+        setBookingError(null);
+
+        // Check blocklist
+        if (blockedPhones?.includes(user.phone)) {
+            setBookingError(t('warnings.clientBlocked'));
+            return false;
+        }
+
+        // Get active appointments for this client
+        const clientActiveAppointments = appointments.filter(a =>
+            a.clientPhone === user.phone &&
+            a.status !== 'cancelled' &&
+            a.status !== 'completed'
+        );
+
+        // Limit: max 3 active bookings
+        if (clientActiveAppointments.length >= 3) {
+            setBookingError(t('warnings.tooManyBookings').replace('{count}', clientActiveAppointments.length));
+            return false;
+        }
+
+        // Limit: max 2 same service per day
+        const dateStr = format(selectedDate, 'yyyy-MM-dd');
+        const sameServiceSameDay = clientActiveAppointments.filter(a =>
+            a.date === dateStr && a.serviceId === selectedService.id
+        );
+
+        if (sameServiceSameDay.length >= 2) {
+            setBookingError(t('warnings.duplicateService'));
+            return false;
+        }
+
+        return true;
+    };
+
     const handleBook = () => {
         if (!selectedService || !selectedDate || !selectedTime) return;
+
+        if (!validateBooking()) return;
 
         const finalPrice = getPriceWithCampaign(selectedService);
 
@@ -151,6 +192,7 @@ export const BookingWizard = () => {
                         salonSettings={salonSettings}
                         appointments={appointments}
                         services={services}
+                        workScheduleOverrides={workScheduleOverrides}
                     />
 
                     <div className="flex gap-2 mt-6">
@@ -189,11 +231,18 @@ export const BookingWizard = () => {
                         </CardContent>
                     </Card>
 
+                    {bookingError && (
+                        <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive border border-destructive/20">
+                            <AlertTriangle className="w-5 h-5 shrink-0" />
+                            <span className="text-sm">{bookingError}</span>
+                        </div>
+                    )}
+
                     <div className="flex gap-2">
-                        <Button variant="outline" className="w-full" onClick={() => setStep(2)}>
+                        <Button variant="outline" className="w-full" onClick={() => { setStep(2); setBookingError(null); }}>
                             {t('common.back')}
                         </Button>
-                        <Button className="w-full" onClick={handleBook}>
+                        <Button className="w-full" onClick={handleBook} disabled={!!bookingError}>
                             {t('booking.bookNow')}
                         </Button>
                     </div>

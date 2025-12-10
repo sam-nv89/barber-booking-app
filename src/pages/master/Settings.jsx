@@ -8,15 +8,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { cn, formatPrice, formatPhoneNumber } from '@/lib/utils';
 import { SuccessAnimation } from '@/components/features/SuccessAnimation';
 import { format } from 'date-fns';
+import { Trash2, UserX } from 'lucide-react';
 
 export const Settings = () => {
-    const { t, salonSettings, setSalonSettings, setWorkScheduleOverrides, workScheduleOverrides, language } = useStore();
+    const { t, salonSettings, setSalonSettings, setWorkScheduleOverrides, workScheduleOverrides, clearWorkScheduleOverrides, language, blockedPhones, addBlockedPhone, removeBlockedPhone } = useStore();
     const [formData, setFormData] = React.useState(salonSettings);
     const [isDirty, setIsDirty] = React.useState(false);
     const [isScheduleModalOpen, setIsScheduleModalOpen] = React.useState(false);
     const [isShiftModalOpen, setIsShiftModalOpen] = React.useState(false);
     const [scheduleData, setScheduleData] = React.useState(salonSettings.schedule);
     const [successMessage, setSuccessMessage] = React.useState(null);
+    const [pendingMode, setPendingMode] = React.useState(null); // For confirm dialog
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = React.useState(false);
+    const [newBlockedPhone, setNewBlockedPhone] = React.useState('');
 
     const handleChange = (e) => {
         let { name, value } = e.target;
@@ -36,6 +40,30 @@ export const Settings = () => {
     const handleSaveSchedule = () => {
         setSalonSettings({ ...salonSettings, schedule: scheduleData });
         setIsScheduleModalOpen(false);
+        setSuccessMessage(t('settings.scheduleSaved'));
+    };
+
+    const handleModeChange = (newMode) => {
+        if (newMode === salonSettings.scheduleMode) return;
+
+        // If switching FROM shift mode and there are overrides, show confirm
+        if (salonSettings.scheduleMode === 'shift' && Object.keys(workScheduleOverrides).length > 0) {
+            setPendingMode(newMode);
+            setIsConfirmModalOpen(true);
+        } else {
+            // Direct switch
+            setSalonSettings({ ...salonSettings, scheduleMode: newMode });
+            if (newMode === 'weekly') {
+                clearWorkScheduleOverrides();
+            }
+        }
+    };
+
+    const confirmModeChange = () => {
+        clearWorkScheduleOverrides();
+        setSalonSettings({ ...salonSettings, scheduleMode: pendingMode });
+        setIsConfirmModalOpen(false);
+        setPendingMode(null);
         setSuccessMessage(t('settings.scheduleSaved'));
     };
 
@@ -102,26 +130,149 @@ export const Settings = () => {
                     <CardTitle className="text-lg">{t('settings.schedule')}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    {days.map(day => (
-                        <div key={day.key} className="flex justify-between items-center">
-                            <span className={cn(!salonSettings.schedule[day.key].start && "text-destructive")}>{t(`days.${day.key}`)}</span>
-                            <span className={cn("text-muted-foreground", (!salonSettings.schedule[day.key].start) && "text-destructive")}>
-                                {formatScheduleDisplay(salonSettings.schedule[day.key])}
-                            </span>
+                    {/* Mode Switcher */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">{t('settings.scheduleMode')}</label>
+                        <div className="flex gap-4">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="scheduleMode"
+                                    checked={salonSettings.scheduleMode === 'weekly'}
+                                    onChange={() => handleModeChange('weekly')}
+                                    className="w-4 h-4 accent-primary"
+                                />
+                                <span className={cn(salonSettings.scheduleMode === 'weekly' && 'font-medium')}>
+                                    {t('settings.weeklyMode')}
+                                </span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="scheduleMode"
+                                    checked={salonSettings.scheduleMode === 'shift'}
+                                    onChange={() => handleModeChange('shift')}
+                                    className="w-4 h-4 accent-primary"
+                                />
+                                <span className={cn(salonSettings.scheduleMode === 'shift' && 'font-medium')}>
+                                    {t('settings.shiftMode')}
+                                </span>
+                            </label>
                         </div>
-                    ))}
-                    <div className="flex gap-2 mt-4">
-                        <Button variant="outline" className="flex-1" onClick={() => setIsScheduleModalOpen(true)}>
-                            {t('settings.editSchedule')}
-                        </Button>
-                        <Button variant="secondary" className="flex-1" onClick={() => setIsShiftModalOpen(true)}>
-                            {t('settings.shiftGenerator')}
-                        </Button>
                     </div>
+
+                    {/* Weekly Mode Content */}
+                    {salonSettings.scheduleMode === 'weekly' && (
+                        <>
+                            {days.map(day => (
+                                <div key={day.key} className="flex justify-between items-center">
+                                    <span className={cn(!salonSettings.schedule[day.key].start && "text-destructive")}>{t(`days.${day.key}`)}</span>
+                                    <span className={cn("text-muted-foreground", (!salonSettings.schedule[day.key].start) && "text-destructive")}>
+                                        {formatScheduleDisplay(salonSettings.schedule[day.key])}
+                                    </span>
+                                </div>
+                            ))}
+                            <Button variant="outline" className="w-full mt-4" onClick={() => setIsScheduleModalOpen(true)}>
+                                {t('settings.editSchedule')}
+                            </Button>
+
+                            {/* Booking Period */}
+                            <div className="space-y-2 mt-4 pt-4 border-t">
+                                <label className="text-sm font-medium">{t('settings.bookingPeriod')}</label>
+                                <p className="text-xs text-muted-foreground">{t('settings.bookingPeriodDesc')}</p>
+                                <select
+                                    value={salonSettings.bookingPeriodMonths || 1}
+                                    onChange={(e) => setSalonSettings({ ...salonSettings, bookingPeriodMonths: parseInt(e.target.value) })}
+                                    className="w-full p-2 rounded-md border bg-background"
+                                >
+                                    <option value={1}>1 {t('common.month')}</option>
+                                    <option value={3}>3 {t('common.months')}</option>
+                                    <option value={6}>6 {t('common.months')}</option>
+                                    <option value={12}>12 {t('common.months')}</option>
+                                </select>
+                            </div>
+                        </>
+                    )}
+
+                    {/* Shift Mode Content */}
+                    {salonSettings.scheduleMode === 'shift' && (
+                        <div className="space-y-3">
+                            <div className="p-3 rounded-lg bg-muted/50">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm text-muted-foreground">{t('settings.currentPattern')}</span>
+                                    <span className="font-medium">
+                                        {salonSettings.shiftPattern?.workDays || 2} {t('settings.workingDays')} / {salonSettings.shiftPattern?.offDays || 2} {t('settings.daysOff')}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between items-center mt-2">
+                                    <span className="text-sm text-muted-foreground">{t('settings.workHours')}</span>
+                                    <span className="font-medium">
+                                        {salonSettings.shiftPattern?.workHours?.start || '10:00'} - {salonSettings.shiftPattern?.workHours?.end || '20:00'}
+                                    </span>
+                                </div>
+                            </div>
+                            <Button variant="secondary" className="w-full" onClick={() => setIsShiftModalOpen(true)}>
+                                {t('settings.shiftGenerator')}
+                            </Button>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 
-            <GeneratedScheduleCalendar />
+            {/* Show calendar only in shift mode */}
+            {salonSettings.scheduleMode === 'shift' && <GeneratedScheduleCalendar />}
+
+            {/* Blocklist Management */}
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                        <UserX className="w-5 h-5" />
+                        {t('settings.blocklist')}
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="flex gap-2">
+                        <Input
+                            type="tel"
+                            placeholder={t('settings.enterPhone')}
+                            value={newBlockedPhone}
+                            onChange={(e) => setNewBlockedPhone(formatPhoneNumber(e.target.value))}
+                        />
+                        <Button
+                            variant="destructive"
+                            onClick={() => {
+                                if (newBlockedPhone.replace(/\D/g, '').length >= 10) {
+                                    addBlockedPhone(newBlockedPhone);
+                                    setNewBlockedPhone('');
+                                    setSuccessMessage(t('settings.addedToBlocklist'));
+                                }
+                            }}
+                        >
+                            {t('common.add')}
+                        </Button>
+                    </div>
+
+                    {blockedPhones.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-4">{t('settings.blocklistEmpty')}</p>
+                    ) : (
+                        <div className="space-y-2">
+                            {blockedPhones.map((phone, index) => (
+                                <div key={index} className="flex items-center justify-between p-2 rounded-md bg-destructive/10 border border-destructive/20">
+                                    <span className="text-sm font-medium">{phone}</span>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/20"
+                                        onClick={() => removeBlockedPhone(phone)}
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
 
             <ServicesManager onSuccess={setSuccessMessage} />
             <MarketingManager onSuccess={setSuccessMessage} />
@@ -179,12 +330,35 @@ export const Settings = () => {
             <ShiftGeneratorModal
                 isOpen={isShiftModalOpen}
                 onClose={() => setIsShiftModalOpen(false)}
-                onSave={(overrides) => {
+                onSave={(overrides, pattern) => {
+                    // Save both overrides and the pattern settings
                     setWorkScheduleOverrides(overrides);
+                    if (pattern) {
+                        setSalonSettings({
+                            ...salonSettings,
+                            scheduleMode: 'shift',
+                            shiftPattern: pattern
+                        });
+                    }
                     setSuccessMessage(t('settings.scheduleSaved'));
                     setIsShiftModalOpen(false);
                 }}
             />
+
+            {/* Confirm Mode Change Dialog */}
+            <Modal isOpen={isConfirmModalOpen} onClose={() => setIsConfirmModalOpen(false)} title={t('settings.confirmModeChange')}>
+                <div className="space-y-4">
+                    <p className="text-muted-foreground">{t('settings.confirmModeChangeMessage')}</p>
+                    <div className="flex gap-2">
+                        <Button variant="outline" className="flex-1" onClick={() => setIsConfirmModalOpen(false)}>
+                            {t('common.cancel')}
+                        </Button>
+                        <Button variant="destructive" className="flex-1" onClick={confirmModeChange}>
+                            {t('common.confirm')}
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
 
             {successMessage && (
                 <SuccessAnimation
@@ -197,11 +371,13 @@ export const Settings = () => {
     );
 };
 
-// Shift Generator Modal with period selection
+// Shift Generator Modal with period selection and work hours
 const ShiftGeneratorModal = ({ isOpen, onClose, onSave }) => {
     const { t, salonSettings } = useStore();
-    const [workDays, setWorkDays] = React.useState(2);
-    const [offDays, setOffDays] = React.useState(2);
+    const [workDays, setWorkDays] = React.useState(salonSettings.shiftPattern?.workDays || 2);
+    const [offDays, setOffDays] = React.useState(salonSettings.shiftPattern?.offDays || 2);
+    const [workStart, setWorkStart] = React.useState(salonSettings.shiftPattern?.workHours?.start || '10:00');
+    const [workEnd, setWorkEnd] = React.useState(salonSettings.shiftPattern?.workHours?.end || '20:00');
     const [startDate, setStartDate] = React.useState(format(new Date(), 'yyyy-MM-dd'));
     const [periodMonths, setPeriodMonths] = React.useState(3);
 
@@ -221,13 +397,19 @@ const ShiftGeneratorModal = ({ isOpen, onClose, onSave }) => {
 
             overrides[dateStr] = {
                 isWorking,
-                start: isWorking ? (salonSettings.schedule.mon?.start || '10:00') : '',
-                end: isWorking ? (salonSettings.schedule.mon?.end || '20:00') : ''
+                start: isWorking ? workStart : '',
+                end: isWorking ? workEnd : ''
             };
             dayCounter++;
         }
 
-        onSave(overrides);
+        // Pass both overrides and pattern
+        const pattern = {
+            workDays,
+            offDays,
+            workHours: { start: workStart, end: workEnd }
+        };
+        onSave(overrides, pattern);
     };
 
     return (
@@ -255,6 +437,23 @@ const ShiftGeneratorModal = ({ isOpen, onClose, onSave }) => {
                             className="w-20"
                         />
                         <span className="text-muted-foreground">{t('settings.daysOff')}</span>
+                    </div>
+                </div>
+
+                <div className="space-y-2">
+                    <label className="text-sm font-medium">{t('settings.workHours')}</label>
+                    <div className="flex items-center gap-2">
+                        <Input
+                            type="time"
+                            value={workStart}
+                            onChange={(e) => setWorkStart(e.target.value)}
+                        />
+                        <span>-</span>
+                        <Input
+                            type="time"
+                            value={workEnd}
+                            onChange={(e) => setWorkEnd(e.target.value)}
+                        />
                     </div>
                 </div>
 
@@ -617,7 +816,7 @@ const ServicesManager = ({ onSuccess }) => {
                         <div key={service.id} className="flex justify-between items-center p-3 bg-muted rounded-lg border hover:border-primary/50 transition-colors">
                             <div>
                                 <div className="font-medium">{getServiceName(service)}</div>
-                                <div className="text-sm text-muted-foreground">{service.duration} {t('services.duration').split(' ')[0]} • {formatPrice(service.price)} ₸</div>
+                                <div className="text-sm text-muted-foreground">{service.duration} {t('common.min')} • {formatPrice(service.price)} ₸</div>
                             </div>
                             <div className="flex gap-2">
                                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenEdit(service)}>

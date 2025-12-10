@@ -38,14 +38,35 @@ export const useStore = create(
                 address: 'ул. Абая 150',
                 phone: '+7 777 000 00 00',
                 bufferTime: 0, // minutes
+                bookingPeriodMonths: 1, // How far ahead clients can book: 1, 3, 6, 12
+                scheduleMode: 'weekly', // 'weekly' | 'shift'
+                shiftPattern: {
+                    workDays: 2,
+                    offDays: 2,
+                    workHours: { start: '10:00', end: '20:00' }
+                },
                 schedule: DEFAULT_SCHEDULE
             },
             setSalonSettings: (settings) => set((state) => ({ salonSettings: { ...state.salonSettings, ...settings } })),
 
+            // Blocklist for anti-fraud
+            blockedPhones: [],
+            addBlockedPhone: (phone) => set((state) => ({
+                blockedPhones: state.blockedPhones.includes(phone)
+                    ? state.blockedPhones
+                    : [...state.blockedPhones, phone]
+            })),
+            removeBlockedPhone: (phone) => set((state) => ({
+                blockedPhones: state.blockedPhones.filter(p => p !== phone)
+            })),
+
             // Advanced Schedule State
-            workScheduleOverrides: {}, // { 'YYYY-MM-DD': { isWorking: boolean, start, end, breaks: [] } }
+            workScheduleOverrides: {}, // { 'YYYY-MM-DD': { isWorking: boolean, start, end } }
             setWorkScheduleOverrides: (overrides) => set((state) => ({
                 workScheduleOverrides: { ...state.workScheduleOverrides, ...overrides }
+            })),
+            updateSingleOverride: (dateStr, override) => set((state) => ({
+                workScheduleOverrides: { ...state.workScheduleOverrides, [dateStr]: override }
             })),
             clearWorkScheduleOverrides: () => set({ workScheduleOverrides: {} }),
 
@@ -203,33 +224,51 @@ export const useStore = create(
                     priceSnapshot = service ? service.price : 0;
                 }
 
+                // Check for suspicious booking (client has 2+ active bookings)
+                const clientActiveBookings = get().appointments.filter(a =>
+                    a.clientPhone === appointment.clientPhone &&
+                    a.status !== 'cancelled' &&
+                    a.status !== 'completed'
+                );
+                const isSuspicious = clientActiveBookings.length >= 2;
+
                 const newApp = {
                     ...appointment,
                     price: priceSnapshot, // LOCK THE PRICE
                     id: Date.now().toString(),
                     status: appointment.status || 'pending', // Allow status override (e.g. for Master booking)
                     createdAt: new Date().toISOString(),
-                    unreadChanges: true
+                    unreadChanges: true,
+                    suspicious: isSuspicious // Flag for master
                 };
+
+                const notifications = [{
+                    id: Date.now().toString(),
+                    type: isSuspicious ? 'warning' : 'new',
+                    recipient: 'master',
+                    appointmentId: newApp.id,
+                    titleKey: isSuspicious ? 'notifications.suspiciousBookingTitle' : 'notifications.newBookingTitle',
+                    messageKey: isSuspicious ? 'notifications.suspiciousBookingMessage' : 'notifications.newBookingMessage',
+                    params: {
+                        clientName: appointment.clientName,
+                        date: appointment.date,
+                        time: appointment.time,
+                        count: clientActiveBookings.length + 1
+                    },
+
+                    // Fallback for old system
+                    title: isSuspicious ? '⚠️ Подозрительная запись' : 'Новая заявка',
+                    message: isSuspicious
+                        ? `${appointment.clientName} уже имеет ${clientActiveBookings.length} записей. Новая на ${appointment.date} ${appointment.time}`
+                        : `Новая запись от ${appointment.clientName} на ${appointment.date} ${appointment.time}`,
+
+                    date: new Date().toISOString(),
+                    read: false
+                }];
 
                 set((state) => ({
                     appointments: [...state.appointments, newApp],
-                    notifications: [{
-                        id: Date.now().toString(),
-                        type: 'new',
-                        recipient: 'master',
-                        appointmentId: newApp.id,
-                        titleKey: 'notifications.newBookingTitle',
-                        messageKey: 'notifications.newBookingMessage',
-                        params: { clientName: appointment.clientName, date: appointment.date, time: appointment.time },
-
-                        // Fallback for old system
-                        title: 'Новая заявка',
-                        message: `Новая запись от ${appointment.clientName} на ${appointment.date} ${appointment.time}`,
-
-                        date: new Date().toISOString(),
-                        read: false
-                    }, ...state.notifications]
+                    notifications: [...notifications, ...state.notifications]
                 }));
             },
             updateAppointmentStatus: (id, status) => set((state) => {
@@ -373,7 +412,9 @@ export const useStore = create(
                 services: state.services,
                 campaigns: state.campaigns,
                 reviews: state.reviews,
-                dismissedPrompts: state.dismissedPrompts
+                dismissedPrompts: state.dismissedPrompts,
+                blockedPhones: state.blockedPhones,
+                workScheduleOverrides: state.workScheduleOverrides
             }),
         }
     )

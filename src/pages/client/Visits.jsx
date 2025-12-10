@@ -14,7 +14,7 @@ import { format } from 'date-fns';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 
 export const Visits = () => {
-    const { appointments, t, user, updateAppointmentStatus, updateAppointment, salonSettings, language, locale } = useStore();
+    const { appointments, t, user, updateAppointmentStatus, updateAppointment, salonSettings, language, locale, services, workScheduleOverrides } = useStore();
     const location = useLocation();
     const [activeTab, setActiveTab] = React.useState('upcoming');
     const [chatOpen, setChatOpen] = React.useState(null);
@@ -266,6 +266,9 @@ export const Visits = () => {
                         selectedTime={newTime}
                         onTimeSelect={setNewTime}
                         salonSettings={salonSettings}
+                        appointments={appointments}
+                        services={services}
+                        workScheduleOverrides={workScheduleOverrides}
                     />
                     <Button className="w-full" onClick={handleRescheduleConfirm} disabled={!newDate || !newTime}>
                         {t('visits.confirmReschedule')}
