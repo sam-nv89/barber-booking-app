@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { cn, formatPrice, formatPhoneNumber } from '@/lib/utils';
 import { SuccessAnimation } from '@/components/features/SuccessAnimation';
 import { format } from 'date-fns';
-import { Trash2, UserX } from 'lucide-react';
+import { Trash2, UserX, Plus, Clock } from 'lucide-react';
 
 export const Settings = () => {
     const { t, salonSettings, setSalonSettings, setWorkScheduleOverrides, workScheduleOverrides, clearWorkScheduleOverrides, language, blockedPhones, addBlockedPhone, removeBlockedPhone } = useStore();
@@ -71,10 +71,51 @@ export const Settings = () => {
         setScheduleData(prev => {
             const current = prev[day];
             if (current.start && current.end) {
-                return { ...prev, [day]: { start: '', end: '' } };
+                return { ...prev, [day]: { start: '', end: '', breaks: [] } };
             } else {
-                return { ...prev, [day]: { start: '10:00', end: '20:00' } };
+                return { ...prev, [day]: { start: '10:00', end: '20:00', breaks: [] } };
             }
+        });
+    };
+
+    // Add a break to a specific day
+    const addBreak = (day) => {
+        setScheduleData(prev => {
+            const current = prev[day];
+            const breaks = current.breaks || [];
+            return {
+                ...prev,
+                [day]: {
+                    ...current,
+                    breaks: [...breaks, { start: '13:00', end: '14:00' }]
+                }
+            };
+        });
+    };
+
+    // Remove a break from a specific day
+    const removeBreak = (day, index) => {
+        setScheduleData(prev => {
+            const current = prev[day];
+            const breaks = [...(current.breaks || [])];
+            breaks.splice(index, 1);
+            return {
+                ...prev,
+                [day]: { ...current, breaks }
+            };
+        });
+    };
+
+    // Update a break time
+    const updateBreak = (day, index, field, value) => {
+        setScheduleData(prev => {
+            const current = prev[day];
+            const breaks = [...(current.breaks || [])];
+            breaks[index] = { ...breaks[index], [field]: value };
+            return {
+                ...prev,
+                [day]: { ...current, breaks }
+            };
         });
     };
 
@@ -191,6 +232,40 @@ export const Settings = () => {
                                     <option value={12}>12 {t('common.months')}</option>
                                 </select>
                             </div>
+
+                            {/* Buffer Time */}
+                            <div className="space-y-3 mt-4 pt-4 border-t">
+                                <label className="text-sm font-medium">{t('settings.bufferTime')}</label>
+                                <p className="text-xs text-muted-foreground">{t('settings.bufferTimeDesc')}</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {[0, 5, 10, 15, 30].map(val => (
+                                        <button
+                                            key={val}
+                                            onClick={() => setSalonSettings({ ...salonSettings, bufferTime: val })}
+                                            className={cn(
+                                                "min-w-[52px] px-3 py-2 rounded-lg text-sm font-medium border-2 transition-all",
+                                                salonSettings.bufferTime === val
+                                                    ? "border-primary bg-primary text-primary-foreground shadow-md"
+                                                    : "border-border bg-card hover:bg-muted text-foreground"
+                                            )}
+                                        >
+                                            {val} {t('common.min')}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
+                                    <span className="text-sm text-muted-foreground">{t('settings.customValue')}:</span>
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        max="120"
+                                        value={salonSettings.bufferTime || 0}
+                                        onChange={(e) => setSalonSettings({ ...salonSettings, bufferTime: parseInt(e.target.value) || 0 })}
+                                        className="w-20 h-9 text-center font-medium"
+                                    />
+                                    <span className="text-sm text-muted-foreground">{t('common.min')}</span>
+                                </div>
+                            </div>
                         </>
                     )}
 
@@ -214,6 +289,40 @@ export const Settings = () => {
                             <Button variant="secondary" className="w-full" onClick={() => setIsShiftModalOpen(true)}>
                                 {t('settings.shiftGenerator')}
                             </Button>
+
+                            {/* Buffer Time */}
+                            <div className="space-y-3 mt-4 pt-4 border-t">
+                                <label className="text-sm font-medium">{t('settings.bufferTime')}</label>
+                                <p className="text-xs text-muted-foreground">{t('settings.bufferTimeDesc')}</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {[0, 5, 10, 15, 30].map(val => (
+                                        <button
+                                            key={val}
+                                            onClick={() => setSalonSettings({ ...salonSettings, bufferTime: val })}
+                                            className={cn(
+                                                "min-w-[52px] px-3 py-2 rounded-lg text-sm font-medium border-2 transition-all",
+                                                salonSettings.bufferTime === val
+                                                    ? "border-primary bg-primary text-primary-foreground shadow-md"
+                                                    : "border-border bg-card hover:bg-muted text-foreground"
+                                            )}
+                                        >
+                                            {val} {t('common.min')}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
+                                    <span className="text-sm text-muted-foreground">{t('settings.customValue')}:</span>
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        max="120"
+                                        value={salonSettings.bufferTime || 0}
+                                        onChange={(e) => setSalonSettings({ ...salonSettings, bufferTime: parseInt(e.target.value) || 0 })}
+                                        className="w-20 h-9 text-center font-medium"
+                                    />
+                                    <span className="text-sm text-muted-foreground">{t('common.min')}</span>
+                                </div>
+                            </div>
                         </div>
                     )}
                 </CardContent>
@@ -302,20 +411,66 @@ export const Settings = () => {
                                     {t('settings.dayOff')}
                                 </div>
                             ) : (
-                                <div className="flex gap-2 items-center">
-                                    <Input
-                                        type="time"
-                                        list="time-options"
-                                        value={scheduleData[day.key].start}
-                                        onChange={(e) => setScheduleData({ ...scheduleData, [day.key]: { ...scheduleData[day.key], start: e.target.value } })}
-                                    />
-                                    <span>-</span>
-                                    <Input
-                                        type="time"
-                                        list="time-options"
-                                        value={scheduleData[day.key].end}
-                                        onChange={(e) => setScheduleData({ ...scheduleData, [day.key]: { ...scheduleData[day.key], end: e.target.value } })}
-                                    />
+                                <div className="space-y-3">
+                                    {/* Work hours */}
+                                    <div className="flex gap-2 items-center">
+                                        <Input
+                                            type="time"
+                                            list="time-options"
+                                            value={scheduleData[day.key].start}
+                                            onChange={(e) => setScheduleData({ ...scheduleData, [day.key]: { ...scheduleData[day.key], start: e.target.value } })}
+                                        />
+                                        <span>-</span>
+                                        <Input
+                                            type="time"
+                                            list="time-options"
+                                            value={scheduleData[day.key].end}
+                                            onChange={(e) => setScheduleData({ ...scheduleData, [day.key]: { ...scheduleData[day.key], end: e.target.value } })}
+                                        />
+                                    </div>
+
+                                    {/* Breaks */}
+                                    {(scheduleData[day.key].breaks || []).length > 0 && (
+                                        <div className="space-y-2 pl-2 border-l-2 border-muted">
+                                            {scheduleData[day.key].breaks.map((brk, idx) => (
+                                                <div key={idx} className="flex gap-2 items-center">
+                                                    <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
+                                                    <Input
+                                                        type="time"
+                                                        className="w-24"
+                                                        value={brk.start}
+                                                        onChange={(e) => updateBreak(day.key, idx, 'start', e.target.value)}
+                                                    />
+                                                    <span className="text-sm">-</span>
+                                                    <Input
+                                                        type="time"
+                                                        className="w-24"
+                                                        value={brk.end}
+                                                        onChange={(e) => updateBreak(day.key, idx, 'end', e.target.value)}
+                                                    />
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-8 w-8 p-0 text-destructive"
+                                                        onClick={() => removeBreak(day.key, idx)}
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </Button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Add break button */}
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-xs gap-1"
+                                        onClick={() => addBreak(day.key)}
+                                    >
+                                        <Plus className="w-3 h-3" />
+                                        {t('settings.addBreak')}
+                                    </Button>
                                 </div>
                             )}
                         </div>
@@ -378,8 +533,16 @@ const ShiftGeneratorModal = ({ isOpen, onClose, onSave }) => {
     const [offDays, setOffDays] = React.useState(salonSettings.shiftPattern?.offDays || 2);
     const [workStart, setWorkStart] = React.useState(salonSettings.shiftPattern?.workHours?.start || '10:00');
     const [workEnd, setWorkEnd] = React.useState(salonSettings.shiftPattern?.workHours?.end || '20:00');
+    const [breaks, setBreaks] = React.useState(salonSettings.shiftPattern?.breaks || []);
     const [startDate, setStartDate] = React.useState(format(new Date(), 'yyyy-MM-dd'));
     const [periodMonths, setPeriodMonths] = React.useState(3);
+
+    // Break management
+    const addBreak = () => setBreaks(prev => [...prev, { start: '13:00', end: '14:00' }]);
+    const removeBreak = (index) => setBreaks(prev => prev.filter((_, i) => i !== index));
+    const updateBreak = (index, field, value) => {
+        setBreaks(prev => prev.map((brk, i) => i === index ? { ...brk, [field]: value } : brk));
+    };
 
     const handleGenerate = () => {
         const overrides = {};
@@ -398,7 +561,8 @@ const ShiftGeneratorModal = ({ isOpen, onClose, onSave }) => {
             overrides[dateStr] = {
                 isWorking,
                 start: isWorking ? workStart : '',
-                end: isWorking ? workEnd : ''
+                end: isWorking ? workEnd : '',
+                breaks: isWorking ? breaks : []
             };
             dayCounter++;
         }
@@ -407,7 +571,8 @@ const ShiftGeneratorModal = ({ isOpen, onClose, onSave }) => {
         const pattern = {
             workDays,
             offDays,
-            workHours: { start: workStart, end: workEnd }
+            workHours: { start: workStart, end: workEnd },
+            breaks: breaks
         };
         onSave(overrides, pattern);
     };
@@ -455,6 +620,49 @@ const ShiftGeneratorModal = ({ isOpen, onClose, onSave }) => {
                             onChange={(e) => setWorkEnd(e.target.value)}
                         />
                     </div>
+                </div>
+
+                {/* Breaks section */}
+                <div className="space-y-2">
+                    <label className="text-sm font-medium">{t('settings.breaks')}</label>
+                    {breaks.length > 0 && (
+                        <div className="space-y-2 pl-2 border-l-2 border-muted">
+                            {breaks.map((brk, idx) => (
+                                <div key={idx} className="flex gap-2 items-center">
+                                    <Input
+                                        type="time"
+                                        className="w-24"
+                                        value={brk.start}
+                                        onChange={(e) => updateBreak(idx, 'start', e.target.value)}
+                                    />
+                                    <span className="text-sm">-</span>
+                                    <Input
+                                        type="time"
+                                        className="w-24"
+                                        value={brk.end}
+                                        onChange={(e) => updateBreak(idx, 'end', e.target.value)}
+                                    />
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-8 w-8 p-0 text-destructive"
+                                        onClick={() => removeBreak(idx)}
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs gap-1"
+                        onClick={addBreak}
+                    >
+                        <Plus className="w-3 h-3" />
+                        {t('settings.addBreak')}
+                    </Button>
                 </div>
 
                 <div className="space-y-2">
