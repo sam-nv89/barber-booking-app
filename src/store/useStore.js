@@ -122,6 +122,22 @@ export const useStore = create(
                 notifications: state.notifications.map(n => (n.recipient === role || !n.recipient) ? { ...n, read: true } : n)
             })),
 
+            // CRM Clients
+            clients: [],
+            addClient: (client) => set((state) => ({
+                clients: [...(state.clients || []), {
+                    ...client,
+                    id: client.id || Date.now().toString(),
+                    createdAt: new Date().toISOString()
+                }]
+            })),
+            removeClient: (id) => set((state) => ({
+                clients: (state.clients || []).filter(c => c.id !== id)
+            })),
+            updateClient: (id, updates) => set((state) => ({
+                clients: (state.clients || []).map(c => c.id === id ? { ...c, ...updates } : c)
+            })),
+
             // Review Actions
             addReview: (review) => {
                 const existingReview = get().reviews.find(r => r.appointmentId === review.appointmentId);
@@ -278,10 +294,28 @@ export const useStore = create(
                     read: false
                 }];
 
-                set((state) => ({
-                    appointments: [...state.appointments, newApp],
-                    notifications: [...notifications, ...state.notifications]
-                }));
+                set((state) => {
+                    // Auto-add client to CRM if not exists
+                    const existingClient = (state.clients || []).find(c =>
+                        c.phone?.replace(/\D/g, '') === appointment.clientPhone?.replace(/\D/g, '')
+                    );
+
+                    const updatedClients = existingClient
+                        ? state.clients
+                        : [...(state.clients || []), {
+                            id: Date.now().toString(),
+                            name: appointment.clientName,
+                            phone: appointment.clientPhone,
+                            createdAt: new Date().toISOString(),
+                            source: 'booking'
+                        }];
+
+                    return {
+                        appointments: [...state.appointments, newApp],
+                        notifications: [...notifications, ...state.notifications],
+                        clients: updatedClients
+                    };
+                });
             },
             updateAppointmentStatus: (id, status) => set((state) => {
                 const app = state.appointments.find(a => a.id === id);
@@ -426,7 +460,8 @@ export const useStore = create(
                 reviews: state.reviews,
                 dismissedPrompts: state.dismissedPrompts,
                 blockedPhones: state.blockedPhones,
-                workScheduleOverrides: state.workScheduleOverrides
+                workScheduleOverrides: state.workScheduleOverrides,
+                clients: state.clients
             }),
         }
     )

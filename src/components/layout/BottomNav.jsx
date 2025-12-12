@@ -1,6 +1,6 @@
 import React from 'react';
 import { useStore } from '@/store/useStore';
-import { Calendar, User, Scissors, Settings, List, LayoutDashboard } from 'lucide-react';
+import { Calendar, User, Scissors, Settings, List, LayoutDashboard, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Link, useLocation } from 'react-router-dom';
 
@@ -17,6 +17,7 @@ export const BottomNav = () => {
     const masterLinks = [
         { href: '/master/dashboard', icon: LayoutDashboard, label: t('nav.studio') },
         { href: '/master/records', icon: List, label: t('nav.records') },
+        { href: '/master/clientlist', icon: Users, label: t('nav.clients') || 'Клиенты' },
         { href: '/master/settings', icon: Settings, label: t('nav.settings') },
     ];
 

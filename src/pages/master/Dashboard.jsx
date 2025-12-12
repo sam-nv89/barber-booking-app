@@ -9,7 +9,7 @@ import { cn, formatPrice } from '@/lib/utils';
 import { motion } from 'framer-motion';
 
 export const Dashboard = () => {
-    const { appointments, services, reviews, t } = useStore();
+    const { appointments, services, reviews, t, locale } = useStore();
     const [period, setPeriod] = useState('month'); // 'week' | 'month' | 'all'
 
     // Filter appointments based on period
@@ -58,12 +58,16 @@ export const Dashboard = () => {
 
     // Chart Data
     const chartData = useMemo(() => {
-        if (period === 'all') return [];
-
-        // Group by date
+        // Group by date for week/month, by month for 'all'
         const grouped = filteredAppointments.reduce((acc, app) => {
             if (['completed', 'confirmed'].includes(app.status)) {
-                acc[app.date] = (acc[app.date] || 0) + 1;
+                if (period === 'all') {
+                    // Group by month for 'all time'
+                    const monthKey = app.date.substring(0, 7); // YYYY-MM
+                    acc[monthKey] = (acc[monthKey] || 0) + 1;
+                } else {
+                    acc[app.date] = (acc[app.date] || 0) + 1;
+                }
             }
             return acc;
         }, {});
@@ -130,47 +134,45 @@ export const Dashboard = () => {
                 ))}
             </div>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 gap-3">
-                {statCards.map((stat, index) => {
+            {/* Stats Grid - Revenue full width, then 3 cards in one row */}
+            <Card className="overflow-hidden border-none shadow-sm">
+                <CardContent className="p-4 flex items-center justify-between">
+                    <div>
+                        <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{statCards[0].title}</div>
+                        <div className="text-3xl font-bold tracking-tight mt-1">{statCards[0].value}</div>
+                    </div>
+                    <div className={`p-3 rounded-full ${statCards[0].bg} ${statCards[0].color}`}>
+                        <CreditCard className="h-6 w-6" />
+                    </div>
+                </CardContent>
+            </Card>
+
+            <div className="grid grid-cols-3 gap-3">
+                {statCards.slice(1).map((stat, index) => {
                     const Icon = stat.icon;
                     const CardComponent = (
-                        <Card key={index} className={cn("overflow-hidden border-none shadow-sm hover:shadow-md transition-shadow", index === 0 && "col-span-2")}>
-                            <CardContent className={cn("p-4 flex items-center gap-4", index === 0 ? "flex-row justify-between" : "flex-col text-center space-y-2")}>
-                                {index === 0 ? (
-                                    <>
-                                        <div>
-                                            <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{stat.title}</div>
-                                            <div className="text-3xl font-bold tracking-tight mt-1">{stat.value}</div>
-                                        </div>
-                                        <div className={`p-3 rounded-full ${stat.bg} ${stat.color}`}>
-                                            <Icon className="h-6 w-6" />
-                                        </div>
-                                    </>
-                                ) : (
-                                    <>
-                                        <div className={`p-2 rounded-full ${stat.bg} ${stat.color}`}>
-                                            <Icon className="h-5 w-5" />
-                                        </div>
-                                        <div>
-                                            <div className="text-xl font-bold tracking-tight">{stat.value}</div>
-                                            <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{stat.title}</div>
-                                        </div>
-                                    </>
-                                )}
+                        <Card key={index} className="overflow-hidden border-none shadow-sm hover:shadow-md transition-shadow">
+                            <CardContent className="p-3 flex flex-col items-center text-center gap-2">
+                                <div className={`p-2 rounded-full ${stat.bg} ${stat.color}`}>
+                                    <Icon className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <div className="text-lg font-bold tracking-tight">{stat.value}</div>
+                                    <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{stat.title}</div>
+                                </div>
                             </CardContent>
                         </Card>
                     );
 
                     if (stat.href) {
-                        return <Link key={index} to={stat.href} className={index === 0 ? "col-span-2" : ""}>{CardComponent}</Link>;
+                        return <Link key={index} to={stat.href}>{CardComponent}</Link>;
                     }
                     return CardComponent;
                 })}
             </div>
 
             {/* Simple Bar Chart */}
-            {(period !== 'all' && chartData.length > 0) && (
+            {chartData.length > 0 && (
                 <Card>
                     <CardHeader>
                         <CardTitle className="text-lg">{t('dashboard.dynamics')}</CardTitle>
@@ -185,8 +187,8 @@ export const Dashboard = () => {
                                         style={{ height: `${(d.count / maxChartValue) * 100}%` }}
                                     >
                                     </div>
-                                    <div className="text-[10px] text-muted-foreground rotate-0 whitespace-nowrap">
-                                        {format(parseISO(d.date), 'dd.MM')}
+                                    <div className="text-xs text-muted-foreground rotate-0 whitespace-nowrap">
+                                        {period === 'all' ? format(parseISO(d.date + '-01'), 'MMM yy', { locale: locale() }) : format(parseISO(d.date), 'dd.MM')}
                                     </div>
                                 </div>
                             ))}
