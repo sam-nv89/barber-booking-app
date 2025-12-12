@@ -11,9 +11,18 @@ import { Settings } from '@/pages/master/Settings'
 import { Dashboard } from '@/pages/master/Dashboard'
 import { Reviews } from '@/pages/master/Reviews'
 import { ClientList } from '@/pages/master/ClientList'
+import { TMAProvider, useTMA } from '@/components/providers/TMAProvider'
 
-function App() {
-    const { theme } = useStore();
+function AppContent() {
+    const { theme, setTheme } = useStore();
+    const { isTelegram, colorScheme, ready } = useTMA();
+
+    useEffect(() => {
+        // Sync theme with Telegram if in TMA
+        if (isTelegram && colorScheme) {
+            setTheme(colorScheme);
+        }
+    }, [isTelegram, colorScheme, setTheme]);
 
     useEffect(() => {
         if (theme === 'dark') {
@@ -37,6 +46,18 @@ function App() {
             setSalonSettings({ ...salonSettings, schedule: DEFAULT_SCHEDULE });
         }
     }, [salonSettings, setSalonSettings]);
+
+    // Show loading while TMA initializes
+    if (!ready) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-background">
+                <div className="text-center">
+                    <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">Загрузка...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <HashRouter>
@@ -62,4 +83,13 @@ function App() {
     )
 }
 
+function App() {
+    return (
+        <TMAProvider>
+            <AppContent />
+        </TMAProvider>
+    )
+}
+
 export default App
+
