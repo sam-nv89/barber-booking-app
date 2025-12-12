@@ -2,23 +2,12 @@
 // Provides fallback for browser environment
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-// Check if running inside Telegram
-const isTMA = () => {
-    try {
-        return window.Telegram?.WebApp !== undefined ||
-            window.location.hash.includes('tgWebAppData') ||
-            window.parent !== window;
-    } catch {
-        return false;
-    }
-};
-
 const TMAContext = createContext({
     isTelegram: false,
     user: null,
     themeParams: null,
     colorScheme: 'light',
-    ready: false,
+    ready: true, // Default to ready
 });
 
 export function TMAProvider({ children }) {
@@ -27,69 +16,63 @@ export function TMAProvider({ children }) {
         user: null,
         themeParams: null,
         colorScheme: 'light',
-        ready: false,
+        ready: true, // Start as ready to prevent blocking
     });
 
     useEffect(() => {
         const initTMA = async () => {
-            if (!isTMA()) {
-                // Browser fallback
-                setState(prev => ({ ...prev, ready: true }));
-                return;
+            // Check if we're in Telegram WebView
+            const webApp = window.Telegram?.WebApp;
+
+            if (!webApp) {
+                console.log('Not in Telegram, using browser mode');
+                return; // Keep default state
             }
 
             try {
-                // Dynamic import to avoid SSR issues
-                const { init, miniApp, themeParams, initData, backButton } = await import('@telegram-apps/sdk-react');
-
-                // Initialize SDK
-                init();
-
-                // Mount components synchronously
-                miniApp.mountSync();
-                themeParams.mountSync();
-                backButton.mount();
-
-                // Restore init data
-                initData.restore();
+                // Use native Telegram WebApp API (more reliable)
+                webApp.ready();
+                webApp.expand();
 
                 // Get user data
-                const user = initData.user();
+                const user = webApp.initDataUnsafe?.user;
 
                 // Get theme
-                const theme = themeParams.state();
-                const isDark = miniApp.isDark?.() ?? false;
+                const colorScheme = webApp.colorScheme || 'light';
+                const themeParams = webApp.themeParams || {};
 
-                // Apply Telegram CSS variables
-                if (theme) {
-                    applyThemeVariables(theme);
+                // Apply theme
+                if (colorScheme === 'dark') {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
                 }
-
-                // Signal ready
-                miniApp.ready();
 
                 setState({
                     isTelegram: true,
                     user: user ? {
                         id: user.id,
-                        firstName: user.firstName,
-                        lastName: user.lastName,
+                        firstName: user.first_name,
+                        lastName: user.last_name,
                         username: user.username,
-                        photoUrl: user.photoUrl,
-                        languageCode: user.languageCode,
+                        photoUrl: user.photo_url,
+                        languageCode: user.language_code,
                     } : null,
-                    themeParams: theme,
-                    colorScheme: isDark ? 'dark' : 'light',
+                    themeParams,
+                    colorScheme,
                     ready: true,
                 });
 
+                console.log('TMA initialized:', { user: user?.first_name, colorScheme });
+
             } catch (error) {
-                console.warn('TMA init failed, using browser mode:', error);
-                setState(prev => ({ ...prev, ready: true }));
+                console.warn('TMA init error:', error);
+                // Keep ready: true so app still loads
             }
         };
 
-        initTMA();
+        // Small delay to ensure Telegram WebApp is injected
+        setTimeout(initTMA, 100);
     }, []);
 
     return (
@@ -99,33 +82,9 @@ export function TMAProvider({ children }) {
     );
 }
 
-// Apply Telegram theme variables to CSS
-function applyThemeVariables(theme) {
-    const root = document.documentElement;
-
-    // Map TMA theme to our CSS variables
-    const mappings = {
-        '--tg-bg': theme.backgroundColor,
-        '--tg-secondary-bg': theme.secondaryBackgroundColor,
-        '--tg-text': theme.textColor,
-        '--tg-hint': theme.hintColor,
-        '--tg-link': theme.linkColor,
-        '--tg-button': theme.buttonColor,
-        '--tg-button-text': theme.buttonTextColor,
-        '--tg-header': theme.headerBackgroundColor,
-        '--tg-accent': theme.accentTextColor,
-        '--tg-destructive': theme.destructiveTextColor,
-    };
-
-    Object.entries(mappings).forEach(([key, value]) => {
-        if (value) {
-            root.style.setProperty(key, value);
-        }
-    });
-}
-
 export function useTMA() {
     return useContext(TMAContext);
 }
 
 export { TMAContext };
+
