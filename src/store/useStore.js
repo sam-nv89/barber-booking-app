@@ -127,7 +127,7 @@ export const useStore = create(
             addClient: (client) => set((state) => ({
                 clients: [...(state.clients || []), {
                     ...client,
-                    id: client.id || Date.now().toString(),
+                    id: client.id || `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                     createdAt: new Date().toISOString()
                 }]
             })),
@@ -136,6 +136,22 @@ export const useStore = create(
             })),
             updateClient: (id, updates) => set((state) => ({
                 clients: (state.clients || []).map(c => c.id === id ? { ...c, ...updates } : c)
+            })),
+
+            // Custom Tags for CRM
+            customTags: [],
+            addCustomTag: (tag) => set((state) => ({
+                customTags: [...(state.customTags || []), {
+                    ...tag,
+                    id: tag.id || `custom_${Date.now()}`,
+                    createdAt: new Date().toISOString()
+                }]
+            })),
+            updateCustomTag: (id, updates) => set((state) => ({
+                customTags: (state.customTags || []).map(t => t.id === id ? { ...t, ...updates } : t)
+            })),
+            removeCustomTag: (id) => set((state) => ({
+                customTags: (state.customTags || []).filter(t => t.id !== id)
             })),
 
             // Review Actions

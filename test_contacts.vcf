@@ -1,0 +1,30 @@
+BEGIN:VCARD
+VERSION:3.0
+FN:Алексей Иванов
+N:Иванов;Алексей;;;
+TEL;TYPE=CELL:+77015551234
+END:VCARD
+BEGIN:VCARD
+VERSION:3.0
+FN:Мария Петрова
+N:Петрова;Мария;;;
+TEL;TYPE=CELL:+77021112233
+END:VCARD
+BEGIN:VCARD
+VERSION:3.0
+FN:Дмитрий Сидоров
+N:Сидоров;Дмитрий;;;
+TEL;TYPE=CELL:+77039998877
+END:VCARD
+BEGIN:VCARD
+VERSION:3.0
+FN:Анна Козлова
+N:Козлова;Анна;;;
+TEL;TYPE=CELL:+77047776655
+END:VCARD
+BEGIN:VCARD
+VERSION:3.0
+FN:Сергей Новиков
+N:Новиков;Сергей;;;
+TEL;TYPE=CELL:+77053334455
+END:VCARD

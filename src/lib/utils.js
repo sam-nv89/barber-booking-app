@@ -1,8 +1,29 @@
 import { clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
+import * as XLSX from 'xlsx'
 
 export function cn(...inputs) {
     return twMerge(clsx(inputs));
+}
+
+// Determine if text should be white or black based on background color
+// Uses luminance formula for accessibility
+export function getContrastColor(hexColor) {
+    if (!hexColor) return '#000000';
+
+    // Remove # if present
+    const hex = hexColor.replace('#', '');
+
+    // Parse RGB
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+
+    // Calculate relative luminance
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
+    // Return white for dark backgrounds, black for light backgrounds
+    return luminance > 0.5 ? '#000000' : '#FFFFFF';
 }
 
 export const formatPrice = (price) => {
@@ -173,4 +194,219 @@ export const getSlotsForDate = (date, salonSettings, appointments = [], services
     });
 
     return finalSlots;
+};
+
+// Parse vCard (.vcf) file content into array of contacts
+// Supports vCard 2.1, 3.0, 4.0
+export const parseVCard = (vcfContent) => {
+    if (!vcfContent || typeof vcfContent !== 'string') return [];
+
+    const contacts = [];
+    const vcards = vcfContent.split(/(?=BEGIN:VCARD)/i);
+
+    for (const vcard of vcards) {
+        if (!vcard.trim() || !vcard.toUpperCase().includes('BEGIN:VCARD')) continue;
+
+        const contact = { name: '', phone: '' };
+        const lines = vcard.split(/\r?\n/);
+
+        for (const line of lines) {
+            // Parse FN (Formatted Name) - preferred
+            if (line.toUpperCase().startsWith('FN')) {
+                const match = line.match(/^FN[;:](.+)$/i);
+                if (match) {
+                    contact.name = match[1].replace(/^[;:]+/, '').trim();
+                }
+            }
+
+            // Parse N (Name) - fallback if no FN
+            if (!contact.name && line.toUpperCase().startsWith('N:')) {
+                const match = line.match(/^N:([^;]*);([^;]*)/i);
+                if (match) {
+                    const lastName = match[1]?.trim() || '';
+                    const firstName = match[2]?.trim() || '';
+                    contact.name = `${firstName} ${lastName}`.trim();
+                }
+            }
+
+            // Parse TEL (Telephone)
+            if (line.toUpperCase().startsWith('TEL')) {
+                // Handle various formats: TEL:+123, TEL;TYPE=CELL:+123, TEL;CELL:+123
+                const match = line.match(/^TEL[^:]*:(.+)$/i);
+                if (match && !contact.phone) {
+                    // Clean phone number - keep only digits and +
+                    contact.phone = match[1].replace(/[^\d+]/g, '').trim();
+                }
+            }
+        }
+
+        // Only add if has name or phone
+        if (contact.name || contact.phone) {
+            // Default name if empty
+            if (!contact.name && contact.phone) {
+                contact.name = contact.phone;
+            }
+            contacts.push(contact);
+        }
+    }
+
+    return contacts;
+};
+
+// Parse CSV content into array of contacts with optional tags and notes
+// Smart detection of columns for name, phone, tags, notes
+export const parseCSV = (csvContent) => {
+    if (!csvContent || typeof csvContent !== 'string') return [];
+
+    const contacts = [];
+    const lines = csvContent.trim().split(/\r?\n/);
+
+    if (lines.length < 2) return []; // Need header + at least one row
+
+    // Detect delimiter
+    const firstLine = lines[0];
+    let delimiter = ',';
+    if (firstLine.includes(';') && !firstLine.includes(',')) delimiter = ';';
+    if (firstLine.includes('\t') && !firstLine.includes(',') && !firstLine.includes(';')) delimiter = '\t';
+
+    // Parse header to find columns
+    const headers = lines[0].toLowerCase().split(delimiter).map(h => h.trim().replace(/['"]/g, ''));
+
+    let nameIndex = headers.findIndex(h =>
+        h === 'name' || h === 'имя' || h === 'фио' || h === 'клиент' || h === 'client' || h === 'аты'
+    );
+    let phoneIndex = headers.findIndex(h =>
+        h === 'phone' || h === 'телефон' || h === 'тел' || h === 'tel' || h === 'mobile' || h === 'мобильный'
+    );
+    let tagsIndex = headers.findIndex(h =>
+        h === 'tags' || h === 'теги' || h === 'тег' || h === 'tag' || h === 'категория' || h === 'category'
+    );
+    let notesIndex = headers.findIndex(h =>
+        h === 'notes' || h === 'заметки' || h === 'заметка' || h === 'note' || h === 'комментарий' || h === 'comment' || h === 'примечание'
+    );
+
+    // If no headers found, assume first column is name, second is phone
+    if (nameIndex === -1) nameIndex = 0;
+    if (phoneIndex === -1) phoneIndex = 1;
+
+    // Parse data rows
+    for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+
+        const cols = line.split(delimiter).map(c => c.trim().replace(/^["']|["']$/g, ''));
+
+        const contact = {
+            name: cols[nameIndex] || '',
+            phone: cols[phoneIndex]?.replace(/[^\d+]/g, '') || ''
+        };
+
+        // Parse tags if column exists
+        if (tagsIndex !== -1 && cols[tagsIndex]) {
+            // Tags can be comma-separated or semicolon-separated
+            const tagStr = cols[tagsIndex];
+            contact.tags = tagStr.split(/[,;]/).map(t => t.trim().toLowerCase()).filter(Boolean);
+        }
+
+        // Parse notes if column exists
+        if (notesIndex !== -1 && cols[notesIndex]) {
+            contact.notes = cols[notesIndex];
+        }
+
+        if (contact.name || contact.phone) {
+            if (!contact.name && contact.phone) {
+                contact.name = contact.phone;
+            }
+            contacts.push(contact);
+        }
+    }
+
+    return contacts;
+};
+
+// Convert Google Sheets URL to CSV export URL
+export const googleSheetToCSV = (url) => {
+    if (!url || typeof url !== 'string') return null;
+
+    // Match Google Sheets URL patterns
+    const match = url.match(/docs\.google\.com\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+    if (!match) return null;
+
+    const sheetId = match[1];
+    // Get gid (sheet tab) if present
+    const gidMatch = url.match(/[?&]gid=(\d+)/);
+    const gid = gidMatch ? gidMatch[1] : '0';
+
+    return `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+};
+
+// Parse Excel (.xlsx, .xls) file into array of contacts with optional tags and notes
+// Smart detection of name, phone, tags, and notes columns
+export const parseExcel = (arrayBuffer) => {
+    if (!arrayBuffer) return [];
+
+    try {
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+        if (data.length < 2) return [];
+
+        // Find columns in header
+        const headers = data[0].map(h => String(h || '').toLowerCase().trim());
+
+        let nameIndex = headers.findIndex(h =>
+            h === 'name' || h === 'имя' || h === 'фио' || h === 'клиент' ||
+            h === 'client' || h === 'ф.и.о.' || h === 'ф.и.о' || h === 'аты' || h.includes('имя') || h.includes('name')
+        );
+        let phoneIndex = headers.findIndex(h =>
+            h === 'phone' || h === 'телефон' || h === 'тел' || h === 'tel' ||
+            h === 'mobile' || h === 'мобильный' || h === 'номер' || h.includes('телефон') || h.includes('phone')
+        );
+        let tagsIndex = headers.findIndex(h =>
+            h === 'tags' || h === 'теги' || h === 'тег' || h === 'tag' || h === 'категория' || h === 'category'
+        );
+        let notesIndex = headers.findIndex(h =>
+            h === 'notes' || h === 'заметки' || h === 'заметка' || h === 'note' ||
+            h === 'комментарий' || h === 'comment' || h === 'примечание'
+        );
+
+        // If no headers found, assume first is name, second is phone
+        if (nameIndex === -1) nameIndex = 0;
+        if (phoneIndex === -1) phoneIndex = 1;
+
+        const contacts = [];
+        for (let i = 1; i < data.length; i++) {
+            const row = data[i];
+            if (!row || row.length === 0) continue;
+
+            const contact = {
+                name: String(row[nameIndex] || '').trim(),
+                phone: String(row[phoneIndex] || '').replace(/[^\d+]/g, '')
+            };
+
+            // Parse tags if column exists
+            if (tagsIndex !== -1 && row[tagsIndex]) {
+                const tagStr = String(row[tagsIndex]);
+                contact.tags = tagStr.split(/[,;]/).map(t => t.trim().toLowerCase()).filter(Boolean);
+            }
+
+            // Parse notes if column exists
+            if (notesIndex !== -1 && row[notesIndex]) {
+                contact.notes = String(row[notesIndex]).trim();
+            }
+
+            if (contact.name || contact.phone) {
+                if (!contact.name && contact.phone) {
+                    contact.name = contact.phone;
+                }
+                contacts.push(contact);
+            }
+        }
+
+        return contacts;
+    } catch (e) {
+        console.error('Excel parse error:', e);
+        return [];
+    }
 };
