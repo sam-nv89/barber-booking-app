@@ -166,7 +166,15 @@ export const getSlotsForDate = (date, salonSettings, appointments = [], services
         const slotStartMin = timeToMinutes(slot);
         const slotEndMin = slotStartMin + serviceDuration + buffer;
 
-        // A. Check if slot fits within working hours
+        // A. Check if slot has already passed (for today's date)
+        const now = new Date();
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        if (dateStr === todayStr) {
+            const currentMinutes = now.getHours() * 60 + now.getMinutes();
+            if (slotStartMin <= currentMinutes) return false; // Slot has passed
+        }
+
+        // B. Check if slot fits within working hours
         if (slotEndMin > endMinutes) return false;
 
         // B. Check Breaks

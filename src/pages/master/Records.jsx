@@ -130,7 +130,12 @@ export const Records = () => {
                                 <div className="flex justify-between items-start">
                                     <div>
                                         <div className="font-bold">{app.clientName}</div>
-                                        <div className="text-sm text-muted-foreground">{app.clientPhone}</div>
+                                        <div className="text-sm text-muted-foreground flex items-center gap-2">
+                                            {app.clientPhone}
+                                            {app.telegramUsername && (
+                                                <span className="text-blue-500">@{app.telegramUsername}</span>
+                                            )}
+                                        </div>
                                     </div>
                                     <div className="text-right">
                                         <div className="font-medium">{app.time}</div>

@@ -75,20 +75,6 @@ export const BookingWizard = () => {
         });
     };
 
-    // MainButton for TMA - shows on step 3 (confirmation)
-    useMainButton(
-        t('booking.bookNow'),
-        () => {
-            if (selectedServices.length > 0 && selectedDate && selectedTime && !bookingError) {
-                handleBook();
-            }
-        },
-        {
-            visible: step === 3 && !showSuccess,
-            enabled: !bookingError
-        }
-    );
-
     // BackButton for TMA navigation
     useBackButton(step > 1 ? () => setStep(step - 1) : null);
 
@@ -129,6 +115,7 @@ export const BookingWizard = () => {
             time: selectedTime,
             clientName: user.name,
             clientPhone: user.phone,
+            telegramUsername: user.telegramUsername,
             totalPrice: totalPrice,
             totalDuration: totalDuration
         });
@@ -226,16 +213,19 @@ export const BookingWizard = () => {
                     {selectedServices.length > 0 && (
                         <Card className="bg-accent/50 border-primary/20">
                             <CardContent className="p-4">
-                                <div className="flex justify-between items-center">
-                                    <div>
+                                <div className="flex justify-between items-center gap-4">
+                                    <div className="min-w-0">
                                         <div className="text-sm text-muted-foreground">
                                             {t('common.selected')}: {selectedServices.length} {t('common.services')}
                                         </div>
-                                        <div className="font-bold text-lg">
-                                            {formatDuration(totalDuration, t)} • {formatPrice(totalPrice)} ₸
+                                        <div className="font-semibold">
+                                            {formatDuration(totalDuration, t)}
+                                        </div>
+                                        <div className="font-bold text-lg text-primary">
+                                            {formatPrice(totalPrice)} ₸
                                         </div>
                                     </div>
-                                    <Button onClick={() => setStep(2)} size="lg">
+                                    <Button onClick={() => setStep(2)} size="lg" className="shrink-0">
                                         {t('common.next')} →
                                     </Button>
                                 </div>
@@ -273,52 +263,91 @@ export const BookingWizard = () => {
 
             {/* Step 3: Confirmation */}
             {step === 3 && (
-                <div className="space-y-4">
-                    <h2 className="text-lg font-semibold">{t('booking.confirmBooking')}</h2>
-                    <Card>
-                        <CardContent className="p-4 space-y-3">
-                            {/* Services List */}
-                            <div>
-                                <span className="text-muted-foreground text-sm">{t('booking.service')}:</span>
-                                <div className="mt-1 space-y-1">
-                                    {selectedServices.map(s => (
-                                        <div key={s.id} className="flex justify-between">
-                                            <span className="font-medium">{getServiceName(s)}</span>
-                                            <span className="text-muted-foreground text-sm">{formatDuration(s.duration, t)}</span>
-                                        </div>
-                                    ))}
+                <div className="space-y-6">
+                    {/* Header with check icon + edit link */}
+                    <div className="text-center space-y-2">
+                        <div className="w-16 h-16 mx-auto bg-gradient-to-br from-primary/20 to-primary/5 rounded-full flex items-center justify-center">
+                            <Check className="w-8 h-8 text-primary" />
+                        </div>
+                        <h2 className="text-xl font-bold">{t('booking.confirmBooking')}</h2>
+                        <p className="text-muted-foreground text-sm">Проверьте детали записи</p>
+                        <button
+                            className="text-primary text-sm hover:underline"
+                            onClick={() => { setStep(2); setBookingError(null); }}
+                        >
+                            ← Изменить
+                        </button>
+                    </div>
+
+                    {/* Booking Details Card */}
+                    <Card className="overflow-hidden border-0 shadow-lg">
+                        {/* Services */}
+                        <div className="p-4 bg-gradient-to-r from-primary/10 to-primary/5">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                                    <span className="text-lg">✂️</span>
+                                </div>
+                                <div className="flex-1">
+                                    <div className="text-xs text-muted-foreground uppercase tracking-wide">{t('booking.service')}</div>
+                                    <div className="font-semibold">
+                                        {selectedServices.map(s => getServiceName(s)).join(', ')}
+                                    </div>
                                 </div>
                             </div>
-                            <div className="border-t pt-2 flex justify-between">
-                                <span className="text-muted-foreground">{t('booking.date')}:</span>
-                                <span className="font-medium capitalize">{selectedDate && format(selectedDate, 'd MMMM yyyy', { locale: locale() })}</span>
+                        </div>
+
+                        <CardContent className="p-0">
+                            {/* Date & Time Row */}
+                            <div className="grid grid-cols-2 divide-x divide-border">
+                                <div className="p-4 text-center">
+                                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">📅 {t('booking.date')}</div>
+                                    <div className="font-semibold capitalize">
+                                        {selectedDate && format(selectedDate, 'd MMM', { locale: locale() })}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground capitalize">
+                                        {selectedDate && format(selectedDate, 'EEEE', { locale: locale() })}
+                                    </div>
+                                </div>
+                                <div className="p-4 text-center">
+                                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">🕐 {t('booking.time')}</div>
+                                    <div className="font-semibold text-xl">{selectedTime}</div>
+                                </div>
                             </div>
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">{t('booking.time')}:</span>
-                                <span className="font-medium">{selectedTime}</span>
-                            </div>
-                            <div className="border-t pt-2 flex justify-between text-lg">
-                                <span className="font-bold">{t('common.total')}:</span>
-                                <span className="font-bold">{formatDuration(totalDuration, t)} • {formatPrice(totalPrice)} ₸</span>
+
+                            {/* Divider */}
+                            <div className="border-t border-border" />
+
+                            {/* Total */}
+                            <div className="p-4 bg-accent/30">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <div className="text-sm text-muted-foreground">{t('common.total')}</div>
+                                        <div className="text-xs text-muted-foreground">{formatDuration(totalDuration, t)}</div>
+                                    </div>
+                                    <div className="text-2xl font-bold text-primary">
+                                        {formatPrice(totalPrice)} ₸
+                                    </div>
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
 
+                    {/* Error Message */}
                     {bookingError && (
-                        <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive border border-destructive/20">
+                        <div className="flex items-center gap-3 p-4 rounded-xl bg-destructive/10 text-destructive border border-destructive/20">
                             <AlertTriangle className="w-5 h-5 shrink-0" />
                             <span className="text-sm">{bookingError}</span>
                         </div>
                     )}
 
-                    <div className="flex gap-2">
-                        <Button variant="outline" className="w-full" onClick={() => { setStep(2); setBookingError(null); }}>
-                            {t('common.back')}
-                        </Button>
-                        <Button className="w-full" onClick={handleBook} disabled={!!bookingError}>
-                            {t('booking.bookNow')}
-                        </Button>
-                    </div>
+                    {/* Booking button */}
+                    <Button
+                        className="w-full h-12 text-base font-semibold"
+                        onClick={handleBook}
+                        disabled={!!bookingError}
+                    >
+                        {t('booking.bookNow')}
+                    </Button>
                 </div>
             )}
             {showSuccess && <SuccessAnimation onComplete={handleSuccessComplete} title={t('booking.success')} />}

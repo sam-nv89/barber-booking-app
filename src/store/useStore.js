@@ -23,9 +23,12 @@ export const useStore = create(
             // User State
             user: {
                 role: 'client', // 'client' | 'master'
-                name: 'Alex',
-                phone: '77700000000',
+                name: '',
+                phone: '',
                 avatar: null,
+                telegramId: null,
+                telegramUsername: null,
+                telegramPhone: null,
             },
             setUser: (user) => set((state) => ({ user: { ...state.user, ...user } })),
             setRole: (role) => set((state) => ({ user: { ...state.user, role } })),

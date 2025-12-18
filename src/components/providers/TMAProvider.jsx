@@ -1,43 +1,111 @@
 // TMA Provider - wraps app with Telegram Mini App context
 // Provides fallback for browser environment
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { useStore } from '@/store/useStore';
 
 const TMAContext = createContext({
     isTelegram: false,
-    user: null,
+    telegramUser: null,
     themeParams: null,
     colorScheme: 'light',
-    ready: true, // Default to ready
+    ready: true,
+    requestPhonePermission: () => Promise.resolve(null),
 });
 
 export function TMAProvider({ children }) {
     const [state, setState] = useState({
         isTelegram: false,
-        user: null,
+        telegramUser: null,
         themeParams: null,
         colorScheme: 'light',
-        ready: true, // Start as ready to prevent blocking
+        ready: true,
     });
+
+    const { user, setUser } = useStore();
+
+    // Function to request phone permission
+    const requestPhonePermission = useCallback(async () => {
+        const webApp = window.Telegram?.WebApp;
+        if (!webApp) {
+            console.log('[TMA] No WebApp available');
+            return null;
+        }
+
+        return new Promise((resolve) => {
+            try {
+                // Set up event handler for contact received
+                const handleContact = (event) => {
+                    console.log('[TMA] Contact event received:', event);
+                    if (event?.responseUnsafe?.contact) {
+                        const contact = event.responseUnsafe.contact;
+                        const phone = (contact.phone_number || '').replace(/^\+/, '');
+                        if (phone) {
+                            setUser({ phone });
+                            console.log('[TMA] Phone saved:', phone);
+                            resolve(phone);
+                            return;
+                        }
+                    }
+                    console.log('[TMA] Contact request failed or declined');
+                    resolve(null);
+                };
+
+                // Try different methods depending on Telegram version
+                if (typeof webApp.requestContact === 'function') {
+                    console.log('[TMA] Calling requestContact...');
+                    // Method 1: Callback style (older API)
+                    webApp.requestContact((sent) => {
+                        console.log('[TMA] requestContact callback, sent:', sent);
+                        // The actual contact data comes via event or popup result
+                        if (!sent) {
+                            resolve(null);
+                        }
+                        // If sent=true, we need to wait for the data
+                        // Some versions return data in callback, some via events
+                    });
+
+                    // Also listen for popup events as fallback
+                    webApp.onEvent('contactRequested', (result) => {
+                        console.log('[TMA] contactRequested event:', result);
+                        if (result?.status === 'sent' || result?.status === 'shared') {
+                            // Contact was shared, the data should be in result
+                            resolve(result);
+                        } else {
+                            resolve(null);
+                        }
+                    });
+
+                    // Timeout fallback
+                    setTimeout(() => {
+                        console.log('[TMA] Phone request timeout');
+                        resolve(null);
+                    }, 30000);
+                } else {
+                    console.log('[TMA] requestContact not available');
+                    resolve(null);
+                }
+            } catch (error) {
+                console.warn('[TMA] requestContact error:', error);
+                resolve(null);
+            }
+        });
+    }, [setUser]);
 
     useEffect(() => {
         const initTMA = async () => {
-            // Check if we're in Telegram WebView
             const webApp = window.Telegram?.WebApp;
 
             if (!webApp) {
-                console.log('Not in Telegram, using browser mode');
-                return; // Keep default state
+                console.log('[TMA] Not in Telegram, using browser mode');
+                return;
             }
 
             try {
-                // Use native Telegram WebApp API (more reliable)
                 webApp.ready();
                 webApp.expand();
 
-                // Get user data
-                const user = webApp.initDataUnsafe?.user;
-
-                // Get theme
+                // Get user data from initDataUnsafe
+                const tgUser = webApp.initDataUnsafe?.user;
                 const colorScheme = webApp.colorScheme || 'light';
                 const themeParams = webApp.themeParams || {};
 
@@ -48,35 +116,64 @@ export function TMAProvider({ children }) {
                     document.documentElement.classList.remove('dark');
                 }
 
+                const telegramUser = tgUser ? {
+                    id: tgUser.id,
+                    firstName: tgUser.first_name,
+                    lastName: tgUser.last_name,
+                    username: tgUser.username,
+                    photoUrl: tgUser.photo_url,
+                    languageCode: tgUser.language_code,
+                } : null;
+
                 setState({
                     isTelegram: true,
-                    user: user ? {
-                        id: user.id,
-                        firstName: user.first_name,
-                        lastName: user.last_name,
-                        username: user.username,
-                        photoUrl: user.photo_url,
-                        languageCode: user.language_code,
-                    } : null,
+                    telegramUser,
                     themeParams,
                     colorScheme,
                     ready: true,
                 });
 
-                console.log('TMA initialized:', { user: user?.first_name, colorScheme });
+                // Auto-fill user profile from Telegram
+                if (telegramUser) {
+                    const fullName = [telegramUser.firstName, telegramUser.lastName].filter(Boolean).join(' ');
+
+                    // ALWAYS update from Telegram (overwrite old defaults)
+                    const updates = {
+                        telegramId: telegramUser.id,
+                        telegramUsername: telegramUser.username,
+                    };
+
+                    // Always set name from Telegram (overwrite defaults like "Alex")
+                    if (fullName) {
+                        updates.name = fullName;
+                    }
+
+                    // Always set avatar from Telegram if available
+                    if (telegramUser.photoUrl && !user.avatar?.startsWith('data:')) {
+                        updates.avatar = telegramUser.photoUrl;
+                    }
+
+                    // Apply updates
+                    setUser(updates);
+                    console.log('[TMA] User synced:', updates);
+                    // No auto phone request - user controls this manually in Profile
+                }
 
             } catch (error) {
-                console.warn('TMA init error:', error);
-                // Keep ready: true so app still loads
+                console.warn('[TMA] Init error:', error);
             }
         };
 
-        // Small delay to ensure Telegram WebApp is injected
         setTimeout(initTMA, 100);
     }, []);
 
+    const contextValue = {
+        ...state,
+        requestPhonePermission,
+    };
+
     return (
-        <TMAContext.Provider value={state}>
+        <TMAContext.Provider value={contextValue}>
             {children}
         </TMAContext.Provider>
     );
@@ -86,5 +183,9 @@ export function useTMA() {
     return useContext(TMAContext);
 }
 
-export { TMAContext };
+export function useTelegramUser() {
+    const { telegramUser } = useTMA();
+    return telegramUser;
+}
 
+export { TMAContext };
