@@ -11,6 +11,8 @@ import { AlertTriangle, Check } from 'lucide-react';
 import { SuccessAnimation } from '@/components/features/SuccessAnimation';
 import { DateTimeSelector } from '@/components/features/DateTimeSelector';
 import { ClockWidget } from '@/components/features/ClockWidget';
+import { useMainButton, useBackButton, useHaptic } from '@/hooks/useTelegram';
+import { useTMA } from '@/components/providers/TMAProvider';
 
 export const BookingWizard = () => {
     const { t, addAppointment, user, salonSettings, services, appointments, language, locale, workScheduleOverrides, blockedPhones } = useStore();
@@ -21,29 +23,9 @@ export const BookingWizard = () => {
     const [showSuccess, setShowSuccess] = React.useState(false);
     const [bookingError, setBookingError] = React.useState(null);
 
-    const getServiceName = (service) => {
-        if (!service) return '';
-        if (typeof service.name === 'object') {
-            return service.name[language] || service.name['ru'] || Object.values(service.name)[0];
-        }
-        return service.name;
-    };
-
-    // Toggle service selection
-    const toggleService = (service) => {
-        setSelectedServices(prev => {
-            const exists = prev.find(s => s.id === service.id);
-            if (exists) {
-                return prev.filter(s => s.id !== service.id);
-            } else {
-                return [...prev, service];
-            }
-        });
-    };
-
-    // Calculate totals for selected services
-    const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration, 0);
-    const totalPrice = selectedServices.reduce((sum, s) => sum + getPriceWithCampaign(s), 0);
+    // TMA hooks
+    const { isTelegram } = useTMA();
+    const { impact, notification } = useHaptic();
 
     // Logic to calculate price with active campaign
     function getPriceWithCampaign(service) {
@@ -67,6 +49,48 @@ export const BookingWizard = () => {
         }
         return service.price;
     }
+
+    // Calculate totals for selected services
+    const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration, 0);
+    const totalPrice = selectedServices.reduce((sum, s) => sum + getPriceWithCampaign(s), 0);
+
+    const getServiceName = (service) => {
+        if (!service) return '';
+        if (typeof service.name === 'object') {
+            return service.name[language] || service.name['ru'] || Object.values(service.name)[0];
+        }
+        return service.name;
+    };
+
+    // Toggle service selection with haptic feedback
+    const toggleService = (service) => {
+        impact('light'); // Haptic feedback
+        setSelectedServices(prev => {
+            const exists = prev.find(s => s.id === service.id);
+            if (exists) {
+                return prev.filter(s => s.id !== service.id);
+            } else {
+                return [...prev, service];
+            }
+        });
+    };
+
+    // MainButton for TMA - shows on step 3 (confirmation)
+    useMainButton(
+        t('booking.bookNow'),
+        () => {
+            if (selectedServices.length > 0 && selectedDate && selectedTime && !bookingError) {
+                handleBook();
+            }
+        },
+        {
+            visible: step === 3 && !showSuccess,
+            enabled: !bookingError
+        }
+    );
+
+    // BackButton for TMA navigation
+    useBackButton(step > 1 ? () => setStep(step - 1) : null);
 
     // Booking validation
     const validateBooking = () => {

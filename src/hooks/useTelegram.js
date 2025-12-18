@@ -1,6 +1,9 @@
-// useTelegram hook - utilities for TMA buttons and haptics
+// useTelegram hooks - using native Telegram WebApp API
 import { useCallback, useEffect, useRef } from 'react';
 import { useTMA } from '@/components/providers/TMAProvider';
+
+// Get WebApp instance
+const getWebApp = () => window.Telegram?.WebApp;
 
 // Hook for Main Button (bottom action button)
 export function useMainButton(text, onClick, options = {}) {
@@ -13,40 +16,46 @@ export function useMainButton(text, onClick, options = {}) {
     }, [onClick]);
 
     useEffect(() => {
-        if (!isTelegram) return;
+        const webApp = getWebApp();
+        if (!isTelegram || !webApp?.MainButton) return;
 
-        const setupButton = async () => {
-            try {
-                const { mainButton } = await import('@telegram-apps/sdk-react');
+        const mainButton = webApp.MainButton;
 
-                if (!mainButton.isMounted()) {
-                    mainButton.mount();
-                }
+        // Configure button
+        mainButton.setText(text);
 
-                mainButton.setParams({
-                    text: text,
-                    isVisible: options.visible !== false,
-                    isEnabled: options.enabled !== false,
-                    backgroundColor: options.color,
-                    textColor: options.textColor,
-                });
+        if (options.color) {
+            mainButton.setParams({ color: options.color });
+        }
+        if (options.textColor) {
+            mainButton.setParams({ text_color: options.textColor });
+        }
 
-                const handler = () => callbackRef.current?.();
-                mainButton.onClick(handler);
+        // Show/hide based on options
+        if (options.visible === false) {
+            mainButton.hide();
+        } else {
+            mainButton.show();
+        }
 
-                return () => {
-                    mainButton.offClick(handler);
-                    if (options.hideOnUnmount !== false) {
-                        mainButton.hide();
-                    }
-                };
-            } catch (e) {
-                console.warn('Main button setup failed:', e);
+        // Enable/disable
+        if (options.enabled === false) {
+            mainButton.disable();
+        } else {
+            mainButton.enable();
+        }
+
+        // Click handler
+        const handler = () => callbackRef.current?.();
+        mainButton.onClick(handler);
+
+        return () => {
+            mainButton.offClick(handler);
+            if (options.hideOnUnmount !== false) {
+                mainButton.hide();
             }
         };
-
-        setupButton();
-    }, [isTelegram, text, options.visible, options.enabled, options.color, options.textColor]);
+    }, [isTelegram, text, options.visible, options.enabled, options.color, options.textColor, options.hideOnUnmount]);
 }
 
 // Hook for Back Button
@@ -59,28 +68,19 @@ export function useBackButton(onBack) {
     }, [onBack]);
 
     useEffect(() => {
-        if (!isTelegram || !onBack) return;
+        const webApp = getWebApp();
+        if (!isTelegram || !onBack || !webApp?.BackButton) return;
 
-        const setupButton = async () => {
-            try {
-                const { backButton } = await import('@telegram-apps/sdk-react');
+        const backButton = webApp.BackButton;
+        backButton.show();
 
-                backButton.show();
+        const handler = () => callbackRef.current?.();
+        backButton.onClick(handler);
 
-                const handler = () => callbackRef.current?.();
-                backButton.onClick(handler);
-
-                return () => {
-                    backButton.offClick(handler);
-                    backButton.hide();
-                };
-            } catch (e) {
-                console.warn('Back button setup failed:', e);
-            }
+        return () => {
+            backButton.offClick(handler);
+            backButton.hide();
         };
-
-        const cleanup = setupButton();
-        return () => cleanup?.then?.(fn => fn?.());
     }, [isTelegram, !!onBack]);
 }
 
@@ -88,27 +88,27 @@ export function useBackButton(onBack) {
 export function useHaptic() {
     const { isTelegram } = useTMA();
 
-    const impact = useCallback(async (style = 'light') => {
-        if (!isTelegram) return;
+    const impact = useCallback((style = 'light') => {
+        const webApp = getWebApp();
+        if (!isTelegram || !webApp?.HapticFeedback) return;
         try {
-            const { hapticFeedback } = await import('@telegram-apps/sdk-react');
-            hapticFeedback.impactOccurred(style); // light, medium, heavy, rigid, soft
+            webApp.HapticFeedback.impactOccurred(style); // light, medium, heavy, rigid, soft
         } catch { }
     }, [isTelegram]);
 
-    const notification = useCallback(async (type = 'success') => {
-        if (!isTelegram) return;
+    const notification = useCallback((type = 'success') => {
+        const webApp = getWebApp();
+        if (!isTelegram || !webApp?.HapticFeedback) return;
         try {
-            const { hapticFeedback } = await import('@telegram-apps/sdk-react');
-            hapticFeedback.notificationOccurred(type); // success, warning, error
+            webApp.HapticFeedback.notificationOccurred(type); // success, warning, error
         } catch { }
     }, [isTelegram]);
 
-    const selection = useCallback(async () => {
-        if (!isTelegram) return;
+    const selection = useCallback(() => {
+        const webApp = getWebApp();
+        if (!isTelegram || !webApp?.HapticFeedback) return;
         try {
-            const { hapticFeedback } = await import('@telegram-apps/sdk-react');
-            hapticFeedback.selectionChanged();
+            webApp.HapticFeedback.selectionChanged();
         } catch { }
     }, [isTelegram]);
 
@@ -119,43 +119,54 @@ export function useHaptic() {
 export function usePopup() {
     const { isTelegram } = useTMA();
 
-    const showPopup = useCallback(async (title, message, buttons = [{ type: 'ok' }]) => {
-        if (!isTelegram) {
+    const showPopup = useCallback((title, message, buttons = [{ type: 'ok' }]) => {
+        const webApp = getWebApp();
+        if (!isTelegram || !webApp?.showPopup) {
             alert(`${title}\n${message}`);
-            return 'ok';
+            return Promise.resolve('ok');
         }
-        try {
-            const { popup } = await import('@telegram-apps/sdk-react');
-            const result = await popup.open({ title, message, buttons });
-            return result;
-        } catch {
-            alert(`${title}\n${message}`);
-            return 'ok';
-        }
+        return new Promise((resolve) => {
+            webApp.showPopup({ title, message, buttons }, (buttonId) => {
+                resolve(buttonId || 'ok');
+            });
+        });
     }, [isTelegram]);
 
-    const showAlert = useCallback(async (message) => {
-        return showPopup('', message, [{ type: 'ok' }]);
-    }, [showPopup]);
+    const showAlert = useCallback((message) => {
+        const webApp = getWebApp();
+        if (!isTelegram || !webApp?.showAlert) {
+            alert(message);
+            return Promise.resolve();
+        }
+        return new Promise((resolve) => {
+            webApp.showAlert(message, resolve);
+        });
+    }, [isTelegram]);
 
-    const showConfirm = useCallback(async (message) => {
-        if (!isTelegram) {
-            return confirm(message);
+    const showConfirm = useCallback((message) => {
+        const webApp = getWebApp();
+        if (!isTelegram || !webApp?.showConfirm) {
+            return Promise.resolve(confirm(message));
         }
-        try {
-            const { popup } = await import('@telegram-apps/sdk-react');
-            const result = await popup.open({
-                message,
-                buttons: [
-                    { id: 'cancel', type: 'cancel' },
-                    { id: 'ok', type: 'ok' },
-                ]
-            });
-            return result === 'ok';
-        } catch {
-            return confirm(message);
-        }
+        return new Promise((resolve) => {
+            webApp.showConfirm(message, resolve);
+        });
     }, [isTelegram]);
 
     return { showPopup, showAlert, showConfirm };
 }
+
+// Hook for closing the Mini App
+export function useCloseMiniApp() {
+    const { isTelegram } = useTMA();
+
+    const close = useCallback(() => {
+        const webApp = getWebApp();
+        if (isTelegram && webApp?.close) {
+            webApp.close();
+        }
+    }, [isTelegram]);
+
+    return close;
+}
+
