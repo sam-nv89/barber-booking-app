@@ -37,7 +37,8 @@ export const useStore = create(
                 name: 'Barber Shop #1',
                 address: 'ул. Абая 150',
                 phone: '+7 777 000 00 00',
-                bufferTime: 0, // minutes
+                bufferTime: 10, // minutes between appointments
+                slotInterval: 30, // minutes - time slot granularity
                 bookingPeriodMonths: 1, // How far ahead clients can book: 1, 3, 6, 12
                 scheduleMode: 'weekly', // 'weekly' | 'shift'
                 shiftPattern: {

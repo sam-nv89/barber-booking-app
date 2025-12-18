@@ -110,7 +110,11 @@ export const timeToMinutes = (time) => {
 export const getSlotsForDate = (date, salonSettings, appointments = [], services = [], workScheduleOverrides = {}, serviceDuration = 60) => {
     if (!date || !salonSettings) return [];
 
-    const dateStr = date.toISOString().split('T')[0];
+    // Use local date to avoid timezone issues (toISOString uses UTC which can shift the date)
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
     const daysMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const dayKey = daysMap[date.getDay()];
 
@@ -143,14 +147,16 @@ export const getSlotsForDate = (date, salonSettings, appointments = [], services
         }
     }
 
-    // 2. Generate Raw Slots (Hourly)
+    // 2. Generate Raw Slots (configurable interval, default 30 min)
     const slots = [];
-    const startHour = parseInt(schedule.start.split(':')[0]);
-    const endHour = parseInt(schedule.end.split(':')[0]);
+    const slotInterval = salonSettings.slotInterval || 30; // minutes
+    const startMinutes = timeToMinutes(schedule.start);
     const endMinutes = timeToMinutes(schedule.end);
 
-    for (let h = startHour; h < endHour; h++) {
-        slots.push(`${h.toString().padStart(2, '0')}:00`);
+    for (let minutes = startMinutes; minutes < endMinutes; minutes += slotInterval) {
+        const hours = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+        slots.push(`${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`);
     }
 
     // 3. Filter Availability

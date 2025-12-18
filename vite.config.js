@@ -14,7 +14,7 @@ export default defineConfig({
   server: {
     port: 3000,
     host: true,
-    allowedHosts: ['localhost', '.loca.lt'],
+    allowedHosts: ['localhost', '.loca.lt', '.trycloudflare.com'],
   },
   base: './',
 })

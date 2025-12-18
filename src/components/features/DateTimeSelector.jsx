@@ -35,8 +35,8 @@ export const DateTimeSelector = ({ selectedDate, onDateSelect, selectedTime, onT
         if (isBefore(date, today)) return false;
         if (isAfter(date, maxDate)) return false;
 
-        // Check if there are slots available
-        const slots = getSlotsForDate(date, salonSettings, [], [], workScheduleOverrides);
+        // Check if there are slots available (considering existing appointments)
+        const slots = getSlotsForDate(date, salonSettings, appointments, services, workScheduleOverrides, serviceDuration);
         return slots.length > 0;
     };
 
