@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Layout } from '@/components/layout/Layout'
 import { useStore } from '@/store/useStore'
@@ -12,10 +12,21 @@ import { Dashboard } from '@/pages/master/Dashboard'
 import { Reviews } from '@/pages/master/Reviews'
 import { ClientList } from '@/pages/master/ClientList'
 import { TMAProvider, useTMA } from '@/components/providers/TMAProvider'
+import { WelcomeAnimation } from '@/components/features/WelcomeAnimation'
 
 function AppContent() {
-    const { theme, setTheme } = useStore();
+    const { theme, setTheme, user } = useStore();
     const { isTelegram, colorScheme, ready } = useTMA();
+    const [showWelcome, setShowWelcome] = useState(false);
+
+    // Check if this is a new session and user has a name
+    useEffect(() => {
+        const hasSeenWelcome = sessionStorage.getItem('hasSeenWelcome');
+        if (!hasSeenWelcome && user?.name && ready) {
+            setShowWelcome(true);
+            sessionStorage.setItem('hasSeenWelcome', 'true');
+        }
+    }, [user?.name, ready]);
 
     useEffect(() => {
         // Sync theme with Telegram if in TMA
@@ -46,6 +57,11 @@ function AppContent() {
             setSalonSettings({ ...salonSettings, schedule: DEFAULT_SCHEDULE });
         }
     }, [salonSettings, setSalonSettings]);
+
+    // Show welcome animation for new session
+    if (showWelcome) {
+        return <WelcomeAnimation onComplete={() => setShowWelcome(false)} />;
+    }
 
     // Show loading while TMA initializes
     if (!ready) {

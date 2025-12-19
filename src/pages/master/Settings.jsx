@@ -7,8 +7,9 @@ import { Modal } from '@/components/ui/Modal';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { cn, formatPrice, formatPhoneNumber } from '@/lib/utils';
 import { SuccessAnimation } from '@/components/features/SuccessAnimation';
+import { WelcomeAnimation } from '@/components/features/WelcomeAnimation';
 import { format } from 'date-fns';
-import { Trash2, UserX, Plus, Clock } from 'lucide-react';
+import { Trash2, UserX, Plus, Clock, Play } from 'lucide-react';
 
 export const Settings = () => {
     const { t, salonSettings, setSalonSettings, setWorkScheduleOverrides, workScheduleOverrides, clearWorkScheduleOverrides, language, blockedPhones, addBlockedPhone, removeBlockedPhone } = useStore();
@@ -382,6 +383,9 @@ export const Settings = () => {
                     )}
                 </CardContent>
             </Card>
+
+            {/* Animation Preview */}
+            <AnimationPreviewCard />
 
             <ServicesManager onSuccess={setSuccessMessage} />
             <MarketingManager onSuccess={setSuccessMessage} />
@@ -1090,6 +1094,98 @@ const ServicesManager = ({ onSuccess }) => {
                     <Button className="w-full" onClick={handleSave}>{t('common.save')}</Button>
                 </div>
             </Modal>
+        </>
+    );
+};
+
+// Animation Preview Card for testing all welcome animations
+const AnimationPreviewCard = () => {
+    const { t } = useStore();
+    const [showPreview, setShowPreview] = React.useState(false);
+    const [previewTimeOfDay, setPreviewTimeOfDay] = React.useState('morning');
+    const [previewSeason, setPreviewSeason] = React.useState('winter');
+
+    const timeOptions = [
+        { value: 'morning', label: '🌅 Утро', labelEn: 'Morning' },
+        { value: 'afternoon', label: '☀️ День', labelEn: 'Afternoon' },
+        { value: 'evening', label: '🌆 Вечер', labelEn: 'Evening' },
+        { value: 'night', label: '🌙 Ночь', labelEn: 'Night' }
+    ];
+
+    const seasonOptions = [
+        { value: 'winter', label: '❄️ Зима', labelEn: 'Winter' },
+        { value: 'spring', label: '🌷 Весна', labelEn: 'Spring' },
+        { value: 'summer', label: '🌻 Лето', labelEn: 'Summer' },
+        { value: 'autumn', label: '🍁 Осень', labelEn: 'Autumn' }
+    ];
+
+    return (
+        <>
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                        <Play className="w-5 h-5" />
+                        Тест анимации приветствия
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Время суток</label>
+                        <div className="grid grid-cols-2 gap-2">
+                            {timeOptions.map(opt => (
+                                <button
+                                    key={opt.value}
+                                    className={cn(
+                                        "p-2 rounded-md border text-sm transition-all",
+                                        previewTimeOfDay === opt.value
+                                            ? "border-primary bg-primary/10 font-medium"
+                                            : "border-border hover:bg-muted"
+                                    )}
+                                    onClick={() => setPreviewTimeOfDay(opt.value)}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Сезон</label>
+                        <div className="grid grid-cols-2 gap-2">
+                            {seasonOptions.map(opt => (
+                                <button
+                                    key={opt.value}
+                                    className={cn(
+                                        "p-2 rounded-md border text-sm transition-all",
+                                        previewSeason === opt.value
+                                            ? "border-primary bg-primary/10 font-medium"
+                                            : "border-border hover:bg-muted"
+                                    )}
+                                    onClick={() => setPreviewSeason(opt.value)}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <Button
+                        className="w-full gap-2"
+                        onClick={() => setShowPreview(true)}
+                    >
+                        <Play className="w-4 h-4" />
+                        Показать анимацию
+                    </Button>
+                </CardContent>
+            </Card>
+
+            {showPreview && (
+                <WelcomeAnimation
+                    previewTimeOfDay={previewTimeOfDay}
+                    previewSeason={previewSeason}
+                    onComplete={() => setShowPreview(false)}
+                />
+            )}
         </>
     );
 };

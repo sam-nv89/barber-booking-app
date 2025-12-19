@@ -327,6 +327,15 @@ export const TRANSLATIONS = {
             replyMessage: 'Мастер ответил на ваш отзыв',
             suspiciousBookingTitle: '⚠️ Подозрительная запись',
             suspiciousBookingMessage: '{clientName} уже имеет {countText}.\nНовая запись на {date} в {time}',
+        },
+        profile: {
+            name: 'Имя',
+            namePlaceholder: 'Ваше имя',
+            phone: 'Телефон',
+            email: 'Email',
+            deletePhoto: 'Удалить фото',
+            loadFromTelegram: 'Загрузить из Telegram',
+            fromTelegram: 'из Telegram',
         }
     },
     kz: {
@@ -657,6 +666,15 @@ export const TRANSLATIONS = {
             replyMessage: 'Шебер сіздің пікіріңізге жауап берді',
             suspiciousBookingTitle: '⚠️ Күдікті жазба',
             suspiciousBookingMessage: '{clientName} клиентінде {count} жазба бар.\nЖаңа жазба {date} сағат {time}',
+        },
+        profile: {
+            name: 'Аты',
+            namePlaceholder: 'Сіздің атыңыз',
+            phone: 'Телефон',
+            email: 'Email',
+            deletePhoto: 'Фотоны жою',
+            loadFromTelegram: 'Telegram-нан жүктеу',
+            fromTelegram: 'Telegram-нан',
         }
     },
     en: {
@@ -987,6 +1005,15 @@ export const TRANSLATIONS = {
             replyMessage: 'Master replied to your review',
             suspiciousBookingTitle: '⚠️ Suspicious Booking',
             suspiciousBookingMessage: '{clientName} already has {count} bookings.\nNew booking on {date} at {time}',
+        },
+        profile: {
+            name: 'Name',
+            namePlaceholder: 'Your name',
+            phone: 'Phone',
+            email: 'Email',
+            deletePhoto: 'Delete photo',
+            loadFromTelegram: 'Load from Telegram',
+            fromTelegram: 'from Telegram',
         }
     }
 };
