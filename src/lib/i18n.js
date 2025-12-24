@@ -156,12 +156,14 @@ export const TRANSLATIONS = {
             removeFromBlocklist: 'Удалить из списка',
             phoneBlocked: 'Этот номер заблокирован',
             enterPhone: 'Введите номер телефона',
+            unblock: 'Разблокировать',
+            block: 'Внести в ЧС',
         },
         warnings: {
             tooManyBookings: 'У клиента уже есть {count} активных записей',
             duplicateService: 'Клиент уже записан на эту услугу в этот день',
             suspiciousBooking: 'Подозрительная запись',
-            clientBlocked: 'Клиент в чёрном списке',
+            clientBlocked: 'Для записи свяжитесь с мастером напрямую',
         },
         marketing: {
             createCampaign: 'Создать акцию',
@@ -495,12 +497,14 @@ export const TRANSLATIONS = {
             removeFromBlocklist: 'Тізімнен жою',
             phoneBlocked: 'Бұл нөмір бұғатталған',
             enterPhone: 'Телефон нөмірін енгізіңіз',
+            unblock: 'Бұғаттан шығару',
+            block: 'Қара тізімге',
         },
         warnings: {
             tooManyBookings: 'Клиенттің {count} белсенді жазбасы бар',
             duplicateService: 'Клиент бұл қызметке бүгін қазірдің өзінде жазылған',
             suspiciousBooking: 'Күмәнді жазба',
-            clientBlocked: 'Клиент бұғатталған',
+            clientBlocked: 'Жазылу үшін шеберге тікелей хабарласыңыз',
         },
         marketing: {
             createCampaign: 'Акция құру',
@@ -834,12 +838,14 @@ export const TRANSLATIONS = {
             removeFromBlocklist: 'Remove from list',
             phoneBlocked: 'This phone is blocked',
             enterPhone: 'Enter phone number',
+            unblock: 'Unblock',
+            block: 'Add to blacklist',
         },
         warnings: {
             tooManyBookings: 'Client already has {count} active bookings',
             duplicateService: 'Client is already booked for this service today',
             suspiciousBooking: 'Suspicious booking',
-            clientBlocked: 'Client is blocked',
+            clientBlocked: 'Please contact master directly to book',
         },
         marketing: {
             createCampaign: 'Create Campaign',

@@ -82,9 +82,12 @@ export const BookingWizard = () => {
     const validateBooking = () => {
         setBookingError(null);
 
-        // Check blocklist
-        if (blockedPhones?.includes(user.phone)) {
-            setBookingError(t('warnings.clientBlocked'));
+        // Check blocklist using cleaned phone digits
+        const userCleanPhone = user.phone?.replace(/\D/g, '');
+        const isBlocked = (blockedPhones || []).some(p => p.replace(/\D/g, '') === userCleanPhone);
+        if (isBlocked) {
+            const salonPhone = salonSettings?.phone || '';
+            setBookingError(`${t('warnings.clientBlocked')}${salonPhone ? ': ' + salonPhone : ''}`);
             return false;
         }
 

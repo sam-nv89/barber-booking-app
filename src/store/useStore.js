@@ -30,7 +30,38 @@ export const useStore = create(
                 telegramUsername: null,
                 telegramPhone: null,
             },
-            setUser: (user) => set((state) => ({ user: { ...state.user, ...user } })),
+            setUser: (userData) => set((state) => {
+                const updatedUser = { ...state.user, ...userData };
+
+                // Sync profile changes to clients CRM
+                const userPhone = updatedUser.phone?.replace(/\D/g, '');
+                const userTelegramId = updatedUser.telegramId;
+
+                const updatedClients = (state.clients || []).map(client => {
+                    const clientPhone = client.phone?.replace(/\D/g, '');
+                    const clientTgUser = client.telegramUsername?.replace('@', '').toLowerCase();
+                    const userTgUser = updatedUser.telegramUsername?.replace('@', '').toLowerCase();
+                    const isMatch =
+                        (userPhone && clientPhone && userPhone === clientPhone) ||
+                        (userTelegramId && client.telegramId === userTelegramId) ||
+                        (userTgUser && clientTgUser && userTgUser === clientTgUser) ||
+                        (updatedUser.name && client.name && updatedUser.name.toLowerCase() === client.name.toLowerCase());
+
+                    if (isMatch) {
+                        return {
+                            ...client,
+                            name: updatedUser.name || client.name,
+                            phone: updatedUser.phone || client.phone,
+                            email: updatedUser.email || client.email,
+                            telegramUsername: updatedUser.telegramUsername || client.telegramUsername,
+                            telegramId: updatedUser.telegramId || client.telegramId,
+                        };
+                    }
+                    return client;
+                });
+
+                return { user: updatedUser, clients: updatedClients };
+            }),
             setRole: (role) => set((state) => ({ user: { ...state.user, role } })),
 
             // Settings State
@@ -55,14 +86,16 @@ export const useStore = create(
 
             // Blocklist for anti-fraud
             blockedPhones: [],
-            addBlockedPhone: (phone) => set((state) => ({
-                blockedPhones: state.blockedPhones.includes(phone)
-                    ? state.blockedPhones
-                    : [...state.blockedPhones, phone]
-            })),
-            removeBlockedPhone: (phone) => set((state) => ({
-                blockedPhones: state.blockedPhones.filter(p => p !== phone)
-            })),
+            addBlockedPhone: (phone) => set((state) => {
+                const cleanPhone = phone?.replace(/\D/g, '');
+                if (!cleanPhone) return state;
+                const alreadyBlocked = state.blockedPhones.some(p => p.replace(/\D/g, '') === cleanPhone);
+                return alreadyBlocked ? state : { blockedPhones: [...state.blockedPhones, cleanPhone] };
+            }),
+            removeBlockedPhone: (phone) => set((state) => {
+                const cleanPhone = phone?.replace(/\D/g, '');
+                return { blockedPhones: state.blockedPhones.filter(p => p.replace(/\D/g, '') !== cleanPhone) };
+            }),
 
             // Advanced Schedule State
             workScheduleOverrides: {}, // { 'YYYY-MM-DD': { isWorking: boolean, start, end } }
@@ -326,6 +359,7 @@ export const useStore = create(
                             id: Date.now().toString(),
                             name: appointment.clientName,
                             phone: appointment.clientPhone,
+                            telegramUsername: appointment.telegramUsername,
                             createdAt: new Date().toISOString(),
                             source: 'booking'
                         }];

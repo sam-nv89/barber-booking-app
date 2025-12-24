@@ -3,13 +3,13 @@ import React, { useState, useMemo, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Search, Users, Plus, Phone, User, Trash2, Calendar, Edit, X, FileText, Tag, Upload, Check, AlertCircle, Link, FileSpreadsheet, Palette, ArrowUpDown, ChevronDown } from 'lucide-react';
+import { Search, Users, Plus, Phone, User, Trash2, Calendar, Edit, X, FileText, Tag, Upload, Check, AlertCircle, Link, FileSpreadsheet, Palette, ArrowUpDown, ChevronDown, ShieldOff, ShieldCheck } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { formatPhoneNumber, parseVCard, parseCSV, googleSheetToCSV, parseExcel, getContrastColor } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 
 export function ClientList() {
-    const { clients, appointments, addClient, removeClient, updateClient, customTags, addCustomTag, updateCustomTag, removeCustomTag, t } = useStore();
+    const { clients, appointments, addClient, removeClient, updateClient, customTags, addCustomTag, updateCustomTag, removeCustomTag, blockedPhones, addBlockedPhone, removeBlockedPhone, t } = useStore();
     const [searchQuery, setSearchQuery] = useState('');
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState(null);
@@ -36,12 +36,12 @@ export function ClientList() {
 
     // Edit modal state
     const [showEditModal, setShowEditModal] = useState(false);
-    const [editFormData, setEditFormData] = useState({ id: null, name: '', phone: '', notes: '', tags: [] });
+    const [editFormData, setEditFormData] = useState({ id: null, name: '', phone: '', email: '', telegramUsername: '', notes: '', tags: [] });
     const [showUpdateSuccess, setShowUpdateSuccess] = useState(false);
 
     // Add client modal state
     const [showAddModal, setShowAddModal] = useState(false);
-    const [addFormData, setAddFormData] = useState({ name: '', phone: '', notes: '', tags: [] });
+    const [addFormData, setAddFormData] = useState({ name: '', phone: '', email: '', telegramUsername: '', notes: '', tags: [] });
     const [showAddSuccess, setShowAddSuccess] = useState(false);
 
 
@@ -252,11 +252,13 @@ export function ClientList() {
         addClient({
             name: addFormData.name.trim(),
             phone: formatPhoneNumber(addFormData.phone),
+            email: addFormData.email?.trim() || '',
+            telegramUsername: addFormData.telegramUsername?.trim() || '',
             notes: addFormData.notes.trim(),
             tags: addFormData.tags
         });
         setShowAddModal(false);
-        setAddFormData({ name: '', phone: '', notes: '', tags: [] });
+        setAddFormData({ name: '', phone: '', email: '', telegramUsername: '', notes: '', tags: [] });
         setShowAddSuccess(true);
         setTimeout(() => setShowAddSuccess(false), 3000);
     };
@@ -278,6 +280,8 @@ export function ClientList() {
             id: client.id,
             name: client.name || '',
             phone: client.phone || '',
+            email: client.email || '',
+            telegramUsername: client.telegramUsername || '',
             notes: client.notes || '',
             tags: client.tags || []
         });
@@ -289,6 +293,8 @@ export function ClientList() {
             updateClient(editFormData.id, {
                 name: editFormData.name,
                 phone: formatPhoneNumber(editFormData.phone),
+                email: editFormData.email,
+                telegramUsername: editFormData.telegramUsername,
                 notes: editFormData.notes,
                 tags: editFormData.tags
             });
@@ -485,6 +491,24 @@ export function ClientList() {
     };
 
     const getTagInfo = (tagId) => AVAILABLE_TAGS.find(t => t.id === tagId);
+
+    // Blacklist helpers
+    const isClientBlocked = (phone) => {
+        if (!phone) return false;
+        const cleanPhone = phone.replace(/\D/g, '');
+        return (blockedPhones || []).some(p => p.replace(/\D/g, '') === cleanPhone);
+    };
+
+    const toggleBlacklist = (client) => {
+        const cleanPhone = client.phone?.replace(/\D/g, '');
+        if (!cleanPhone) return;
+
+        if (isClientBlocked(client.phone)) {
+            removeBlockedPhone(cleanPhone);
+        } else {
+            addBlockedPhone(cleanPhone);
+        }
+    };
 
     // Create new custom tag with preset color
     const createCustomTag = () => {
@@ -830,21 +854,34 @@ export function ClientList() {
             ) : (
                 <div className="space-y-3">
                     {filteredClients.map(client => (
-                        <Card key={client.id} className="hover:shadow-md transition-shadow">
+                        <Card key={client.id} className={cn("hover:shadow-md transition-shadow", isClientBlocked(client.phone) && "border-red-500/30 bg-red-500/5")}>
                             <CardContent className="p-4">
                                 <div className="flex items-start justify-between">
                                     <div className="flex items-start gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mt-1">
-                                            <User className="w-5 h-5 text-primary" />
+                                        <div className={cn("w-10 h-10 rounded-full flex items-center justify-center mt-1", isClientBlocked(client.phone) ? "bg-red-500/10" : "bg-primary/10")}>
+                                            <User className={cn("w-5 h-5", isClientBlocked(client.phone) ? "text-red-500" : "text-primary")} />
                                         </div>
                                         <div className="space-y-1">
-                                            <div className="font-medium">
+                                            <div className="font-medium flex items-center gap-2">
                                                 {searchQuery ? highlightText(client.name, searchQuery) : client.name}
+                                                {isClientBlocked(client.phone) && (
+                                                    <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-500 border border-red-500/30">ЧС</span>
+                                                )}
                                             </div>
                                             <div className="text-sm text-muted-foreground flex items-center gap-1">
                                                 <Phone className="w-3 h-3" />
                                                 {searchQuery ? highlightPhone(client.phone, searchQuery) : client.phone}
                                             </div>
+                                            {client.telegramUsername && (
+                                                <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                                    <span className="text-primary">@{client.telegramUsername.replace('@', '')}</span>
+                                                </div>
+                                            )}
+                                            {client.email && (
+                                                <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                                    ✉️ {client.email}
+                                                </div>
+                                            )}
                                             {client.totalBookings > 0 && (
                                                 <div className="text-xs text-muted-foreground flex items-center gap-1">
                                                     <Calendar className="w-3 h-3" />
@@ -881,14 +918,25 @@ export function ClientList() {
                                             size="icon"
                                             variant="ghost"
                                             onClick={() => startEdit(client)}
+                                            title={t('clients.edit') || 'Редактировать'}
                                         >
                                             <Edit className="w-4 h-4" />
                                         </Button>
                                         <Button
                                             size="icon"
                                             variant="ghost"
+                                            onClick={() => toggleBlacklist(client)}
+                                            className={isClientBlocked(client.phone) ? 'text-red-500 hover:text-red-600' : 'text-muted-foreground'}
+                                            title={isClientBlocked(client.phone) ? t('settings.unblock') : t('settings.block')}
+                                        >
+                                            {isClientBlocked(client.phone) ? <ShieldOff className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
+                                        </Button>
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
                                             className="text-destructive hover:text-destructive"
                                             onClick={() => handleDelete(client)}
+                                            title={t('common.delete') || 'Удалить'}
                                         >
                                             <Trash2 className="w-4 h-4" />
                                         </Button>
@@ -1162,7 +1210,7 @@ export function ClientList() {
                     onClick={() => setShowEditModal(false)}
                 >
                     <Card
-                        className="w-full max-w-md animate-in zoom-in-95 duration-200"
+                        className="w-full max-w-md max-h-[80vh] overflow-y-auto animate-in zoom-in-95 duration-200 mb-20"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <CardContent className="p-6">
@@ -1199,6 +1247,23 @@ export function ClientList() {
                                     />
                                 </div>
                                 <div>
+                                    <label className="text-sm font-medium mb-1 block">Telegram</label>
+                                    <Input
+                                        value={editFormData.telegramUsername}
+                                        onChange={(e) => setEditFormData(p => ({ ...p, telegramUsername: e.target.value }))}
+                                        placeholder="@username"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-sm font-medium mb-1 block">Email</label>
+                                    <Input
+                                        type="email"
+                                        value={editFormData.email}
+                                        onChange={(e) => setEditFormData(p => ({ ...p, email: e.target.value }))}
+                                        placeholder="email@example.com"
+                                    />
+                                </div>
+                                <div>
                                     <label className="text-sm font-medium mb-1 block">{t('clients.notes') || 'Заметки'}</label>
                                     <Input
                                         value={editFormData.notes}
@@ -1230,6 +1295,29 @@ export function ClientList() {
                                         ))}
                                     </div>
                                 </div>
+
+                                {/* Blacklist Toggle */}
+                                {editFormData.phone && (
+                                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border">
+                                        <div className="flex items-center gap-2">
+                                            <ShieldOff className={cn("w-4 h-4", isClientBlocked(editFormData.phone) ? "text-red-500" : "text-muted-foreground")} />
+                                            <span className="text-sm font-medium">Чёрный список</span>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleBlacklist({ phone: editFormData.phone })}
+                                            className={cn(
+                                                "relative w-11 h-6 rounded-full transition-colors",
+                                                isClientBlocked(editFormData.phone) ? "bg-red-500" : "bg-muted"
+                                            )}
+                                        >
+                                            <span className={cn(
+                                                "absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform",
+                                                isClientBlocked(editFormData.phone) && "translate-x-5"
+                                            )} />
+                                        </button>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Buttons */}
@@ -1271,7 +1359,7 @@ export function ClientList() {
                     onClick={() => setShowAddModal(false)}
                 >
                     <Card
-                        className="w-full max-w-md animate-in zoom-in-95 duration-200"
+                        className="w-full max-w-md max-h-[80vh] overflow-y-auto animate-in zoom-in-95 duration-200 mb-20"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <CardContent className="p-6">
@@ -1305,6 +1393,23 @@ export function ClientList() {
                                         value={addFormData.phone}
                                         onChange={(e) => setAddFormData(p => ({ ...p, phone: formatPhoneNumber(e.target.value) }))}
                                         placeholder="+7 (___) ___-__-__"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-sm font-medium mb-1 block">Telegram</label>
+                                    <Input
+                                        value={addFormData.telegramUsername}
+                                        onChange={(e) => setAddFormData(p => ({ ...p, telegramUsername: e.target.value }))}
+                                        placeholder="@username"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-sm font-medium mb-1 block">Email</label>
+                                    <Input
+                                        type="email"
+                                        value={addFormData.email}
+                                        onChange={(e) => setAddFormData(p => ({ ...p, email: e.target.value }))}
+                                        placeholder="email@example.com"
                                     />
                                 </div>
                                 <div>

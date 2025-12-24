@@ -288,3 +288,218 @@
 .delay-800 {
   animation-delay: 0.8s;
 }
+
+/* City Scene Animations */
+@keyframes walk-across {
+  0% {
+    transform: translateX(-50px);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 1;
+  }
+
+  90% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateX(calc(100vw + 50px));
+    opacity: 0;
+  }
+}
+
+@keyframes float-cloud {
+  0% {
+    transform: translateX(-100px);
+  }
+
+  100% {
+    transform: translateX(calc(100vw + 100px));
+  }
+}
+
+@keyframes fly-across {
+  0% {
+    transform: translateX(-100px) translateY(0);
+  }
+
+  50% {
+    transform: translateX(50vw) translateY(-20px);
+  }
+
+  100% {
+    transform: translateX(calc(100vw + 100px)) translateY(10px);
+  }
+}
+
+@keyframes tail-wag {
+
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+
+  25% {
+    transform: rotate(15deg);
+  }
+
+  75% {
+    transform: rotate(-15deg);
+  }
+}
+
+@keyframes blink {
+
+  0%,
+  45%,
+  55%,
+  100% {
+    transform: scaleY(1);
+  }
+
+  50% {
+    transform: scaleY(0.1);
+  }
+}
+
+@keyframes cat-idle {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-walk-across {
+  animation: walk-across 8s linear infinite;
+}
+
+.animate-float-cloud {
+  animation: float-cloud 25s linear infinite;
+}
+
+.animate-float-cloud-slow {
+  animation: float-cloud 35s linear infinite;
+}
+
+.animate-fly-across {
+  animation: fly-across 12s ease-in-out infinite;
+}
+
+.animate-tail-wag {
+  animation: tail-wag 0.8s ease-in-out infinite;
+  transform-origin: left center;
+}
+
+.animate-blink {
+  animation: blink 4s ease-in-out infinite;
+}
+
+.animate-cat-idle {
+  animation: cat-idle 2s ease-in-out infinite;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.8s ease-out forwards;
+}
+
+/* Celestial Animations */
+@keyframes sunrise {
+  0% {
+    transform: translateY(100vh) scale(0.8);
+    opacity: 0.5;
+  }
+
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes sunset {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(150vh) scale(0.9);
+    opacity: 0;
+  }
+}
+
+@keyframes moonrise {
+  0% {
+    transform: translateY(100vh) rotate(-10deg);
+  }
+
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+}
+
+@keyframes pulse-sun {
+
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 60px 30px rgba(255, 200, 0, 0.4);
+  }
+
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 0 80px 40px rgba(255, 200, 0, 0.6);
+  }
+}
+
+.animate-sunrise {
+  animation: sunrise 3s ease-out forwards;
+}
+
+.animate-sunset {
+  animation: sunset 12s ease-in-out forwards;
+}
+
+.animate-moonrise {
+  animation: moonrise 3s ease-out forwards;
+}
+
+.animate-pulse-sun {
+  animation: pulse-sun 4s ease-in-out infinite;
+}
+
+.animate-pulse-sun-smooth {
+  animation: pulse-sun-smooth 6s ease-in-out infinite;
+}
+
+@keyframes pulse-sun-smooth {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+}

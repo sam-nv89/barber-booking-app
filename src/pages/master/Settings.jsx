@@ -1103,20 +1103,12 @@ const AnimationPreviewCard = () => {
     const { t } = useStore();
     const [showPreview, setShowPreview] = React.useState(false);
     const [previewTimeOfDay, setPreviewTimeOfDay] = React.useState('morning');
-    const [previewSeason, setPreviewSeason] = React.useState('winter');
 
     const timeOptions = [
         { value: 'morning', label: '🌅 Утро', labelEn: 'Morning' },
         { value: 'afternoon', label: '☀️ День', labelEn: 'Afternoon' },
         { value: 'evening', label: '🌆 Вечер', labelEn: 'Evening' },
         { value: 'night', label: '🌙 Ночь', labelEn: 'Night' }
-    ];
-
-    const seasonOptions = [
-        { value: 'winter', label: '❄️ Зима', labelEn: 'Winter' },
-        { value: 'spring', label: '🌷 Весна', labelEn: 'Spring' },
-        { value: 'summer', label: '🌻 Лето', labelEn: 'Summer' },
-        { value: 'autumn', label: '🍁 Осень', labelEn: 'Autumn' }
     ];
 
     return (
@@ -1149,26 +1141,6 @@ const AnimationPreviewCard = () => {
                         </div>
                     </div>
 
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">Сезон</label>
-                        <div className="grid grid-cols-2 gap-2">
-                            {seasonOptions.map(opt => (
-                                <button
-                                    key={opt.value}
-                                    className={cn(
-                                        "p-2 rounded-md border text-sm transition-all",
-                                        previewSeason === opt.value
-                                            ? "border-primary bg-primary/10 font-medium"
-                                            : "border-border hover:bg-muted"
-                                    )}
-                                    onClick={() => setPreviewSeason(opt.value)}
-                                >
-                                    {opt.label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
                     <Button
                         className="w-full gap-2"
                         onClick={() => setShowPreview(true)}
@@ -1182,7 +1154,6 @@ const AnimationPreviewCard = () => {
             {showPreview && (
                 <WelcomeAnimation
                     previewTimeOfDay={previewTimeOfDay}
-                    previewSeason={previewSeason}
                     onComplete={() => setShowPreview(false)}
                 />
             )}
