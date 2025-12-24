@@ -163,14 +163,6 @@ export const WelcomeAnimation = ({ previewTimeOfDay, onComplete }) => {
             }
             onClick={handleClose}
         >
-            {/* Close Button */}
-            < button
-                className="absolute top-6 right-6 z-50 p-2 rounded-full bg-black/20 hover:bg-black/40 text-white transition-colors"
-                onClick={(e) => { e.stopPropagation(); handleClose(); }}
-            >
-                <X className="w-6 h-6" />
-            </button >
-
             {/* --- Celestial Layers --- */}
             < div className="absolute inset-0 w-full h-full pointer-events-none" >
 

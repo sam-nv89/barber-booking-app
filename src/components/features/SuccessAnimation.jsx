@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-export const SuccessAnimation = ({ onComplete, title = "Успешно!", message = "Ваша запись подтверждена" }) => {
+export const SuccessAnimation = ({ onComplete, title = "Успешно!", message = "Ваша заявка отправлена мастеру" }) => {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
             <motion.div
