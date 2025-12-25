@@ -41,14 +41,15 @@ export const Visits = () => {
             if (highlightId) {
                 const app = appointments.find(a => a.id === highlightId);
                 if (app) {
-                    // Switch tab if needed
+                    // Switch tab based on SAME logic used for upcoming/history filters
                     const appDate = new Date(app.date + 'T' + app.time);
-                    const isHistory = appDate < new Date() || app.status === 'completed' || app.status === 'cancelled';
+                    const now = new Date();
+                    // Use same logic as the history filter: past date OR completed/cancelled status
+                    const isHistoryItem = appDate < now || app.status === 'completed' || app.status === 'cancelled';
 
-                    if (isHistory) setActiveTab('history');
-                    else setActiveTab('upcoming');
+                    setActiveTab(isHistoryItem ? 'history' : 'upcoming');
 
-                    // Scroll after render (small delay to ensure tab switch + render)
+                    // Scroll after render (increased delay to ensure tab switch + render complete)
                     setTimeout(() => {
                         const el = document.getElementById(`appointment-${highlightId}`);
                         if (el) {
@@ -56,7 +57,7 @@ export const Visits = () => {
                             el.classList.add('ring-2', 'ring-primary', 'ring-offset-2'); // Visual highlight
                             setTimeout(() => el.classList.remove('ring-2', 'ring-primary', 'ring-offset-2'), 2000);
                         }
-                    }, 100);
+                    }, 200);
                 }
             }
         }

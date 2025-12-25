@@ -488,6 +488,82 @@ export const useStore = create(
                 };
             }),
 
+            // Generate mock data for testing analytics
+            generateMockData: () => set((state) => {
+                const services = state.services || [];
+                const clientNames = ['Иван', 'Алексей', 'Дмитрий', 'Сергей', 'Михаил', 'Артём', 'Максим', 'Андрей', 'Николай', 'Владимир'];
+                const statuses = ['completed', 'completed', 'completed', 'completed', 'cancelled', 'pending', 'confirmed'];
+                const times = ['09:00', '10:00', '11:00', '12:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'];
+
+                const newAppointments = [];
+                const newClients = [];
+                const newReviews = [];
+
+                // Generate 100 appointments over last 60 days
+                for (let i = 0; i < 100; i++) {
+                    const daysAgo = Math.floor(Math.random() * 60);
+                    const date = new Date();
+                    date.setDate(date.getDate() - daysAgo);
+                    const dateStr = date.toISOString().split('T')[0];
+
+                    const clientName = clientNames[Math.floor(Math.random() * clientNames.length)] + ' ' + (i + 1);
+                    const phone = '+7 7' + String(Math.floor(Math.random() * 100000000)).padStart(8, '0');
+                    const service = services[Math.floor(Math.random() * services.length)];
+                    const status = statuses[Math.floor(Math.random() * statuses.length)];
+                    const time = times[Math.floor(Math.random() * times.length)];
+                    const price = service?.price || Math.floor(Math.random() * 10000) + 3000;
+
+                    const appId = `mock-${Date.now()}-${i}`;
+
+                    newAppointments.push({
+                        id: appId,
+                        date: dateStr,
+                        time: time,
+                        serviceId: service?.id,
+                        serviceIds: service ? [service.id] : [],
+                        clientName,
+                        clientPhone: phone,
+                        price,
+                        status,
+                        createdAt: date.toISOString(),
+                    });
+
+                    // Add client if not exists
+                    const clientExists = state.clients?.some(c => c.phone === phone) || newClients.some(c => c.phone === phone);
+                    if (!clientExists) {
+                        newClients.push({
+                            id: `client-${Date.now()}-${i}`,
+                            name: clientName,
+                            phone,
+                            createdAt: date.toISOString(),
+                            source: 'mock',
+                            totalBookings: 1,
+                            visits: status === 'completed' ? 1 : 0,
+                        });
+                    }
+
+                    // Add review for some completed appointments
+                    if (status === 'completed' && Math.random() > 0.6) {
+                        newReviews.push({
+                            id: `review-${Date.now()}-${i}`,
+                            appointmentId: appId,
+                            clientName,
+                            rating: Math.floor(Math.random() * 2) + 4, // 4 or 5 stars
+                            comment: ['Отлично!', 'Хороший мастер', 'Рекомендую', 'Всё супер'][Math.floor(Math.random() * 4)],
+                            date: dateStr,
+                            reply: null,
+                            isRead: true,
+                        });
+                    }
+                }
+
+                return {
+                    appointments: [...state.appointments, ...newAppointments],
+                    clients: [...(state.clients || []), ...newClients],
+                    reviews: [...(state.reviews || []), ...newReviews],
+                };
+            }),
+
             // Selectors/Helpers
             t: (key) => {
                 const lang = get().language;

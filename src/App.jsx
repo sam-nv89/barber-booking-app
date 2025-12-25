@@ -11,6 +11,7 @@ import { Settings } from '@/pages/master/Settings'
 import { Dashboard } from '@/pages/master/Dashboard'
 import { Reviews } from '@/pages/master/Reviews'
 import { ClientList } from '@/pages/master/ClientList'
+import { Analytics } from '@/pages/master/Analytics'
 import { TMAProvider, useTMA } from '@/components/providers/TMAProvider'
 import { WelcomeAnimation } from '@/components/features/WelcomeAnimation'
 
@@ -89,6 +90,7 @@ function AppContent() {
                     <Route path="/master/dashboard" element={<Dashboard />} />
                     <Route path="/master/reviews" element={<Reviews />} />
                     <Route path="/master/clientlist" element={<ClientList />} />
+                    <Route path="/master/analytics" element={<Analytics />} />
                     <Route path="/master/settings" element={<Settings />} />
 
                     {/* Fallback */}

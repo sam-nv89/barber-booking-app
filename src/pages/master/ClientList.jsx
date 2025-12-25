@@ -857,7 +857,10 @@ export function ClientList() {
                         <Card key={client.id} className={cn("hover:shadow-md transition-shadow", isClientBlocked(client.phone) && "border-red-500/30 bg-red-500/5")}>
                             <CardContent className="p-4">
                                 <div className="flex items-start justify-between">
-                                    <div className="flex items-start gap-3">
+                                    <div
+                                        className="flex items-start gap-3 flex-1 cursor-pointer rounded-lg -m-2 p-2 hover:bg-muted/50 transition-colors"
+                                        onClick={() => startEdit(client)}
+                                    >
                                         <div className={cn("w-10 h-10 rounded-full flex items-center justify-center mt-1", isClientBlocked(client.phone) ? "bg-red-500/10" : "bg-primary/10")}>
                                             <User className={cn("w-5 h-5", isClientBlocked(client.phone) ? "text-red-500" : "text-primary")} />
                                         </div>
@@ -913,15 +916,7 @@ export function ClientList() {
                                             )}
                                         </div>
                                     </div>
-                                    <div className="flex gap-1">
-                                        <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            onClick={() => startEdit(client)}
-                                            title={t('clients.edit') || 'Редактировать'}
-                                        >
-                                            <Edit className="w-4 h-4" />
-                                        </Button>
+                                    <div className="flex gap-1 shrink-0">
                                         <Button
                                             size="icon"
                                             variant="ghost"
@@ -1241,6 +1236,7 @@ export function ClientList() {
                                 <div>
                                     <label className="text-sm font-medium mb-1 block">{t('clients.phone') || 'Телефон'}</label>
                                     <Input
+                                        type="tel"
                                         value={editFormData.phone}
                                         onChange={(e) => setEditFormData(p => ({ ...p, phone: e.target.value }))}
                                         placeholder="+7 (___) ___-__-__"
@@ -1390,6 +1386,7 @@ export function ClientList() {
                                 <div>
                                     <label className="text-sm font-medium mb-1 block">{t('clients.phone') || 'Телефон'} *</label>
                                     <Input
+                                        type="tel"
                                         value={addFormData.phone}
                                         onChange={(e) => setAddFormData(p => ({ ...p, phone: formatPhoneNumber(e.target.value) }))}
                                         placeholder="+7 (___) ___-__-__"
