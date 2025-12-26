@@ -499,6 +499,14 @@ export const useStore = create(
                 const newClients = [];
                 const newReviews = [];
 
+                // Create a pool of recurring clients (30 clients that will return multiple times)
+                const recurringClientPool = [];
+                for (let i = 0; i < 30; i++) {
+                    const clientName = clientNames[Math.floor(Math.random() * clientNames.length)] + ' ' + (i + 1);
+                    const phone = '+7 7' + String(Math.floor(Math.random() * 100000000)).padStart(8, '0');
+                    recurringClientPool.push({ name: clientName, phone });
+                }
+
                 // Generate 100 appointments over last 60 days
                 for (let i = 0; i < 100; i++) {
                     const daysAgo = Math.floor(Math.random() * 60);
@@ -506,8 +514,19 @@ export const useStore = create(
                     date.setDate(date.getDate() - daysAgo);
                     const dateStr = date.toISOString().split('T')[0];
 
-                    const clientName = clientNames[Math.floor(Math.random() * clientNames.length)] + ' ' + (i + 1);
-                    const phone = '+7 7' + String(Math.floor(Math.random() * 100000000)).padStart(8, '0');
+                    // 70% chance to use a recurring client, 30% new client
+                    let clientName, phone;
+                    if (Math.random() < 0.7 && recurringClientPool.length > 0) {
+                        // Use existing recurring client
+                        const recurringClient = recurringClientPool[Math.floor(Math.random() * recurringClientPool.length)];
+                        clientName = recurringClient.name;
+                        phone = recurringClient.phone;
+                    } else {
+                        // Create new unique client
+                        clientName = clientNames[Math.floor(Math.random() * clientNames.length)] + ' Новый' + (i + 100);
+                        phone = '+7 7' + String(Math.floor(Math.random() * 100000000)).padStart(8, '0');
+                    }
+
                     const service = services[Math.floor(Math.random() * services.length)];
                     const status = statuses[Math.floor(Math.random() * statuses.length)];
                     const time = times[Math.floor(Math.random() * times.length)];
@@ -528,7 +547,7 @@ export const useStore = create(
                         createdAt: date.toISOString(),
                     });
 
-                    // Add client if not exists
+                    // Add client if not exists (in state or new clients)
                     const clientExists = state.clients?.some(c => c.phone === phone) || newClients.some(c => c.phone === phone);
                     if (!clientExists) {
                         newClients.push({

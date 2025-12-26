@@ -15,6 +15,7 @@ export const Analytics = () => {
     const [period, setPeriod] = useState('week');
     const [showPeriodMenu, setShowPeriodMenu] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [hoveredData, setHoveredData] = useState(null); // { index, revenue, heightPercent }
 
     // Date locale based on language
     const dateLocale = language === 'ru' ? ru : language === 'kz' ? kk : enUS;
@@ -129,7 +130,7 @@ export const Analytics = () => {
             .slice(0, 5);
     }, [filteredAppointments, services, language]);
 
-    // Revenue by day/month (for chart)
+    // Revenue by day/month/hour (for chart)
     const revenueByPeriod = useMemo(() => {
         // For 'all' period - show by months
         if (period === 'all') {
@@ -151,6 +152,38 @@ export const Analytics = () => {
                     .filter(a => isSameMonth(new Date(a.date), month)).length;
                 return { date: month, revenue: monthRevenue, clients: monthClients, isMonth: true };
             });
+        }
+
+        // For 'today' period - show by hours
+        if (period === 'today') {
+            const todayStr = format(new Date(), 'yyyy-MM-dd');
+            const todayAppointments = filteredAppointments.filter(a =>
+                a.status === 'completed' && a.date === todayStr
+            );
+
+            // Create hours from 9 to 21
+            const hours = [];
+            for (let h = 9; h <= 21; h++) {
+                const hourRevenue = todayAppointments
+                    .filter(a => {
+                        const [hour] = (a.time || '12:00').split(':').map(Number);
+                        return hour === h;
+                    })
+                    .reduce((sum, a) => sum + (a.price || 0), 0);
+                const hourClients = todayAppointments
+                    .filter(a => {
+                        const [hour] = (a.time || '12:00').split(':').map(Number);
+                        return hour === h;
+                    }).length;
+                hours.push({
+                    hour: h,
+                    revenue: hourRevenue,
+                    clients: hourClients,
+                    isHour: true,
+                    date: new Date() // for tooltip date display
+                });
+            }
+            return hours;
         }
 
         // For other periods - show by days
@@ -285,9 +318,13 @@ export const Analytics = () => {
                             <Calendar className="w-4 h-4" />
                             <span className="text-xs font-medium">{t('analytics.bookings')}</span>
                         </div>
-                        <div className="text-2xl font-bold">{metrics.bookings}</div>
+                        <div className="text-2xl font-bold">{metrics.bookings.toLocaleString('ru-RU')}</div>
                         <div className="text-xs text-muted-foreground mt-1">
-                            ✓ {metrics.completed} / ✕ {metrics.cancelled}
+                            <span title={language === 'en' ? 'Completed' : language === 'kz' ? 'Аяқталған' : 'Завершено'} className="cursor-default">✓ {metrics.completed.toLocaleString('ru-RU')}</span>
+                            {' / '}
+                            <span title={language === 'en' ? 'Cancelled' : language === 'kz' ? 'Болдырмау' : 'Отменено'} className="cursor-default">✕ {metrics.cancelled.toLocaleString('ru-RU')}</span>
+                            {' / '}
+                            <span title={language === 'en' ? 'Pending' : language === 'kz' ? 'Күту' : 'В ожидании'} className="cursor-default">⏳ {metrics.pending.toLocaleString('ru-RU')}</span>
                         </div>
                     </CardContent>
                 </Card>
@@ -310,20 +347,25 @@ export const Analytics = () => {
                             <Users className="w-4 h-4" />
                             <span className="text-xs font-medium">{t('analytics.newClients')}</span>
                         </div>
-                        <div className="text-xl font-bold">{metrics.newClients}</div>
+                        <div className="text-xl font-bold">{metrics.newClients.toLocaleString('ru-RU')}</div>
                     </CardContent>
                 </Card>
             </div>
 
             {/* Revenue Chart */}
             {revenueByPeriod.length > 0 && (() => {
-                // Calculate nice Y-axis max
+                // Calculate nice Y-axis max - add 10% headroom and round to nice number
                 const niceMax = (() => {
-                    if (maxRevenue <= 10000) return Math.ceil(maxRevenue / 2000) * 2000;
-                    if (maxRevenue <= 50000) return Math.ceil(maxRevenue / 10000) * 10000;
-                    if (maxRevenue <= 100000) return Math.ceil(maxRevenue / 20000) * 20000;
-                    if (maxRevenue <= 500000) return Math.ceil(maxRevenue / 100000) * 100000;
-                    return Math.ceil(maxRevenue / 200000) * 200000;
+                    const withBuffer = maxRevenue * 1.1; // 10% headroom
+                    if (withBuffer <= 5000) return Math.ceil(withBuffer / 1000) * 1000;
+                    if (withBuffer <= 10000) return Math.ceil(withBuffer / 2000) * 2000;
+                    if (withBuffer <= 25000) return Math.ceil(withBuffer / 5000) * 5000;
+                    if (withBuffer <= 50000) return Math.ceil(withBuffer / 10000) * 10000;
+                    if (withBuffer <= 100000) return Math.ceil(withBuffer / 25000) * 25000;
+                    if (withBuffer <= 250000) return Math.ceil(withBuffer / 50000) * 50000;
+                    if (withBuffer <= 500000) return Math.ceil(withBuffer / 100000) * 100000;
+                    if (withBuffer <= 1000000) return Math.ceil(withBuffer / 200000) * 200000;
+                    return Math.ceil(withBuffer / 500000) * 500000;
                 })();
                 // 5 labels at 0%, 25%, 50%, 75%, 100%
                 const yLabels = [niceMax, niceMax * 0.75, niceMax * 0.5, niceMax * 0.25, 0];
@@ -335,33 +377,77 @@ export const Analytics = () => {
                     if (val === 0) return '0 ₸';
                     return `${formatPrice(val)} ₸`;
                 };
-
                 return (
-                    <Card>
+                    <Card className="overflow-visible">
                         <CardHeader className="pb-4">
-                            <CardTitle className="text-base flex items-center gap-2 mb-2">
-                                📈 {period === 'all' ? (language === 'en' ? 'Revenue by month' : 'Выручка по месяцам') : t('analytics.revenueByDay')}
-                            </CardTitle>
+                            <div className="flex items-start justify-between">
+                                <CardTitle className="text-base flex items-center gap-2">
+                                    📈 {period === 'all' ? (language === 'en' ? 'Revenue by month' : 'Выручка по месяцам') : t('analytics.revenueByDay')}
+                                </CardTitle>
+                                {/* Always visible data block - shows placeholder or hovered data */}
+                                <div className="text-sm text-right">
+                                    {hoveredData && revenueByPeriod[hoveredData.index] ? (
+                                        <>
+                                            <div className="font-semibold text-foreground">
+                                                {revenueByPeriod[hoveredData.index].isHour
+                                                    ? `${revenueByPeriod[hoveredData.index].hour}:00`
+                                                    : format(revenueByPeriod[hoveredData.index].date, 'dd.MM.yyyy')}
+                                            </div>
+                                            <div className="text-muted-foreground">
+                                                👥 Клиентов: <span className="font-medium text-foreground">{revenueByPeriod[hoveredData.index].clients.toLocaleString('ru-RU')}</span>
+                                            </div>
+                                            <div className="text-muted-foreground">
+                                                💰 Выручка: <span className="font-medium text-green-600">{hoveredData.revenue.toLocaleString('ru-RU')} ₸</span>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div className="font-semibold text-muted-foreground/50">—</div>
+                                            <div className="text-muted-foreground/50">👥 Клиентов: —</div>
+                                            <div className="text-muted-foreground/50">💰 Выручка: —</div>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
                         </CardHeader>
-                        <CardContent>
-                            <div className="flex">
+                        <CardContent className="overflow-visible">
+                            <div className="flex overflow-visible">
                                 {/* Y-axis labels - positioned exactly on grid lines */}
                                 <div className="relative shrink-0 text-right pr-3" style={{ width: '90px', height: `${chartHeight}px` }}>
-                                    {yLabels.map((val, idx) => (
+                                    {yLabels.map((val, idx) => {
+                                        // Hide label if hover value is close (within 12% of chart height)
+                                        const labelPercent = idx * 25; // 0, 25, 50, 75, 100
+                                        const hoverPercent = hoveredData ? (100 - hoveredData.heightPercent) : null;
+                                        const isClose = hoverPercent !== null && Math.abs(labelPercent - hoverPercent) < 12;
+
+                                        return (
+                                            <span
+                                                key={idx}
+                                                className={`absolute right-3 text-sm text-muted-foreground font-medium transition-opacity ${isClose ? 'opacity-0' : 'opacity-100'}`}
+                                                style={{
+                                                    top: `${labelPercent}%`,
+                                                    transform: 'translateY(-50%)'
+                                                }}
+                                            >
+                                                {formatYLabel(val)}
+                                            </span>
+                                        );
+                                    })}
+                                    {/* Dynamic hover value - semi-transparent */}
+                                    {hoveredData && (
                                         <span
-                                            key={idx}
-                                            className="absolute right-3 text-sm text-muted-foreground font-medium"
+                                            className="absolute right-3 text-sm font-medium text-indigo-400 z-20"
                                             style={{
-                                                top: `${idx * 25}%`,
+                                                top: `${100 - hoveredData.heightPercent}%`,
                                                 transform: 'translateY(-50%)'
                                             }}
                                         >
-                                            {formatYLabel(val)}
+                                            {formatYLabel(hoveredData.revenue)}
                                         </span>
-                                    ))}
+                                    )}
                                 </div>
 
-                                {/* Chart area with grid and bars */}
+                                {/* Chart area with grid */}
                                 <div className="flex-1 relative" style={{ height: `${chartHeight}px` }}>
                                     {/* Horizontal grid lines */}
                                     {[0, 25, 50, 75, 100].map((percent) => (
@@ -372,57 +458,165 @@ export const Analytics = () => {
                                         />
                                     ))}
 
-                                    {/* Bars */}
-                                    <div className="flex items-end gap-1 h-full relative z-10 px-1">
-                                        {revenueByPeriod.map((item, i) => {
-                                            const heightPx = niceMax > 0
-                                                ? Math.max(Math.round((item.revenue / niceMax) * chartHeight), item.revenue > 0 ? 6 : 0)
-                                                : 0;
-                                            const itemClients = item.clients;
 
-                                            return (
-                                                <div
-                                                    key={i}
-                                                    className="flex-1 flex flex-col items-center justify-end group relative"
-                                                    style={{ height: `${chartHeight}px` }}
-                                                >
-                                                    {/* Tooltip */}
-                                                    <div
-                                                        className="absolute left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-30 whitespace-nowrap"
-                                                        style={{ bottom: `${heightPx + 10}px` }}
-                                                    >
-                                                        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg px-3 py-2 text-sm">
-                                                            <div className="font-semibold text-foreground mb-1">
-                                                                {item.isMonth ? format(item.date, 'LLLL yyyy', { locale: dateLocale }) : format(item.date, 'dd.MM.yyyy')}
-                                                            </div>
-                                                            {item.revenue > 0 ? (
-                                                                <>
-                                                                    <div className="text-muted-foreground">
-                                                                        👥 {item.isMonth ? 'Записей' : 'Клиентов'}: <span className="font-medium text-foreground">{itemClients}</span>
-                                                                    </div>
-                                                                    <div className="text-muted-foreground">
-                                                                        💰 Выручка: <span className="font-medium text-green-600">{formatPrice(item.revenue)} ₸</span>
-                                                                    </div>
-                                                                </>
-                                                            ) : (
-                                                                <div className="text-muted-foreground">Нет записей</div>
-                                                            )}
+                                    {/* Line chart for month period (>14 days) or today (hourly) */}
+                                    {(period === 'month' && revenueByPeriod.length > 14) || period === 'today' ? (
+                                        <>
+                                            {/* SVG for line and area */}
+                                            <svg
+                                                className="absolute inset-0 w-full h-full pointer-events-none"
+                                                viewBox={`0 0 ${revenueByPeriod.length * 20} ${chartHeight}`}
+                                                preserveAspectRatio="none"
+                                            >
+                                                <defs>
+                                                    <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                                                        <stop offset="0%" stopColor="rgb(99, 102, 241)" stopOpacity="0.4" />
+                                                        <stop offset="100%" stopColor="rgb(99, 102, 241)" stopOpacity="0.05" />
+                                                    </linearGradient>
+                                                </defs>
+                                                {/* Area fill with smooth curve */}
+                                                <path
+                                                    d={(() => {
+                                                        const points = revenueByPeriod.map((item, i) => ({
+                                                            x: (i + 0.5) * 20,
+                                                            y: niceMax > 0 ? chartHeight - (item.revenue / niceMax) * chartHeight : chartHeight
+                                                        }));
+
+                                                        if (points.length < 2) return '';
+
+                                                        // Build smooth curve using quadratic bezier
+                                                        let path = `M${points[0].x},${chartHeight} L${points[0].x},${points[0].y}`;
+                                                        for (let i = 0; i < points.length - 1; i++) {
+                                                            const p0 = points[i];
+                                                            const p1 = points[i + 1];
+                                                            const midX = (p0.x + p1.x) / 2;
+                                                            const midY = (p0.y + p1.y) / 2;
+                                                            path += ` Q${p0.x},${p0.y} ${midX},${midY}`;
+                                                        }
+                                                        const last = points[points.length - 1];
+                                                        path += ` Q${last.x},${last.y} ${last.x},${last.y}`;
+                                                        path += ` L${last.x},${chartHeight} Z`;
+                                                        return path;
+                                                    })()}
+                                                    fill="url(#areaGradient)"
+                                                />
+                                                {/* Line with smooth curve */}
+                                                <path
+                                                    d={(() => {
+                                                        const points = revenueByPeriod.map((item, i) => ({
+                                                            x: (i + 0.5) * 20,
+                                                            y: niceMax > 0 ? chartHeight - (item.revenue / niceMax) * chartHeight : chartHeight
+                                                        }));
+
+                                                        if (points.length < 2) return '';
+
+                                                        // Build smooth curve using quadratic bezier
+                                                        let path = `M${points[0].x},${points[0].y}`;
+                                                        for (let i = 0; i < points.length - 1; i++) {
+                                                            const p0 = points[i];
+                                                            const p1 = points[i + 1];
+                                                            const midX = (p0.x + p1.x) / 2;
+                                                            const midY = (p0.y + p1.y) / 2;
+                                                            path += ` Q${p0.x},${p0.y} ${midX},${midY}`;
+                                                        }
+                                                        const last = points[points.length - 1];
+                                                        path += ` Q${last.x},${last.y} ${last.x},${last.y}`;
+                                                        return path;
+                                                    })()}
+                                                    fill="none"
+                                                    stroke="rgb(99, 102, 241)"
+                                                    strokeWidth="2"
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                />
+                                            </svg>
+                                            {/* HTML overlay for tooltips - overflow visible for tooltips */}
+                                            <div className="absolute inset-0 flex overflow-visible">
+                                                {revenueByPeriod.map((item, i) => {
+                                                    const heightPercent = niceMax > 0 ? (item.revenue / niceMax) * 100 : 0;
+                                                    const itemClients = item.clients;
+                                                    return (
+                                                        <div
+                                                            key={i}
+                                                            className="flex-1 relative group cursor-pointer overflow-visible"
+                                                            onMouseEnter={() => setHoveredData({ index: i, revenue: item.revenue, heightPercent })}
+                                                            onMouseLeave={() => setHoveredData(null)}
+                                                        >
+                                                            {/* Vertical hover highlight */}
+                                                            <div className="absolute inset-0 bg-indigo-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                            {/* Horizontal price level line - dashed, from chart left edge to data point */}
+                                                            <div
+                                                                className="absolute h-px opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                                                style={{
+                                                                    bottom: `${heightPercent}%`,
+                                                                    left: `${-i * 100}%`,
+                                                                    width: `${(i + 0.5) * 100}%`,
+                                                                    backgroundImage: 'repeating-linear-gradient(to right, rgb(129, 140, 248) 0, rgb(129, 140, 248) 4px, transparent 4px, transparent 8px)'
+                                                                }}
+                                                            />
+                                                            {/* Data point */}
+                                                            <div
+                                                                className="absolute left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                                                                style={{ bottom: `${heightPercent}%`, transform: 'translateX(-50%) translateY(50%)' }}
+                                                            />
                                                         </div>
-                                                        <div className="w-2 h-2 bg-white dark:bg-slate-800 border-r border-b border-slate-200 dark:border-slate-700 rotate-45 absolute left-1/2 -translate-x-1/2 -bottom-1" />
-                                                    </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </>
+                                    ) : (
+                                        /* Bar chart for other periods */
+                                        <div className="flex items-end gap-1 h-full relative z-10 px-1">
+                                            {revenueByPeriod.map((item, i) => {
+                                                const heightPx = niceMax > 0
+                                                    ? Math.max(Math.round((item.revenue / niceMax) * chartHeight), item.revenue > 0 ? 6 : 0)
+                                                    : 0;
+                                                const itemClients = item.clients;
 
-                                                    {/* Bar */}
+                                                return (
                                                     <div
-                                                        className="w-full rounded-t cursor-pointer hover:opacity-80 transition-opacity"
-                                                        style={{
-                                                            height: item.revenue > 0 ? `${heightPx}px` : '3px',
-                                                            backgroundColor: item.revenue > 0 ? 'rgb(99, 102, 241)' : 'rgb(229, 231, 235)'
-                                                        }}
-                                                    />
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
+                                                        key={i}
+                                                        className="flex-1 flex flex-col items-center justify-end group relative"
+                                                        style={{ height: `${chartHeight}px` }}
+                                                    >
+                                                        {/* Tooltip */}
+                                                        <div
+                                                            className="absolute left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-30 whitespace-nowrap"
+                                                            style={{ bottom: `${heightPx + 10}px` }}
+                                                        >
+                                                            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg px-3 py-2 text-sm">
+                                                                <div className="font-semibold text-foreground mb-1">
+                                                                    {item.isMonth ? format(item.date, 'LLLL yyyy', { locale: dateLocale }) : format(item.date, 'dd.MM.yyyy')}
+                                                                </div>
+                                                                {item.revenue > 0 ? (
+                                                                    <>
+                                                                        <div className="text-muted-foreground">
+                                                                            👥 {item.isMonth ? 'Записей' : 'Клиентов'}: <span className="font-medium text-foreground">{itemClients}</span>
+                                                                        </div>
+                                                                        <div className="text-muted-foreground">
+                                                                            💰 Выручка: <span className="font-medium text-green-600">{formatPrice(item.revenue)} ₸</span>
+                                                                        </div>
+                                                                    </>
+                                                                ) : (
+                                                                    <div className="text-muted-foreground">Нет записей</div>
+                                                                )}
+                                                            </div>
+                                                            <div className="w-2 h-2 bg-white dark:bg-slate-800 border-r border-b border-slate-200 dark:border-slate-700 rotate-45 absolute left-1/2 -translate-x-1/2 -bottom-1" />
+                                                        </div>
+
+                                                        {/* Bar */}
+                                                        <div
+                                                            className="w-full rounded-t cursor-pointer hover:opacity-80 transition-opacity"
+                                                            style={{
+                                                                height: item.revenue > 0 ? `${heightPx}px` : '3px',
+                                                                backgroundColor: item.revenue > 0 ? 'rgb(99, 102, 241)' : 'rgb(229, 231, 235)'
+                                                            }}
+                                                        />
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -449,11 +643,28 @@ export const Analytics = () => {
                                                 </span>
                                             </div>
                                         );
-                                    } else {
+                                    } else if (item.isHour) {
+                                        // Hour labels for 'today' period
+                                        const showLabel = i % 2 === 0; // Show every 2nd hour
                                         return (
                                             <div key={i} className="flex-1 text-center">
                                                 <span className="text-xs text-muted-foreground font-medium">
-                                                    {format(item.date, 'd')}
+                                                    {showLabel ? `${item.hour}:00` : ''}
+                                                </span>
+                                            </div>
+                                        );
+                                    } else {
+                                        // Calculate label step - show fewer labels when many days
+                                        const totalDays = revenueByPeriod.length;
+                                        const showLabel = totalDays <= 7 ||
+                                            (totalDays <= 14 && i % 2 === 0) ||
+                                            (totalDays <= 21 && i % 3 === 0) ||
+                                            (totalDays > 21 && i % 5 === 0);
+
+                                        return (
+                                            <div key={i} className="flex-1 text-center">
+                                                <span className="text-xs text-muted-foreground font-medium">
+                                                    {showLabel ? format(item.date, 'd') : ''}
                                                 </span>
                                             </div>
                                         );
@@ -484,26 +695,33 @@ export const Analytics = () => {
                                     if (currentYear !== null) {
                                         groups.push({ label: currentYear, start: startIdx, end: revenueByPeriod.length - 1 });
                                     }
+                                } else if (period === 'today') {
+                                    // Single group for today showing the date
+                                    const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+                                    const todayDate = capitalize(format(new Date(), 'd MMMM, yyyy', { locale: dateLocale }));
+                                    groups.push({ label: todayDate, start: 0, end: revenueByPeriod.length - 1 });
                                 } else {
-                                    // Group days by month for today/week/month periods
+                                    // Group days by month for week/month periods
                                     let currentMonth = null;
+                                    let currentMonthData = null;
                                     let startIdx = 0;
 
                                     revenueByPeriod.forEach((item, i) => {
                                         const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
-                                        const monthName = capitalize(format(item.date, 'LLLL', { locale: dateLocale }));
+                                        const monthName = capitalize(format(item.date, 'LLL', { locale: dateLocale }));
                                         const year = format(item.date, 'yyyy');
-                                        const monthYear = `${monthName}, ${year}`;
-                                        if (monthYear !== currentMonth) {
+                                        const monthKey = `${monthName}-${year}`;
+                                        if (monthKey !== currentMonth) {
                                             if (currentMonth !== null) {
-                                                groups.push({ label: currentMonth, start: startIdx, end: i - 1 });
+                                                groups.push({ ...currentMonthData, start: startIdx, end: i - 1 });
                                             }
-                                            currentMonth = monthYear;
+                                            currentMonth = monthKey;
+                                            currentMonthData = { month: monthName, year, label: `${monthName}\n${year}` };
                                             startIdx = i;
                                         }
                                     });
                                     if (currentMonth !== null) {
-                                        groups.push({ label: currentMonth, start: startIdx, end: revenueByPeriod.length - 1 });
+                                        groups.push({ ...currentMonthData, start: startIdx, end: revenueByPeriod.length - 1 });
                                     }
                                 }
 
@@ -517,7 +735,7 @@ export const Analytics = () => {
                                             const isLast = group && i === group.end;
 
                                             return (
-                                                <div key={i} className="flex-1 relative h-6">
+                                                <div key={i} className="flex-1 relative h-10">
                                                     {/* Top bracket line */}
                                                     <div className="absolute top-0 left-0 right-0 border-t border-slate-300 dark:border-slate-600" />
                                                     {/* Left vertical edge pointing up */}
@@ -526,16 +744,22 @@ export const Analytics = () => {
                                                     {isLast && <div className="absolute top-0 right-0 w-px h-1.5 bg-slate-300 dark:bg-slate-600" style={{ transform: 'translateY(-100%)' }} />}
                                                     {/* Label BELOW the line, centered */}
                                                     {isFirst && group && (
-                                                        <span
-                                                            className="absolute top-1 text-sm text-muted-foreground font-medium whitespace-nowrap"
+                                                        <div
+                                                            className="absolute top-1 flex flex-col items-center text-muted-foreground font-medium"
                                                             style={{
                                                                 left: '0',
-                                                                width: `${(group.end - group.start + 1) * 100}%`,
-                                                                textAlign: 'center'
+                                                                width: `${(group.end - group.start + 1) * 100}%`
                                                             }}
                                                         >
-                                                            {group.label}
-                                                        </span>
+                                                            {group.month ? (
+                                                                <>
+                                                                    <span className="text-xs">{group.month}</span>
+                                                                    <span className="text-xs opacity-70">{group.year}</span>
+                                                                </>
+                                                            ) : (
+                                                                <span className="text-sm">{group.label}</span>
+                                                            )}
+                                                        </div>
                                                     )}
                                                 </div>
                                             );
