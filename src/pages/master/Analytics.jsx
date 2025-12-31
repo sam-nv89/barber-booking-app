@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useStore } from '@/store/useStore';
+import { TRANSLATIONS } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { cn, formatPrice } from '@/lib/utils';
@@ -19,6 +20,19 @@ export const Analytics = () => {
 
     // Date locale based on language
     const dateLocale = language === 'ru' ? ru : language === 'kz' ? kk : enUS;
+
+    // Capitalize first letter helper
+    const capitalize = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
+
+    // Local analytics translations (to avoid caching issues)
+    const ANALYTICS_TRANSLATIONS = {
+        ru: { clientsCount: 'Клиентов', revenue: 'Выручка', noBookings: 'Нет записей', revenueByDay: 'Выручка по дням', revenueByMonth: 'Выручка по месяцам' },
+        kz: { clientsCount: 'Клиенттер', revenue: 'Табыс', noBookings: 'Жазбалар жоқ', revenueByDay: 'Күндер бойынша табыс', revenueByMonth: 'Айлар бойынша табыс' },
+        en: { clientsCount: 'Clients', revenue: 'Revenue', noBookings: 'No bookings', revenueByDay: 'Revenue by day', revenueByMonth: 'Revenue by month' },
+    };
+
+    // Analytics translations with fallback
+    const analyticsT = ANALYTICS_TRANSLATIONS[language] || ANALYTICS_TRANSLATIONS.ru;
 
     // Period options
     const periods = [
@@ -382,7 +396,7 @@ export const Analytics = () => {
                         <CardHeader className="pb-4">
                             <div className="flex items-start justify-between">
                                 <CardTitle className="text-base flex items-center gap-2">
-                                    📈 {period === 'all' ? (language === 'en' ? 'Revenue by month' : 'Выручка по месяцам') : t('analytics.revenueByDay')}
+                                    📈 {period === 'all' ? t('analytics.revenueByMonth') : t('analytics.revenueByDay')}
                                 </CardTitle>
                                 {/* Always visible data block - shows placeholder or hovered data */}
                                 <div className="text-sm text-right">
@@ -391,20 +405,22 @@ export const Analytics = () => {
                                             <div className="font-semibold text-foreground">
                                                 {revenueByPeriod[hoveredData.index].isHour
                                                     ? `${revenueByPeriod[hoveredData.index].hour}:00`
-                                                    : format(revenueByPeriod[hoveredData.index].date, 'dd.MM.yyyy')}
+                                                    : revenueByPeriod[hoveredData.index].isMonth
+                                                        ? capitalize(format(revenueByPeriod[hoveredData.index].date, 'LLLL yyyy', { locale: dateLocale }))
+                                                        : format(revenueByPeriod[hoveredData.index].date, 'dd.MM.yyyy')}
                                             </div>
                                             <div className="text-muted-foreground">
-                                                👥 Клиентов: <span className="font-medium text-foreground">{revenueByPeriod[hoveredData.index].clients.toLocaleString('ru-RU')}</span>
+                                                👥 {analyticsT.clientsCount}: <span className="font-medium text-foreground">{revenueByPeriod[hoveredData.index].clients.toLocaleString('ru-RU')}</span>
                                             </div>
                                             <div className="text-muted-foreground">
-                                                💰 Выручка: <span className="font-medium text-green-600">{hoveredData.revenue.toLocaleString('ru-RU')} ₸</span>
+                                                💰 {analyticsT.revenue}: <span className="font-medium text-green-600">{hoveredData.revenue.toLocaleString('ru-RU')} ₸</span>
                                             </div>
                                         </>
                                     ) : (
                                         <>
                                             <div className="font-semibold text-muted-foreground/50">—</div>
-                                            <div className="text-muted-foreground/50">👥 Клиентов: —</div>
-                                            <div className="text-muted-foreground/50">💰 Выручка: —</div>
+                                            <div className="text-muted-foreground/50">👥 {analyticsT.clientsCount}: —</div>
+                                            <div className="text-muted-foreground/50">💰 {analyticsT.revenue}: —</div>
                                         </>
                                     )}
                                 </div>
@@ -474,7 +490,7 @@ export const Analytics = () => {
                                                         <stop offset="100%" stopColor="rgb(99, 102, 241)" stopOpacity="0.05" />
                                                     </linearGradient>
                                                 </defs>
-                                                {/* Area fill with smooth curve */}
+                                                {/* Area fill with smooth curve through data points */}
                                                 <path
                                                     d={(() => {
                                                         const points = revenueByPeriod.map((item, i) => ({
@@ -484,23 +500,31 @@ export const Analytics = () => {
 
                                                         if (points.length < 2) return '';
 
-                                                        // Build smooth curve using quadratic bezier
+                                                        // Use Catmull-Rom spline converted to cubic bezier - passes through all points
+                                                        const tension = 0.3;
                                                         let path = `M${points[0].x},${chartHeight} L${points[0].x},${points[0].y}`;
+
                                                         for (let i = 0; i < points.length - 1; i++) {
-                                                            const p0 = points[i];
-                                                            const p1 = points[i + 1];
-                                                            const midX = (p0.x + p1.x) / 2;
-                                                            const midY = (p0.y + p1.y) / 2;
-                                                            path += ` Q${p0.x},${p0.y} ${midX},${midY}`;
+                                                            const p0 = points[Math.max(0, i - 1)];
+                                                            const p1 = points[i];
+                                                            const p2 = points[i + 1];
+                                                            const p3 = points[Math.min(points.length - 1, i + 2)];
+
+                                                            const cp1x = p1.x + (p2.x - p0.x) * tension;
+                                                            const cp1y = p1.y + (p2.y - p0.y) * tension;
+                                                            const cp2x = p2.x - (p3.x - p1.x) * tension;
+                                                            const cp2y = p2.y - (p3.y - p1.y) * tension;
+
+                                                            path += ` C${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
                                                         }
+
                                                         const last = points[points.length - 1];
-                                                        path += ` Q${last.x},${last.y} ${last.x},${last.y}`;
                                                         path += ` L${last.x},${chartHeight} Z`;
                                                         return path;
                                                     })()}
                                                     fill="url(#areaGradient)"
                                                 />
-                                                {/* Line with smooth curve */}
+                                                {/* Line with smooth curve through data points */}
                                                 <path
                                                     d={(() => {
                                                         const points = revenueByPeriod.map((item, i) => ({
@@ -510,58 +534,97 @@ export const Analytics = () => {
 
                                                         if (points.length < 2) return '';
 
-                                                        // Build smooth curve using quadratic bezier
+                                                        // Use Catmull-Rom spline converted to cubic bezier - passes through all points
+                                                        const tension = 0.3;
                                                         let path = `M${points[0].x},${points[0].y}`;
+
                                                         for (let i = 0; i < points.length - 1; i++) {
-                                                            const p0 = points[i];
-                                                            const p1 = points[i + 1];
-                                                            const midX = (p0.x + p1.x) / 2;
-                                                            const midY = (p0.y + p1.y) / 2;
-                                                            path += ` Q${p0.x},${p0.y} ${midX},${midY}`;
+                                                            const p0 = points[Math.max(0, i - 1)];
+                                                            const p1 = points[i];
+                                                            const p2 = points[i + 1];
+                                                            const p3 = points[Math.min(points.length - 1, i + 2)];
+
+                                                            const cp1x = p1.x + (p2.x - p0.x) * tension;
+                                                            const cp1y = p1.y + (p2.y - p0.y) * tension;
+                                                            const cp2x = p2.x - (p3.x - p1.x) * tension;
+                                                            const cp2y = p2.y - (p3.y - p1.y) * tension;
+
+                                                            path += ` C${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
                                                         }
-                                                        const last = points[points.length - 1];
-                                                        path += ` Q${last.x},${last.y} ${last.x},${last.y}`;
+
                                                         return path;
                                                     })()}
                                                     fill="none"
                                                     stroke="rgb(99, 102, 241)"
-                                                    strokeWidth="2"
+                                                    strokeWidth="1.5"
                                                     strokeLinecap="round"
                                                     strokeLinejoin="round"
+                                                    style={{ filter: 'drop-shadow(0 1px 2px rgba(99, 102, 241, 0.3))' }}
                                                 />
                                             </svg>
-                                            {/* HTML overlay for tooltips - overflow visible for tooltips */}
-                                            <div className="absolute inset-0 flex overflow-visible">
-                                                {revenueByPeriod.map((item, i) => {
+                                            {/* HTML overlay for tooltips - single div with mouse tracking */}
+                                            <div
+                                                className="absolute inset-0 overflow-visible cursor-pointer"
+                                                onMouseMove={(e) => {
+                                                    const rect = e.currentTarget.getBoundingClientRect();
+                                                    const x = e.clientX - rect.left;
+                                                    const totalWidth = rect.width;
+                                                    const segmentWidth = totalWidth / revenueByPeriod.length;
+                                                    const index = Math.floor(x / segmentWidth);
+                                                    const clampedIndex = Math.max(0, Math.min(revenueByPeriod.length - 1, index));
+                                                    const item = revenueByPeriod[clampedIndex];
                                                     const heightPercent = niceMax > 0 ? (item.revenue / niceMax) * 100 : 0;
-                                                    const itemClients = item.clients;
-                                                    return (
+                                                    setHoveredData({ index: clampedIndex, revenue: item.revenue, heightPercent });
+                                                }}
+                                                onMouseLeave={() => setHoveredData(null)}
+                                            >
+                                                {/* Vertical hover highlight */}
+                                                {hoveredData && (
+                                                    <div
+                                                        className="absolute top-0 bottom-0 bg-indigo-500/10 transition-all duration-75"
+                                                        style={{
+                                                            left: `${(hoveredData.index / revenueByPeriod.length) * 100}%`,
+                                                            width: `${100 / revenueByPeriod.length}%`
+                                                        }}
+                                                    />
+                                                )}
+                                                {/* Horizontal price level line - dashed */}
+                                                {hoveredData && (
+                                                    <div
+                                                        className="absolute h-px z-10 transition-all duration-75"
+                                                        style={{
+                                                            bottom: `${hoveredData.heightPercent}%`,
+                                                            left: 0,
+                                                            width: `${((hoveredData.index + 0.5) / revenueByPeriod.length) * 100}%`,
+                                                            backgroundImage: 'repeating-linear-gradient(to right, rgb(129, 140, 248) 0, rgb(129, 140, 248) 4px, transparent 4px, transparent 8px)'
+                                                        }}
+                                                    />
+                                                )}
+                                                {/* Data point with pulse effect */}
+                                                {hoveredData && (
+                                                    <>
+                                                        {/* Pulse ring */}
                                                         <div
-                                                            key={i}
-                                                            className="flex-1 relative group cursor-pointer overflow-visible"
-                                                            onMouseEnter={() => setHoveredData({ index: i, revenue: item.revenue, heightPercent })}
-                                                            onMouseLeave={() => setHoveredData(null)}
-                                                        >
-                                                            {/* Vertical hover highlight */}
-                                                            <div className="absolute inset-0 bg-indigo-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                                            {/* Horizontal price level line - dashed, from chart left edge to data point */}
-                                                            <div
-                                                                className="absolute h-px opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                                                                style={{
-                                                                    bottom: `${heightPercent}%`,
-                                                                    left: `${-i * 100}%`,
-                                                                    width: `${(i + 0.5) * 100}%`,
-                                                                    backgroundImage: 'repeating-linear-gradient(to right, rgb(129, 140, 248) 0, rgb(129, 140, 248) 4px, transparent 4px, transparent 8px)'
-                                                                }}
-                                                            />
-                                                            {/* Data point */}
-                                                            <div
-                                                                className="absolute left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity z-20"
-                                                                style={{ bottom: `${heightPercent}%`, transform: 'translateX(-50%) translateY(50%)' }}
-                                                            />
-                                                        </div>
-                                                    );
-                                                })}
+                                                            className="absolute w-4 h-4 rounded-full bg-indigo-400/30 z-15 animate-ping"
+                                                            style={{
+                                                                bottom: `${hoveredData.heightPercent}%`,
+                                                                left: `${((hoveredData.index + 0.5) / revenueByPeriod.length) * 100}%`,
+                                                                transform: 'translate(-50%, 50%)',
+                                                                animationDuration: '1.5s'
+                                                            }}
+                                                        />
+                                                        {/* Main dot */}
+                                                        <div
+                                                            className="absolute w-3 h-3 rounded-full bg-indigo-500 border-2 border-white z-20 transition-all duration-75"
+                                                            style={{
+                                                                bottom: `${hoveredData.heightPercent}%`,
+                                                                left: `${((hoveredData.index + 0.5) / revenueByPeriod.length) * 100}%`,
+                                                                transform: 'translate(-50%, 50%)',
+                                                                boxShadow: '0 2px 8px rgba(99, 102, 241, 0.5)'
+                                                            }}
+                                                        />
+                                                    </>
+                                                )}
                                             </div>
                                         </>
                                     ) : (
@@ -571,42 +634,19 @@ export const Analytics = () => {
                                                 const heightPx = niceMax > 0
                                                     ? Math.max(Math.round((item.revenue / niceMax) * chartHeight), item.revenue > 0 ? 6 : 0)
                                                     : 0;
-                                                const itemClients = item.clients;
+                                                const heightPercent = niceMax > 0 ? (item.revenue / niceMax) * 100 : 0;
 
                                                 return (
                                                     <div
                                                         key={i}
-                                                        className="flex-1 flex flex-col items-center justify-end group relative"
+                                                        className="flex-1 flex flex-col items-center justify-end relative cursor-pointer"
                                                         style={{ height: `${chartHeight}px` }}
+                                                        onMouseEnter={() => setHoveredData({ index: i, revenue: item.revenue, heightPercent })}
+                                                        onMouseLeave={() => setHoveredData(null)}
                                                     >
-                                                        {/* Tooltip */}
-                                                        <div
-                                                            className="absolute left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-30 whitespace-nowrap"
-                                                            style={{ bottom: `${heightPx + 10}px` }}
-                                                        >
-                                                            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg px-3 py-2 text-sm">
-                                                                <div className="font-semibold text-foreground mb-1">
-                                                                    {item.isMonth ? format(item.date, 'LLLL yyyy', { locale: dateLocale }) : format(item.date, 'dd.MM.yyyy')}
-                                                                </div>
-                                                                {item.revenue > 0 ? (
-                                                                    <>
-                                                                        <div className="text-muted-foreground">
-                                                                            👥 {item.isMonth ? 'Записей' : 'Клиентов'}: <span className="font-medium text-foreground">{itemClients}</span>
-                                                                        </div>
-                                                                        <div className="text-muted-foreground">
-                                                                            💰 Выручка: <span className="font-medium text-green-600">{formatPrice(item.revenue)} ₸</span>
-                                                                        </div>
-                                                                    </>
-                                                                ) : (
-                                                                    <div className="text-muted-foreground">Нет записей</div>
-                                                                )}
-                                                            </div>
-                                                            <div className="w-2 h-2 bg-white dark:bg-slate-800 border-r border-b border-slate-200 dark:border-slate-700 rotate-45 absolute left-1/2 -translate-x-1/2 -bottom-1" />
-                                                        </div>
-
                                                         {/* Bar */}
                                                         <div
-                                                            className="w-full rounded-t cursor-pointer hover:opacity-80 transition-opacity"
+                                                            className={`w-full rounded-t transition-all ${hoveredData?.index === i ? 'opacity-100 scale-x-110' : 'hover:opacity-80'}`}
                                                             style={{
                                                                 height: item.revenue > 0 ? `${heightPx}px` : '3px',
                                                                 backgroundColor: item.revenue > 0 ? 'rgb(99, 102, 241)' : 'rgb(229, 231, 235)'
@@ -625,14 +665,15 @@ export const Analytics = () => {
                                 {revenueByPeriod.map((item, i) => {
                                     // Capitalize first letter helper
                                     const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+                                    const isHovered = hoveredData?.index === i;
 
                                     if (item.isMonth) {
                                         // Full month name for 'all' period
                                         const monthName = capitalize(format(item.date, 'LLLL', { locale: dateLocale }));
                                         return (
-                                            <div key={i} className="flex-1 text-center overflow-hidden">
+                                            <div key={i} className={`flex-1 text-center overflow-hidden transition-all duration-75 ${isHovered ? 'bg-indigo-500/10 rounded' : ''}`}>
                                                 <span
-                                                    className="text-xs text-muted-foreground font-medium inline-block"
+                                                    className={`text-xs font-medium inline-block transition-colors duration-75 ${isHovered ? 'text-indigo-600 dark:text-indigo-400' : 'text-muted-foreground'}`}
                                                     style={{
                                                         writingMode: revenueByPeriod.length > 6 ? 'vertical-rl' : 'horizontal-tb',
                                                         transform: revenueByPeriod.length > 6 ? 'rotate(180deg)' : 'none',
@@ -647,9 +688,9 @@ export const Analytics = () => {
                                         // Hour labels for 'today' period
                                         const showLabel = i % 2 === 0; // Show every 2nd hour
                                         return (
-                                            <div key={i} className="flex-1 text-center">
-                                                <span className="text-xs text-muted-foreground font-medium">
-                                                    {showLabel ? `${item.hour}:00` : ''}
+                                            <div key={i} className={`flex-1 text-center transition-all duration-75 ${isHovered ? 'bg-indigo-500/10 rounded' : ''}`}>
+                                                <span className={`text-xs font-medium transition-colors duration-75 ${isHovered ? 'text-indigo-600 dark:text-indigo-400' : 'text-muted-foreground'}`}>
+                                                    {showLabel || isHovered ? `${item.hour}:00` : ''}
                                                 </span>
                                             </div>
                                         );
@@ -662,9 +703,9 @@ export const Analytics = () => {
                                             (totalDays > 21 && i % 5 === 0);
 
                                         return (
-                                            <div key={i} className="flex-1 text-center">
-                                                <span className="text-xs text-muted-foreground font-medium">
-                                                    {showLabel ? format(item.date, 'd') : ''}
+                                            <div key={i} className={`flex-1 text-center transition-all duration-75 ${isHovered ? 'bg-indigo-500/10 rounded' : ''}`}>
+                                                <span className={`text-xs font-medium transition-colors duration-75 ${isHovered ? 'text-indigo-600 dark:text-indigo-400' : 'text-muted-foreground'}`}>
+                                                    {showLabel || isHovered ? format(item.date, 'd') : ''}
                                                 </span>
                                             </div>
                                         );
