@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-export const SuccessAnimation = ({ onComplete, title = "Успешно!", message = "Ваша заявка отправлена мастеру" }) => {
+export const SuccessAnimation = ({ onComplete, title = "Успешно!", message = "Ваша заявка отправлена мастеру", buttonText = "Отлично" }) => {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
             <motion.div
@@ -69,7 +69,7 @@ export const SuccessAnimation = ({ onComplete, title = "Успешно!", messag
                     onClick={onComplete}
                     className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 rounded-md font-medium transition-colors"
                 >
-                    Отлично
+                    {buttonText}
                 </motion.button>
             </motion.div>
         </div>

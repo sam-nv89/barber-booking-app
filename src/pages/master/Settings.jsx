@@ -23,12 +23,77 @@ export const Settings = () => {
     const [isConfirmModalOpen, setIsConfirmModalOpen] = React.useState(false);
     const [newBlockedPhone, setNewBlockedPhone] = React.useState('');
 
+    // Address autocomplete state
+    const [addressSuggestions, setAddressSuggestions] = React.useState([]);
+    const [showAddressSuggestions, setShowAddressSuggestions] = React.useState(false);
+    const [isSearchingAddress, setIsSearchingAddress] = React.useState(false);
+    const addressTimeoutRef = React.useRef(null);
+
     const handleChange = (e) => {
         let { name, value } = e.target;
         if (name === 'phone') {
             value = formatPhoneNumber(value);
         }
         setFormData({ ...formData, [name]: value });
+        setIsDirty(true);
+    };
+
+    // Search addresses using OpenStreetMap Nominatim (free, no API key)
+    // TODO: In future - add geolocation-based search and better API (DaData/Yandex)
+    const searchAddresses = async (query) => {
+        if (query.length < 3) {
+            setAddressSuggestions([]);
+            return;
+        }
+
+        setIsSearchingAddress(true);
+        try {
+            const response = await fetch(
+                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1&accept-language=${language}`,
+                { headers: { 'User-Agent': 'BarberBookingApp/1.0' } }
+            );
+            const data = await response.json();
+            setAddressSuggestions(data.map(item => {
+                const addr = item.address || {};
+                const country = addr.country || '';
+                const city = addr.city || addr.town || addr.village || addr.state || '';
+                const street = addr.road || addr.street || '';
+                const house = addr.house_number || '';
+
+                const parts = [country, city, street, house].filter(Boolean);
+                const shortAddress = parts.join(', ') || item.display_name.split(',').slice(0, 3).join(', ');
+
+                return {
+                    display: item.display_name,
+                    short: shortAddress,
+                    lat: item.lat,
+                    lon: item.lon
+                };
+            }));
+            setShowAddressSuggestions(true);
+        } catch (error) {
+            console.error('Address search error:', error);
+        } finally {
+            setIsSearchingAddress(false);
+        }
+    };
+
+    // Handle address input change with debounce
+    const handleAddressChange = (e) => {
+        const value = e.target.value;
+        setFormData({ ...formData, address: value });
+        setIsDirty(true);
+
+        // Debounce search
+        if (addressTimeoutRef.current) clearTimeout(addressTimeoutRef.current);
+        addressTimeoutRef.current = setTimeout(() => searchAddresses(value), 400);
+    };
+
+    // Select address from suggestions
+    const selectAddress = (suggestion) => {
+        setFormData({ ...formData, address: suggestion.short || suggestion.display });
+        setShowAddressSuggestions(false);
+        setAddressSuggestions([]);
         setIsDirty(true);
     };
 
@@ -145,9 +210,40 @@ export const Settings = () => {
                         <label className="text-sm font-medium">{t('settings.name')}</label>
                         <Input name="name" value={formData.name} onChange={handleChange} />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-2 relative">
                         <label className="text-sm font-medium">{t('settings.address')}</label>
-                        <Input name="address" value={formData.address} onChange={handleChange} />
+                        <div className="relative">
+                            <Input
+                                name="address"
+                                value={formData.address}
+                                onChange={handleAddressChange}
+                                onFocus={() => addressSuggestions.length > 0 && setShowAddressSuggestions(true)}
+                                onBlur={() => setTimeout(() => setShowAddressSuggestions(false), 200)}
+                                placeholder={language === 'en' ? 'Start typing address...' : language === 'kz' ? 'Мекенжайды теріңіз...' : 'Начните вводить адрес...'}
+                                autoComplete="off"
+                            />
+                            {isSearchingAddress && (
+                                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                </div>
+                            )}
+                        </div>
+                        {/* Address suggestions dropdown */}
+                        {showAddressSuggestions && addressSuggestions.length > 0 && (
+                            <div className="absolute z-50 w-full mt-1 bg-background border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                {addressSuggestions.map((suggestion, i) => (
+                                    <button
+                                        key={i}
+                                        type="button"
+                                        className="w-full px-3 py-2 text-left text-sm hover:bg-muted transition-colors border-b last:border-b-0"
+                                        onMouseDown={() => selectAddress(suggestion)}
+                                    >
+                                        <div className="font-medium truncate">{suggestion.short}</div>
+                                        <div className="text-xs text-muted-foreground truncate">{suggestion.display}</div>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
                     <div className="space-y-2">
                         <label className="text-sm font-medium">{t('settings.phone')}</label>

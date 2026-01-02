@@ -34,6 +34,7 @@ export const Notifications = () => {
             case 'cancelled': return <XCircle className="h-4 w-4 text-red-500" />;
             case 'rescheduled': return <Clock className="h-4 w-4 text-orange-500" />;
             case 'completed': return <Check className="h-4 w-4 text-purple-500" />; // Or a generic star/check
+            case 'warning': return <Bell className="h-4 w-4 text-yellow-500" />; // Suspicious booking
             default: return <Bell className="h-4 w-4" />;
         }
     };
@@ -66,8 +67,8 @@ export const Notifications = () => {
             return;
         }
 
-        // 2. New Booking / Confirmed / Cancelled -> Go to details
-        if (['new', 'confirmed', 'cancelled', 'rescheduled', 'completed'].includes(notification.type)) {
+        // 2. New Booking / Confirmed / Cancelled / Warning (suspicious) -> Go to details
+        if (['new', 'confirmed', 'cancelled', 'rescheduled', 'completed', 'warning'].includes(notification.type)) {
             const targetPath = user.role === 'client' ? '/visits' : '/master/records';
             navigate(targetPath, { state: { highlightId: notification.appointmentId } });
             return;

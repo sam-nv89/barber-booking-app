@@ -273,12 +273,12 @@ export const BookingWizard = () => {
                             <Check className="w-8 h-8 text-primary" />
                         </div>
                         <h2 className="text-xl font-bold">{t('booking.confirmBooking')}</h2>
-                        <p className="text-muted-foreground text-sm">Проверьте детали записи</p>
+                        <p className="text-muted-foreground text-sm">{t('booking.reviewDetails')}</p>
                         <button
                             className="text-primary text-sm hover:underline"
                             onClick={() => { setStep(2); setBookingError(null); }}
                         >
-                            ← Изменить
+                            ← {t('booking.edit')}
                         </button>
                     </div>
 
@@ -353,7 +353,12 @@ export const BookingWizard = () => {
                     </Button>
                 </div>
             )}
-            {showSuccess && <SuccessAnimation onComplete={handleSuccessComplete} title={t('booking.success')} />}
+            {showSuccess && <SuccessAnimation
+                onComplete={handleSuccessComplete}
+                title={t('booking.success')}
+                message={t('booking.requestSentMessage')}
+                buttonText={t('common.great')}
+            />}
         </div>
     );
 };

@@ -217,7 +217,7 @@ export const Analytics = () => {
     // Max revenue for chart scaling
     const maxRevenue = Math.max(...revenueByPeriod.map(d => d.revenue), 1);
 
-    // Workload heatmap data (hour × day of week)
+    // Workload heatmap data (hour × day of week) - filtered by selected period
     const heatmapData = useMemo(() => {
         const grid = {};
         // Initialize grid
@@ -225,7 +225,7 @@ export const Analytics = () => {
             grid[hour] = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
         }
 
-        appointments.filter(a => a.status === 'completed').forEach(a => {
+        filteredAppointments.filter(a => a.status === 'completed').forEach(a => {
             const hour = parseInt(a.time?.split(':')[0] || '12');
             const dayOfWeek = new Date(a.date).getDay();
             if (grid[hour]) {
@@ -234,14 +234,22 @@ export const Analytics = () => {
         });
 
         return grid;
-    }, [appointments]);
+    }, [filteredAppointments]);
 
     const maxHeatValue = Math.max(
         ...Object.values(heatmapData).flatMap(row => Object.values(row)),
         1
     );
 
-    const dayLabels = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+    // Day labels with translations - starting from Monday
+    const dayLabels = language === 'en'
+        ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        : language === 'kz'
+            ? ['Дс', 'Сс', 'Ср', 'Бс', 'Жм', 'Сн', 'Жс']
+            : ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+
+    // Map JavaScript day (0=Sun) to our order (0=Mon)
+    const jsDayToOurDay = [6, 0, 1, 2, 3, 4, 5]; // Sun->6, Mon->0, Tue->1, etc.
 
     const getServiceName = (service) => {
         if (!service) return '';
@@ -400,23 +408,32 @@ export const Analytics = () => {
                                 </CardTitle>
                                 {/* Always visible data block - shows placeholder or hovered data */}
                                 <div className="text-sm text-right">
-                                    {hoveredData && revenueByPeriod[hoveredData.index] ? (
-                                        <>
-                                            <div className="font-semibold text-foreground">
-                                                {revenueByPeriod[hoveredData.index].isHour
-                                                    ? `${revenueByPeriod[hoveredData.index].hour}:00`
-                                                    : revenueByPeriod[hoveredData.index].isMonth
-                                                        ? capitalize(format(revenueByPeriod[hoveredData.index].date, 'LLLL yyyy', { locale: dateLocale }))
-                                                        : format(revenueByPeriod[hoveredData.index].date, 'dd.MM.yyyy')}
-                                            </div>
-                                            <div className="text-muted-foreground">
-                                                👥 {analyticsT.clientsCount}: <span className="font-medium text-foreground">{revenueByPeriod[hoveredData.index].clients.toLocaleString('ru-RU')}</span>
-                                            </div>
-                                            <div className="text-muted-foreground">
-                                                💰 {analyticsT.revenue}: <span className="font-medium text-green-600">{hoveredData.revenue.toLocaleString('ru-RU')} ₸</span>
-                                            </div>
-                                        </>
-                                    ) : (
+                                    {hoveredData && revenueByPeriod[hoveredData.index] ? (() => {
+                                        const currentRevenue = hoveredData.revenue;
+                                        const previousRevenue = hoveredData.index > 0 ? revenueByPeriod[hoveredData.index - 1].revenue : 0;
+                                        const change = previousRevenue > 0 ? ((currentRevenue - previousRevenue) / previousRevenue) * 100 : null;
+                                        const changeText = change !== null ? `${change >= 0 ? '+' : ''}${change.toFixed(0)}%` : '—';
+                                        const changeColor = change === null ? 'text-muted-foreground' : change >= 0 ? 'text-green-600' : 'text-red-500';
+
+                                        return (
+                                            <>
+                                                <div className="font-semibold text-foreground">
+                                                    {revenueByPeriod[hoveredData.index].isHour
+                                                        ? `${revenueByPeriod[hoveredData.index].hour}:00`
+                                                        : revenueByPeriod[hoveredData.index].isMonth
+                                                            ? capitalize(format(revenueByPeriod[hoveredData.index].date, 'LLLL yyyy', { locale: dateLocale }))
+                                                            : format(revenueByPeriod[hoveredData.index].date, 'dd.MM.yyyy')}
+                                                </div>
+                                                <div className="text-muted-foreground">
+                                                    👥 {analyticsT.clientsCount}: <span className="font-medium text-foreground">{revenueByPeriod[hoveredData.index].clients.toLocaleString('ru-RU')}</span>
+                                                </div>
+                                                <div className="text-muted-foreground flex items-center justify-end gap-2">
+                                                    💰 {analyticsT.revenue}: <span className="font-medium text-green-600">{hoveredData.revenue.toLocaleString('ru-RU')} ₸</span>
+                                                    <span className={`text-xs font-semibold ${changeColor}`}>{changeText}</span>
+                                                </div>
+                                            </>
+                                        );
+                                    })() : (
                                         <>
                                             <div className="font-semibold text-muted-foreground/50">—</div>
                                             <div className="text-muted-foreground/50">👥 {analyticsT.clientsCount}: —</div>
@@ -646,10 +663,17 @@ export const Analytics = () => {
                                                     >
                                                         {/* Bar */}
                                                         <div
-                                                            className={`w-full rounded-t transition-all ${hoveredData?.index === i ? 'opacity-100 scale-x-110' : 'hover:opacity-80'}`}
+                                                            className={`w-full rounded-t transition-all duration-100 ${hoveredData?.index === i ? '' : 'hover:opacity-80'}`}
                                                             style={{
                                                                 height: item.revenue > 0 ? `${heightPx}px` : '3px',
-                                                                backgroundColor: item.revenue > 0 ? 'rgb(99, 102, 241)' : 'rgb(229, 231, 235)'
+                                                                backgroundColor: hoveredData?.index === i
+                                                                    ? (item.revenue > 0 ? 'rgb(79, 70, 229)' : 'rgb(229, 231, 235)')
+                                                                    : (item.revenue > 0 ? 'rgb(99, 102, 241)' : 'rgb(229, 231, 235)'),
+                                                                boxShadow: hoveredData?.index === i && item.revenue > 0
+                                                                    ? '0 0 0 2px rgba(255,255,255,0.9), 0 4px 12px rgba(79, 70, 229, 0.4)'
+                                                                    : 'none',
+                                                                position: 'relative',
+                                                                zIndex: hoveredData?.index === i ? 10 : 1
                                                             }}
                                                         />
                                                     </div>
@@ -695,12 +719,8 @@ export const Analytics = () => {
                                             </div>
                                         );
                                     } else {
-                                        // Calculate label step - show fewer labels when many days
-                                        const totalDays = revenueByPeriod.length;
-                                        const showLabel = totalDays <= 7 ||
-                                            (totalDays <= 14 && i % 2 === 0) ||
-                                            (totalDays <= 21 && i % 3 === 0) ||
-                                            (totalDays > 21 && i % 5 === 0);
+                                        // Always show all day labels
+                                        const showLabel = true;
 
                                         return (
                                             <div key={i} className={`flex-1 text-center transition-all duration-75 ${isHovered ? 'bg-indigo-500/10 rounded' : ''}`}>
@@ -883,9 +903,21 @@ export const Analytics = () => {
             {/* Workload Heatmap */}
             <Card>
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-base flex items-center gap-2">
-                        🗓️ {t('analytics.loadByTime')}
-                    </CardTitle>
+                    <div className="flex items-center justify-between">
+                        <CardTitle className="text-base flex items-center gap-2">
+                            🗓️ {t('analytics.loadByTime')}
+                        </CardTitle>
+                        <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                            {periods.find(p => p.key === period)?.label}
+                        </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                        {language === 'en'
+                            ? 'Shows completed bookings by day/hour. Change the period filter above to see different timeframes.'
+                            : language === 'kz'
+                                ? 'Аяқталған жазбаларды күн/сағат бойынша көрсетеді. Басқа кезеңдерді көру үшін жоғарыдағы сүзгіні өзгертіңіз.'
+                                : 'Показывает завершённые записи по дням/часам. Для просмотра других периодов используйте фильтр выше.'}
+                    </p>
                 </CardHeader>
                 <CardContent>
                     <div className="overflow-x-auto">
@@ -904,7 +936,7 @@ export const Analytics = () => {
                                 {[9, 12, 15, 18].map(hour => (
                                     <tr key={hour}>
                                         <td className="text-muted-foreground pr-2">{hour}:00</td>
-                                        {[0, 1, 2, 3, 4, 5, 6].map(day => {
+                                        {[1, 2, 3, 4, 5, 6, 0].map(day => { // Mon=1, Tue=2, ..., Sun=0
                                             const value = heatmapData[hour]?.[day] || 0;
                                             const intensity = value / maxHeatValue;
                                             return (
@@ -912,12 +944,16 @@ export const Analytics = () => {
                                                     <div
                                                         className={cn(
                                                             "w-full h-6 rounded",
-                                                            intensity === 0 && "bg-muted/30",
+                                                            intensity === 0 && "bg-gray-200 dark:bg-gray-700 border border-dashed border-gray-300 dark:border-gray-600",
                                                             intensity > 0 && intensity < 0.33 && "bg-green-500/30",
                                                             intensity >= 0.33 && intensity < 0.66 && "bg-yellow-500/50",
                                                             intensity >= 0.66 && "bg-red-500/60"
                                                         )}
-                                                        title={`${value} записей`}
+                                                        title={language === 'en'
+                                                            ? `${value} booking${value !== 1 ? 's' : ''}`
+                                                            : language === 'kz'
+                                                                ? `${value} жазба`
+                                                                : `${value} ${value === 1 ? 'запись' : value < 5 ? 'записи' : 'записей'}`}
                                                     />
                                                 </td>
                                             );
@@ -929,7 +965,7 @@ export const Analytics = () => {
                     </div>
                     <div className="flex justify-center gap-4 mt-3 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1">
-                            <div className="w-3 h-3 rounded bg-muted/30" /> {language === 'en' ? 'None' : 'Нет'}
+                            <div className="w-3 h-3 rounded bg-gray-200 dark:bg-gray-700 border border-dashed border-gray-300 dark:border-gray-600" /> {language === 'en' ? 'None' : (language === 'kz' ? 'Жоқ' : 'Нет')}
                         </span>
                         <span className="flex items-center gap-1">
                             <div className="w-3 h-3 rounded bg-green-500/30" /> {language === 'en' ? 'Low' : (language === 'kz' ? 'Аз' : 'Мало')}
