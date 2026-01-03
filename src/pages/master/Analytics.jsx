@@ -9,17 +9,17 @@ import {
     ChevronDown, Scissors, ArrowUpRight, ArrowDownRight, RefreshCw, Database
 } from 'lucide-react';
 import { format, subDays, subMonths, isAfter, startOfDay, endOfDay, eachDayOfInterval, isSameDay, eachMonthOfInterval, isSameMonth, startOfMonth } from 'date-fns';
-import { ru, enUS, kk } from 'date-fns/locale';
+import { ru, enUS, kk, es, tr } from 'date-fns/locale';
 
 export const Analytics = () => {
-    const { t, appointments, clients, reviews, services, language, generateMockData } = useStore();
+    const { t, appointments, clients, reviews, services, language, generateMockData, salonSettings } = useStore();
     const [period, setPeriod] = useState('week');
     const [showPeriodMenu, setShowPeriodMenu] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
     const [hoveredData, setHoveredData] = useState(null); // { index, revenue, heightPercent }
 
     // Date locale based on language
-    const dateLocale = language === 'ru' ? ru : language === 'kz' ? kk : enUS;
+    const dateLocale = language === 'ru' ? ru : language === 'kz' ? kk : language === 'es' ? es : language === 'tr' ? tr : enUS;
 
     // Capitalize first letter helper
     const capitalize = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
@@ -29,6 +29,8 @@ export const Analytics = () => {
         ru: { clientsCount: 'Клиентов', revenue: 'Выручка', noBookings: 'Нет записей', revenueByDay: 'Выручка по дням', revenueByMonth: 'Выручка по месяцам' },
         kz: { clientsCount: 'Клиенттер', revenue: 'Табыс', noBookings: 'Жазбалар жоқ', revenueByDay: 'Күндер бойынша табыс', revenueByMonth: 'Айлар бойынша табыс' },
         en: { clientsCount: 'Clients', revenue: 'Revenue', noBookings: 'No bookings', revenueByDay: 'Revenue by day', revenueByMonth: 'Revenue by month' },
+        es: { clientsCount: 'Clientes', revenue: 'Ingresos', noBookings: 'No hay reservas', revenueByDay: 'Ingresos por día', revenueByMonth: 'Ingresos por mes' },
+        tr: { clientsCount: 'Müşteriler', revenue: 'Gelir', noBookings: 'Randevu yok', revenueByDay: 'Günlük gelir', revenueByMonth: 'Aylık gelir' },
     };
 
     // Analytics translations with fallback
@@ -102,7 +104,7 @@ export const Analytics = () => {
 
         // Average rating
         const avgRating = reviews.length > 0
-            ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+            ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toLocaleString(language, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
             : 0;
 
         // Conversion rate
@@ -246,7 +248,11 @@ export const Analytics = () => {
         ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
         : language === 'kz'
             ? ['Дс', 'Сс', 'Ср', 'Бс', 'Жм', 'Сн', 'Жс']
-            : ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+            : language === 'es'
+                ? ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+                : language === 'tr'
+                    ? ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz']
+                    : ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
     // Map JavaScript day (0=Sun) to our order (0=Mon)
     const jsDayToOurDay = [6, 0, 1, 2, 3, 4, 5]; // Sun->6, Mon->0, Tue->1, etc.
@@ -329,7 +335,7 @@ export const Analytics = () => {
                             <TrendingUp className="w-4 h-4" />
                             <span className="text-xs font-medium">{t('analytics.revenue')}</span>
                         </div>
-                        <div className="text-2xl font-bold">{formatPrice(metrics.revenue)} ₸</div>
+                        <div className="text-2xl font-bold">{formatPrice(metrics.revenue)} {salonSettings?.currency || '₸'}</div>
                     </CardContent>
                 </Card>
 
@@ -340,13 +346,13 @@ export const Analytics = () => {
                             <Calendar className="w-4 h-4" />
                             <span className="text-xs font-medium">{t('analytics.bookings')}</span>
                         </div>
-                        <div className="text-2xl font-bold">{metrics.bookings.toLocaleString('ru-RU')}</div>
+                        <div className="text-2xl font-bold">{metrics.bookings.toLocaleString(language)}</div>
                         <div className="text-xs text-muted-foreground mt-1">
-                            <span title={language === 'en' ? 'Completed' : language === 'kz' ? 'Аяқталған' : 'Завершено'} className="cursor-default">✓ {metrics.completed.toLocaleString('ru-RU')}</span>
+                            <span title={t('analytics.completed')} className="cursor-default">✓ {metrics.completed.toLocaleString(language)}</span>
                             {' / '}
-                            <span title={language === 'en' ? 'Cancelled' : language === 'kz' ? 'Болдырмау' : 'Отменено'} className="cursor-default">✕ {metrics.cancelled.toLocaleString('ru-RU')}</span>
+                            <span title={t('analytics.cancelled')} className="cursor-default">✕ {metrics.cancelled.toLocaleString(language)}</span>
                             {' / '}
-                            <span title={language === 'en' ? 'Pending' : language === 'kz' ? 'Күту' : 'В ожидании'} className="cursor-default">⏳ {metrics.pending.toLocaleString('ru-RU')}</span>
+                            <span title={t('analytics.pending')} className="cursor-default">⏳ {metrics.pending.toLocaleString(language)}</span>
                         </div>
                     </CardContent>
                 </Card>
@@ -358,7 +364,7 @@ export const Analytics = () => {
                             <Scissors className="w-4 h-4" />
                             <span className="text-xs font-medium">{t('analytics.averageCheck')}</span>
                         </div>
-                        <div className="text-xl font-bold">{formatPrice(metrics.avgCheck)} ₸</div>
+                        <div className="text-xl font-bold">{formatPrice(metrics.avgCheck)} {salonSettings?.currency || '₸'}</div>
                     </CardContent>
                 </Card>
 
@@ -369,7 +375,7 @@ export const Analytics = () => {
                             <Users className="w-4 h-4" />
                             <span className="text-xs font-medium">{t('analytics.newClients')}</span>
                         </div>
-                        <div className="text-xl font-bold">{metrics.newClients.toLocaleString('ru-RU')}</div>
+                        <div className="text-xl font-bold">{metrics.newClients.toLocaleString(language)}</div>
                     </CardContent>
                 </Card>
             </div>
@@ -395,9 +401,9 @@ export const Analytics = () => {
 
                 // Full number format with currency, only abbreviate for billions
                 const formatYLabel = (val) => {
-                    if (val >= 1000000000) return `${(val / 1000000000).toFixed(1)} млрд ₸`;
-                    if (val === 0) return '0 ₸';
-                    return `${formatPrice(val)} ₸`;
+                    if (val >= 1000000000) return `${(val / 1000000000).toFixed(1)} млрд ${salonSettings?.currency || '₸'}`;
+                    if (val === 0) return `0 ${salonSettings?.currency || '₸'}`;
+                    return `${formatPrice(val)} ${salonSettings?.currency || '₸'}`;
                 };
                 return (
                     <Card className="overflow-visible">
@@ -425,10 +431,10 @@ export const Analytics = () => {
                                                             : format(revenueByPeriod[hoveredData.index].date, 'dd.MM.yyyy')}
                                                 </div>
                                                 <div className="text-muted-foreground">
-                                                    👥 {analyticsT.clientsCount}: <span className="font-medium text-foreground">{revenueByPeriod[hoveredData.index].clients.toLocaleString('ru-RU')}</span>
+                                                    👥 {analyticsT.clientsCount}: <span className="font-medium text-foreground">{revenueByPeriod[hoveredData.index].clients.toLocaleString(language)}</span>
                                                 </div>
                                                 <div className="text-muted-foreground flex items-center justify-end gap-2">
-                                                    💰 {analyticsT.revenue}: <span className="font-medium text-green-600">{hoveredData.revenue.toLocaleString('ru-RU')} ₸</span>
+                                                    💰 {analyticsT.revenue}: <span className="font-medium text-green-600">{hoveredData.revenue.toLocaleString(language)} {salonSettings?.currency || '₸'}</span>
                                                     <span className={`text-xs font-semibold ${changeColor}`}>{changeText}</span>
                                                 </div>
                                             </>
@@ -912,11 +918,7 @@ export const Analytics = () => {
                         </span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                        {language === 'en'
-                            ? 'Shows completed bookings by day/hour. Change the period filter above to see different timeframes.'
-                            : language === 'kz'
-                                ? 'Аяқталған жазбаларды күн/сағат бойынша көрсетеді. Басқа кезеңдерді көру үшін жоғарыдағы сүзгіні өзгертіңіз.'
-                                : 'Показывает завершённые записи по дням/часам. Для просмотра других периодов используйте фильтр выше.'}
+                        {t('analytics.loadDescription')}
                     </p>
                 </CardHeader>
                 <CardContent>
@@ -953,7 +955,11 @@ export const Analytics = () => {
                                                             ? `${value} booking${value !== 1 ? 's' : ''}`
                                                             : language === 'kz'
                                                                 ? `${value} жазба`
-                                                                : `${value} ${value === 1 ? 'запись' : value < 5 ? 'записи' : 'записей'}`}
+                                                                : language === 'es'
+                                                                    ? `${value} reserva${value !== 1 ? 's' : ''}`
+                                                                    : language === 'tr'
+                                                                        ? `${value} randevu`
+                                                                        : `${value} ${value === 1 ? 'запись' : value < 5 ? 'записи' : 'записей'}`}
                                                     />
                                                 </td>
                                             );
@@ -965,16 +971,16 @@ export const Analytics = () => {
                     </div>
                     <div className="flex justify-center gap-4 mt-3 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1">
-                            <div className="w-3 h-3 rounded bg-gray-200 dark:bg-gray-700 border border-dashed border-gray-300 dark:border-gray-600" /> {language === 'en' ? 'None' : (language === 'kz' ? 'Жоқ' : 'Нет')}
+                            <div className="w-3 h-3 rounded bg-gray-200 dark:bg-gray-700 border border-dashed border-gray-300 dark:border-gray-600" /> {t('analyticsTooltips.none')}
                         </span>
                         <span className="flex items-center gap-1">
-                            <div className="w-3 h-3 rounded bg-green-500/30" /> {language === 'en' ? 'Low' : (language === 'kz' ? 'Аз' : 'Мало')}
+                            <div className="w-3 h-3 rounded bg-green-500/30" /> {t('analyticsTooltips.low')}
                         </span>
                         <span className="flex items-center gap-1">
-                            <div className="w-3 h-3 rounded bg-yellow-500/50" /> {language === 'en' ? 'Medium' : (language === 'kz' ? 'Орташа' : 'Средне')}
+                            <div className="w-3 h-3 rounded bg-yellow-500/50" /> {t('analyticsTooltips.medium')}
                         </span>
                         <span className="flex items-center gap-1">
-                            <div className="w-3 h-3 rounded bg-red-500/60" /> {language === 'en' ? 'High' : (language === 'kz' ? 'Көп' : 'Много')}
+                            <div className="w-3 h-3 rounded bg-red-500/60" /> {t('analyticsTooltips.high')}
                         </span>
                     </div>
                 </CardContent>

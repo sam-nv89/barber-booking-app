@@ -204,8 +204,8 @@ export const BookingWizard = () => {
 
                                     {/* Price */}
                                     <div className="text-right shrink-0">
-                                        <div className={cn("font-bold", oldPrice && "text-red-500")}>{formatPrice(finalPrice)} ₸</div>
-                                        {oldPrice && <div className="text-xs text-muted-foreground line-through">{formatPrice(oldPrice)} ₸</div>}
+                                        <div className={cn("font-bold", oldPrice && "text-red-500")}>{formatPrice(finalPrice)} {salonSettings?.currency || '₸'}</div>
+                                        {oldPrice && <div className="text-xs text-muted-foreground line-through">{formatPrice(oldPrice)} {salonSettings?.currency || '₸'}</div>}
                                     </div>
                                 </div>
                             )
@@ -225,7 +225,7 @@ export const BookingWizard = () => {
                                             {formatDuration(totalDuration, t)}
                                         </div>
                                         <div className="font-bold text-lg text-primary">
-                                            {formatPrice(totalPrice)} ₸
+                                            {formatPrice(totalPrice)} {salonSettings?.currency || '₸'}
                                         </div>
                                     </div>
                                     <Button onClick={() => setStep(2)} size="lg" className="shrink-0">
@@ -328,7 +328,7 @@ export const BookingWizard = () => {
                                         <div className="text-xs text-muted-foreground">{formatDuration(totalDuration, t)}</div>
                                     </div>
                                     <div className="text-2xl font-bold text-primary">
-                                        {formatPrice(totalPrice)} ₸
+                                        {formatPrice(totalPrice)} {salonSettings?.currency || '₸'}
                                     </div>
                                 </div>
                             </div>

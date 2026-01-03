@@ -213,6 +213,7 @@ export const Profile = () => {
                         onComplete={() => setShowSuccess(false)}
                         title={t('common.success')}
                         message={t('settings.profileSaved')}
+                        buttonText={t('common.great')}
                     />
                 )
             }

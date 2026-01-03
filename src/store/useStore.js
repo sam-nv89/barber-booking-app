@@ -2,12 +2,14 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { TRANSLATIONS } from '../lib/i18n'
 import { MOCK_APPOINTMENTS, DEFAULT_SCHEDULE } from '../lib/constants'
-import { ru, enUS, kk } from 'date-fns/locale'
+import { ru, enUS, kk, es, tr } from 'date-fns/locale'
 
 const locales = {
     ru: ru,
     en: enUS,
-    kz: kk
+    kz: kk,
+    es: es,
+    tr: tr
 };
 
 export const useStore = create(
@@ -80,7 +82,8 @@ export const useStore = create(
                     offDays: 2,
                     workHours: { start: '10:00', end: '20:00' }
                 },
-                schedule: DEFAULT_SCHEDULE
+                schedule: DEFAULT_SCHEDULE,
+                currency: '₸' // Default currency
             },
             setSalonSettings: (settings) => set((state) => ({ salonSettings: { ...state.salonSettings, ...settings } })),
 
@@ -135,7 +138,7 @@ export const useStore = create(
                     type: 'offer',
                     recipient: 'client',
                     title: 'Новая акция! 🏷️',
-                    message: `${campaign.name}! ${campaign.type === 'discount' ? 'Скидка ' + campaign.value + '%' : 'Специальная цена: ' + campaign.value + ' ₸'}`,
+                    message: `${campaign.name}! ${campaign.type === 'discount' ? 'Скидка ' + campaign.value + '%' : 'Специальная цена: ' + campaign.value + ' ' + (state.salonSettings.currency || '₸')}`,
                     date: new Date().toISOString(),
                     read: false
                 }, ...state.notifications]

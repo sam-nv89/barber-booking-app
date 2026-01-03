@@ -115,7 +115,7 @@ export const FeedbackPrompt = () => {
                                         <div className="w-full bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground flex items-center justify-center gap-2 mb-2">
                                             <span className="font-medium">{t('nav.visits')}</span>
                                             <span>→</span>
-                                            <span className="font-medium">{t('visits.history')}</span>
+                                            <span className="font-medium">{t('reviews.history')}</span>
                                         </div>
                                         <Button onClick={handleDismissHint} className="w-full" variant="secondary">
                                             {t('common.gotIt')}

@@ -3,8 +3,10 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { useStore } from '@/store/useStore';
 
 export const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, description }) => {
+    const { t } = useStore();
     if (!isOpen) return null;
 
     return createPortal(
@@ -45,7 +47,7 @@ export const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, descripti
                                     className="flex-1"
                                     onClick={onClose}
                                 >
-                                    Назад
+                                    {t('common.back')}
                                 </Button>
                                 <Button
                                     variant="destructive"
@@ -55,7 +57,7 @@ export const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, descripti
                                         onClose();
                                     }}
                                 >
-                                    Подтвердить
+                                    {t('common.confirm')}
                                 </Button>
                             </div>
                         </div>

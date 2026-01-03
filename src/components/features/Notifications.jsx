@@ -155,6 +155,7 @@ export const Notifications = () => {
                                                             ? t(notification.messageKey).replace('{clientName}', notification.params?.clientName || '')
                                                                 .replace('{date}', notification.params?.date || '')
                                                                 .replace('{time}', notification.params?.time || '')
+                                                                .replace('{originalDate}', notification.params?.originalDate || '')
                                                                 .replace('{countText}', pluralizeBookings(notification.params?.count || 0))
                                                                 .replace('{count}', notification.params?.count || '')
                                                                 .replace('{rating}', '⭐'.repeat(notification.params?.rating || 0))

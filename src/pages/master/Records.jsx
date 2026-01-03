@@ -1,24 +1,26 @@
 import React, { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Chat } from '@/components/features/Chat';
 import { MasterBookingModal } from '@/components/features/MasterBookingModal';
-import { MessageCircle, Plus } from 'lucide-react';
+import { MessageCircle, Plus, QrCode, CheckCheck } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
 import { format } from 'date-fns';
 
 export const Records = () => {
     const { appointments, updateAppointmentStatus, t, language, locale } = useStore();
     const location = useLocation();
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = React.useState('pending');
     const [chatOpen, setChatOpen] = React.useState(null);
     const [isBookingModalOpen, setIsBookingModalOpen] = React.useState(false);
+    const [showCompleteAllConfirm, setShowCompleteAllConfirm] = React.useState(false);
 
     const pending = appointments.filter(app => app.status === 'pending');
-    const active = appointments.filter(app => app.status === 'confirmed');
+    const active = appointments.filter(app => app.status === 'confirmed' || app.status === 'in_progress');
     const archive = appointments.filter(app => ['completed', 'cancelled'].includes(app.status));
 
     const displayed = activeTab === 'pending' ? pending : activeTab === 'active' ? active : archive;
@@ -65,7 +67,8 @@ export const Records = () => {
             const app = appointments.find(a => a.id === location.state.highlightId);
             if (app) {
                 // Switch tab
-                const tab = app.status === 'pending' ? 'pending' : app.status === 'confirmed' ? 'active' : 'archive';
+                const tab = app.status === 'pending' ? 'pending' :
+                    (app.status === 'confirmed' || app.status === 'in_progress') ? 'active' : 'archive';
                 setActiveTab(tab);
 
                 // Scroll
@@ -81,10 +84,21 @@ export const Records = () => {
         }
     }, [location.state, appointments]);
 
+    const completeAllActive = () => {
+        active.forEach(app => {
+            updateAppointmentStatus(app.id, 'completed');
+        });
+        setShowCompleteAllConfirm(false);
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h1 className="text-2xl font-bold">{t('nav.records')}</h1>
+                <Button size="sm" variant="outline" className="mr-2" onClick={() => navigate('/master/checkin')}>
+                    <QrCode className="w-4 h-4 mr-2" />
+                    Check-in
+                </Button>
                 <Button size="sm" onClick={() => setIsBookingModalOpen(true)}>
                     <Plus className="w-4 h-4 mr-2" />
                     {t('records.addAppointment')}
@@ -105,6 +119,21 @@ export const Records = () => {
                     </button>
                 ))}
             </div>
+
+            {/* Complete All button for active tab */}
+            {activeTab === 'active' && active.length > 0 && (
+                <div className="flex justify-end">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-green-600 border-green-300 hover:bg-green-50"
+                        onClick={() => setShowCompleteAllConfirm(true)}
+                    >
+                        <CheckCheck className="w-4 h-4 mr-2" />
+                        {language === 'en' ? 'Complete All' : language === 'es' ? 'Completar todo' : language === 'tr' ? 'Tümünü tamamla' : language === 'kz' ? 'Барлығын аяқтау' : 'Завершить все'} ({active.length})
+                    </Button>
+                </div>
+            )}
 
             <div className="space-y-4">
                 {displayed.map((app) => {
@@ -143,7 +172,7 @@ export const Records = () => {
                                 </div>
 
                                 <div className="flex justify-between items-center bg-muted p-2 rounded">
-                                    <span className="text-sm">{getServiceNames(app)} • {formatPrice(getAppointmentPrice(app))} ₸</span>
+                                    <span className="text-sm">{getServiceNames(app)} • {formatPrice(getAppointmentPrice(app))} {salonSettings?.currency || '₸'}</span>
                                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => {
                                         e.stopPropagation();
                                         setChatOpen(app.id);
@@ -202,7 +231,7 @@ export const Records = () => {
                 })}
                 {displayed.length === 0 && (
                     <div className="text-center text-muted-foreground py-8">
-                        {t('visits.noRecords')}
+                        {t('clientVisits.noRecords')}
                     </div>
                 )}
             </div>
@@ -213,6 +242,43 @@ export const Records = () => {
 
             <Modal isOpen={isBookingModalOpen} onClose={() => setIsBookingModalOpen(false)} title={t('records.newAppointment')}>
                 <MasterBookingModal onClose={() => setIsBookingModalOpen(false)} />
+            </Modal>
+
+            {/* Complete All Confirmation Modal */}
+            <Modal
+                isOpen={showCompleteAllConfirm}
+                onClose={() => setShowCompleteAllConfirm(false)}
+                title={language === 'en' ? 'Complete All?' : language === 'es' ? '¿Completar todo?' : language === 'tr' ? 'Tümünü tamamla?' : language === 'kz' ? 'Барлығын аяқтау?' : 'Завершить все?'}
+            >
+                <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                        {language === 'en'
+                            ? `Are you sure you want to complete ${active.length} appointment(s)?`
+                            : language === 'es'
+                                ? `¿Desea completar ${active.length} cita(s)?`
+                                : language === 'tr'
+                                    ? `${active.length} randevuyu tamamlamak istiyor musunuz?`
+                                    : language === 'kz'
+                                        ? `${active.length} жазбаны аяқтағыңыз келе ме?`
+                                        : `Вы уверены, что хотите завершить ${active.length} запись(ей)?`}
+                    </p>
+                    <div className="flex gap-2">
+                        <Button
+                            variant="outline"
+                            className="flex-1"
+                            onClick={() => setShowCompleteAllConfirm(false)}
+                        >
+                            {t('common.cancel')}
+                        </Button>
+                        <Button
+                            className="flex-1 bg-green-600 hover:bg-green-700"
+                            onClick={completeAllActive}
+                        >
+                            <CheckCheck className="w-4 h-4 mr-2" />
+                            {t('common.confirm')}
+                        </Button>
+                    </div>
+                </div>
             </Modal>
         </div>
     );

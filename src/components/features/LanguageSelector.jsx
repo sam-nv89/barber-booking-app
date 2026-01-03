@@ -5,9 +5,11 @@ import { Globe, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const LANGUAGES = [
-    { code: 'ru', label: 'Русский', short: 'Ru' },
+    { code: 'en', label: 'English', short: 'En' },
+    { code: 'es', label: 'Español', short: 'Es' },
     { code: 'kz', label: 'Қазақша', short: 'Kz' },
-    { code: 'en', label: 'English', short: 'Eng' },
+    { code: 'ru', label: 'Русский', short: 'Ru' },
+    { code: 'tr', label: 'Türkçe', short: 'Tr' },
 ];
 
 export const LanguageSelector = () => {

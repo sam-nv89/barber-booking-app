@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Chat } from '@/components/features/Chat';
 import { FeedbackModal } from '@/components/features/FeedbackModal';
-import { MessageCircle, Star, Calendar, Clock, Pencil } from 'lucide-react';
+import { MessageCircle, Star, Calendar, Clock, Pencil, QrCode } from 'lucide-react';
+import { BookingQRCode } from '@/components/features/BookingQRCode';
 import { cn, formatPrice } from '@/lib/utils';
 
 import { DateTimeSelector } from '@/components/features/DateTimeSelector';
@@ -21,6 +22,7 @@ export const Visits = () => {
     const [feedbackOpen, setFeedbackOpen] = React.useState(null); // Appointment object to rate
     const [rescheduleOpen, setRescheduleOpen] = React.useState(null); // ID of appointment to reschedule
     const [cancelConfirmationId, setCancelConfirmationId] = React.useState(null);
+    const [qrModalAppointment, setQrModalAppointment] = React.useState(null);
 
     // Reschedule state
     const [newDate, setNewDate] = React.useState(null);
@@ -127,7 +129,7 @@ export const Visits = () => {
         setRescheduleOpen(null);
         setNewDate(null);
         setNewTime(null);
-        alert(t('visits.rescheduleSuccess'));
+        alert(t('clientVisits.rescheduleSuccess'));
     };
 
     return (
@@ -139,13 +141,13 @@ export const Visits = () => {
                     className={cn("flex-1 py-2 text-sm font-medium rounded-md transition-all", activeTab === 'upcoming' ? "bg-background shadow" : "text-muted-foreground")}
                     onClick={() => setActiveTab('upcoming')}
                 >
-                    {t('visits.upcoming')} ({upcoming.length})
+                    {t('clientVisits.upcoming')} ({upcoming.length})
                 </button>
                 <button
                     className={cn("flex-1 py-2 text-sm font-medium rounded-md transition-all", activeTab === 'history' ? "bg-background shadow" : "text-muted-foreground")}
                     onClick={() => setActiveTab('history')}
                 >
-                    {t('visits.history')} ({history.length})
+                    {t('clientVisits.historyTab')} ({history.length})
                 </button>
             </div>
 
@@ -183,9 +185,9 @@ export const Visits = () => {
                                 <div className="flex justify-between items-center pt-2 border-t">
                                     <Button variant="ghost" size="sm" className="pl-0 hover:pl-2 transition-all" onClick={() => setChatOpen(app.id)}>
                                         <MessageCircle className="h-4 w-4 mr-2" />
-                                        {t('visits.chat')}
+                                        {t('clientVisits.chat')}
                                     </Button>
-                                    <div className="font-bold text-lg text-primary">{formatPrice(app.price || service?.price || 0)} ₸</div>
+                                    <div className="font-bold text-lg text-primary">{formatPrice(app.price || service?.price || 0)} {salonSettings?.currency || '₸'}</div>
                                 </div>
                                 {app.status === 'completed' && (
                                     (() => {
@@ -237,7 +239,7 @@ export const Visits = () => {
                                             className="flex-1"
                                             onClick={() => handleRescheduleStart(app)}
                                         >
-                                            {t('visits.reschedule')}
+                                            {t('clientVisits.reschedule')}
                                         </Button>
                                         <Button
                                             variant="ghost"
@@ -245,8 +247,19 @@ export const Visits = () => {
                                             className="flex-1 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
                                             onClick={() => handleCancelClick(app.id)}
                                         >
-                                            {t('visits.cancel')}
+                                            {t('clientVisits.cancel')}
                                         </Button>
+                                        {app.status === 'confirmed' && (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="flex-1 text-primary border-primary/30"
+                                                onClick={() => setQrModalAppointment(app)}
+                                            >
+                                                <QrCode className="w-4 h-4 mr-1" />
+                                                QR
+                                            </Button>
+                                        )}
                                     </div>
                                 )}
                             </CardContent>
@@ -255,12 +268,12 @@ export const Visits = () => {
                 })}
                 {displayed.length === 0 && (
                     <div className="text-center text-muted-foreground py-8">
-                        {t('visits.noRecords')}
+                        {t('clientVisits.noRecords')}
                     </div>
                 )}
             </div>
 
-            <Modal isOpen={!!chatOpen} onClose={() => setChatOpen(null)} title={t('visits.chatMaster')}>
+            <Modal isOpen={!!chatOpen} onClose={() => setChatOpen(null)} title={t('clientVisits.chatMaster')}>
                 <Chat appointmentId={chatOpen} onClose={() => setChatOpen(null)} />
             </Modal>
 
@@ -270,7 +283,7 @@ export const Visits = () => {
                 appointment={feedbackOpen}
             />
 
-            <Modal isOpen={!!rescheduleOpen} onClose={() => setRescheduleOpen(null)} title={t('visits.rescheduleTitle')}>
+            <Modal isOpen={!!rescheduleOpen} onClose={() => setRescheduleOpen(null)} title={t('clientVisits.rescheduleTitle')}>
                 <div className="space-y-6">
                     <DateTimeSelector
                         selectedDate={newDate}
@@ -283,7 +296,7 @@ export const Visits = () => {
                         workScheduleOverrides={workScheduleOverrides}
                     />
                     <Button className="w-full" onClick={handleRescheduleConfirm} disabled={!newDate || !newTime}>
-                        {t('visits.confirmReschedule')}
+                        {t('clientVisits.confirmReschedule')}
                     </Button>
                 </div>
             </Modal>
@@ -292,9 +305,16 @@ export const Visits = () => {
                 isOpen={!!cancelConfirmationId}
                 onClose={() => setCancelConfirmationId(null)}
                 onConfirm={handleCancelConfirm}
-                title={t('visits.cancelTitle')}
-                description={t('visits.cancelDesc')}
+                title={t('clientVisits.cancelTitle')}
+                description={t('clientVisits.cancelDesc')}
             />
+
+            {qrModalAppointment && (
+                <BookingQRCode
+                    appointment={qrModalAppointment}
+                    onClose={() => setQrModalAppointment(null)}
+                />
+            )}
         </div>
     );
 };

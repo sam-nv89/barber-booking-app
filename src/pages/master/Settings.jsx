@@ -228,6 +228,50 @@ export const Settings = () => {
                                 </div>
                             )}
                         </div>
+
+                        {/* Currency Selector */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">{t('settings.currency')}</label>
+                            <select
+                                name="currency"
+                                value={formData.currency || '₸'}
+                                onChange={handleChange}
+                                className="w-full p-2 rounded-md border bg-background"
+                            >
+                                <optgroup label="Popular / Популярные">
+                                    <option value="₸">Kazakhstani Tenge (₸)</option>
+                                    <option value="₽">Russian Ruble (₽)</option>
+                                    <option value="$">US Dollar ($)</option>
+                                    <option value="€">Euro (€)</option>
+                                    <option value="₺">Turkish Lira (₺)</option>
+                                </optgroup>
+                                <optgroup label="CIS / СНГ">
+                                    <option value="s'om">Uzbekistani Som (s'om)</option>
+                                    <option value="Br">Belarusian Ruble (Br)</option>
+                                    <option value="с">Kyrgyzstani Som (c)</option>
+                                    <option value="SM">Tajikistani Somoni (SM)</option>
+                                    <option value="֏">Armenian Dram (֏)</option>
+                                    <option value="₼">Azerbaijani Manat (₼)</option>
+                                    <option value="₾">Georgian Lari (₾)</option>
+                                    <option value="₴">Ukrainian Hryvnia (₴)</option>
+                                </optgroup>
+                                <optgroup label="English Speaking / Англоязычные">
+                                    <option value="£">British Pound (£)</option>
+                                    <option value="C$">Canadian Dollar (C$)</option>
+                                    <option value="A$">Australian Dollar (A$)</option>
+                                </optgroup>
+                                <optgroup label="Spanish Speaking / Испаноязычные">
+                                    <option value="MXN$">Mexican Peso (MXN$)</option>
+                                    <option value="ARS$">Argentine Peso (ARS$)</option>
+                                    <option value="CLP$">Chilean Peso (CLP$)</option>
+                                    <option value="COP$">Colombian Peso (COP$)</option>
+                                    <option value="S/">Peruvian Sol (S/)</option>
+                                    <option value="$U">Uruguayan Peso ($U)</option>
+                                    <option value="RD$">Dominican Peso (RD$)</option>
+                                </optgroup>
+                            </select>
+                        </div>
+
                         {/* Address suggestions dropdown */}
                         {showAddressSuggestions && addressSuggestions.length > 0 && (
                             <div className="absolute z-50 w-full mt-1 bg-background border rounded-lg shadow-lg max-h-48 overflow-y-auto">
@@ -620,6 +664,7 @@ export const Settings = () => {
                     onComplete={() => setSuccessMessage(null)}
                     title={t('common.success')}
                     message={successMessage}
+                    buttonText={t('common.great')}
                 />
             )}
         </div>

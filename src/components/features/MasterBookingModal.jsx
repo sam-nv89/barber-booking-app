@@ -97,7 +97,7 @@ export const MasterBookingModal = ({ onClose }) => {
 
                                     {/* Price */}
                                     <div className="font-medium text-sm shrink-0">
-                                        {formatPrice(service.price)} ₸
+                                        {formatPrice(service.price)} {salonSettings?.currency || '₸'}
                                     </div>
                                 </div>
                             );
@@ -107,7 +107,7 @@ export const MasterBookingModal = ({ onClose }) => {
                     {/* Selected Summary */}
                     {selectedServices.length > 0 && (
                         <div className="text-sm text-muted-foreground bg-muted p-2 rounded">
-                            {t('common.selected')}: {selectedServices.length} • {formatDuration(totalDuration, t)} • {formatPrice(totalPrice)} ₸
+                            {t('common.selected')}: {selectedServices.length} • {formatDuration(totalDuration, t)} • {formatPrice(totalPrice)} {salonSettings?.currency || '₸'}
                         </div>
                     )}
                 </div>
@@ -165,7 +165,7 @@ export const MasterBookingModal = ({ onClose }) => {
                     <div className="bg-muted p-4 rounded-md space-y-2 text-sm">
                         <div className="flex justify-between font-medium">
                             <span>{t('common.total')}:</span>
-                            <span>{formatDuration(totalDuration, t)} • {formatPrice(totalPrice)} ₸</span>
+                            <span>{formatDuration(totalDuration, t)} • {formatPrice(totalPrice)} {salonSettings?.currency || '₸'}</span>
                         </div>
                         <div className="text-muted-foreground text-xs">
                             {format(selectedDate, 'd MMMM yyyy', { locale: locale() })} {t('common.at')} {selectedTime}

@@ -81,7 +81,7 @@ export const Dashboard = () => {
     const statCards = [
         {
             title: t('dashboard.revenue'),
-            value: `${formatPrice(stats.revenue)} ₸`,
+            value: `${formatPrice(stats.revenue)} ${salonSettings?.currency || '₸'}`,
             icon: CreditCard,
             color: 'text-green-500',
             bg: 'bg-green-500/10'

@@ -23,7 +23,9 @@ export const WelcomeAnimation = ({ previewTimeOfDay, onComplete }) => {
     const greetings = {
         ru: { morning: 'Доброе утро', afternoon: 'Добрый день', evening: 'Добрый вечер', night: 'Доброй ночи' },
         en: { morning: 'Good morning', afternoon: 'Good afternoon', evening: 'Good evening', night: 'Good night' },
-        kz: { morning: 'Қайырлы таң', afternoon: 'Қайырлы күн', evening: 'Қайырлы кеш', night: 'Қайырлы түн' }
+        kz: { morning: 'Қайырлы таң', afternoon: 'Қайырлы күн', evening: 'Қайырлы кеш', night: 'Қайырлы түн' },
+        es: { morning: 'Buenos días', afternoon: 'Buenas tardes', evening: 'Buenas noches', night: 'Buenas noches' },
+        tr: { morning: 'Günaydın', afternoon: 'İyi günler', evening: 'İyi akşamlar', night: 'İyi geceler' }
     };
 
     const greeting = greetings[language?.split('-')[0]]?.[timeOfDay] || greetings.ru[timeOfDay];
