@@ -775,16 +775,25 @@ export const Analytics = () => {
 
                                     revenueByPeriod.forEach((item, i) => {
                                         const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
-                                        const monthName = capitalize(format(item.date, 'LLL', { locale: dateLocale }));
-                                        const year = format(item.date, 'yyyy');
-                                        const monthKey = `${monthName}-${year}`;
+                                        const monthNameFull = capitalize(format(item.date, 'LLLL', { locale: dateLocale }));
+                                        const monthNameShort = capitalize(format(item.date, 'LLL', { locale: dateLocale }));
+                                        const yearFull = format(item.date, 'yyyy');
+                                        const yearShort = format(item.date, 'yy');
+                                        const monthKey = `${monthNameFull}-${yearFull}`;
                                         if (monthKey !== currentMonth) {
                                             if (currentMonth !== null) {
                                                 groups.push({ ...currentMonthData, start: startIdx, end: i - 1 });
                                             }
                                             currentMonth = monthKey;
-                                            currentMonthData = { month: monthName, year, label: `${monthName}\n${year}` };
+                                            currentMonthData = {
+                                                month: monthNameFull,
+                                                monthShort: monthNameShort,
+                                                year: yearFull,
+                                                yearShort: yearShort,
+                                                label: `${monthNameFull}, ${yearFull}`
+                                            };
                                             startIdx = i;
+
                                         }
                                     });
                                     if (currentMonth !== null) {
@@ -818,12 +827,16 @@ export const Analytics = () => {
                                                                 width: `${(group.end - group.start + 1) * 100}%`
                                                             }}
                                                         >
-                                                            {group.month ? (
-                                                                <>
-                                                                    <span className="text-xs">{group.month}</span>
-                                                                    <span className="text-xs opacity-70">{group.year}</span>
-                                                                </>
-                                                            ) : (
+                                                            {group.month ? (() => {
+                                                                // Calculate available width per group item
+                                                                const itemCount = group.end - group.start + 1;
+                                                                const useShort = itemCount <= 3; // Use short format if limited space
+                                                                const displayMonth = useShort ? group.monthShort : group.month;
+                                                                const displayYear = useShort ? group.yearShort : group.year;
+                                                                return (
+                                                                    <span className="text-xs">{displayMonth}, {displayYear}</span>
+                                                                );
+                                                            })() : (
                                                                 <span className="text-sm">{group.label}</span>
                                                             )}
                                                         </div>

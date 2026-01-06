@@ -188,7 +188,18 @@ export const Dashboard = () => {
                                     >
                                     </div>
                                     <div className="text-xs text-muted-foreground rotate-0 whitespace-nowrap">
-                                        {period === 'all' ? format(parseISO(d.date + '-01'), 'MMM yy', { locale: locale() }) : format(parseISO(d.date), 'dd.MM')}
+                                        {period === 'all'
+                                            ? (() => {
+                                                const monthDate = parseISO(d.date + '-01');
+                                                const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+                                                // Use abbreviated format if many bars (>6), else full format
+                                                if (chartData.length > 6) {
+                                                    return capitalize(format(monthDate, 'LLL', { locale: locale() })) + ', ' + format(monthDate, 'yy');
+                                                } else {
+                                                    return capitalize(format(monthDate, 'LLLL', { locale: locale() })) + ', ' + format(monthDate, 'yyyy');
+                                                }
+                                            })()
+                                            : format(parseISO(d.date), 'dd.MM')}
                                     </div>
                                 </div>
                             ))}
