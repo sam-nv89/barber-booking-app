@@ -4,12 +4,14 @@ import { useStore } from '@/store/useStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { QrCode, Search, User, Clock, Scissors, CheckCircle, Play, ArrowLeft, Camera, AlertTriangle, X, Calendar } from 'lucide-react';
+import { QrCode, Search, User, Clock, Scissors, CheckCircle, Play, ArrowLeft, Camera, AlertTriangle, X, Calendar, Share2 } from 'lucide-react';
 import { format, isToday, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { Html5QrcodeScanner, Html5QrcodeScanType } from 'html5-qrcode';
+import { QRCodeSVG } from 'qrcode.react';
 
 export const CheckIn = () => {
-    const { t, language, locale, appointments, services, updateAppointment, addNotification } = useStore();
+    const { t, language, locale, appointments, services, updateAppointment, addNotification, salonSettings } = useStore();
     const navigate = useNavigate();
 
     const [code, setCode] = React.useState('');
@@ -18,8 +20,12 @@ export const CheckIn = () => {
     const [error, setError] = React.useState('');
     const [processing, setProcessing] = React.useState(false);
     const [showScanner, setShowScanner] = React.useState(false);
-    const videoRef = React.useRef(null);
-    const streamRef = React.useRef(null);
+    const [showMasterQR, setShowMasterQR] = React.useState(false);
+    const scannerRef = React.useRef(null);
+    const scannerContainerId = 'qr-scanner-container';
+
+    // Check-in mode from settings (default: master scans client)
+    const checkinMode = salonSettings?.checkinMode || 'master_scans';
 
     const getServiceName = (service) => {
         if (!service) return '';
@@ -29,21 +35,21 @@ export const CheckIn = () => {
         return service.name;
     };
 
-    const handleSearch = () => {
+    const handleSearch = (searchCode = code) => {
         setError('');
         setFoundAppointment(null);
         setIsOtherDay(false);
 
-        if (code.length < 4) {
+        const cleanCode = searchCode.toUpperCase().trim();
+
+        if (cleanCode.length < 4) {
             setError(t('checkin.minChars'));
             return;
         }
 
-        const searchCode = code.toUpperCase().trim();
-
         // First try to find today's booking
         let found = appointments.find(a =>
-            a.id.slice(-8).toUpperCase() === searchCode &&
+            a.id.slice(-8).toUpperCase() === cleanCode &&
             a.status === 'confirmed' &&
             isToday(parseISO(a.date))
         );
@@ -54,7 +60,7 @@ export const CheckIn = () => {
         } else {
             // Try to find on other days
             found = appointments.find(a =>
-                a.id.slice(-8).toUpperCase() === searchCode &&
+                a.id.slice(-8).toUpperCase() === cleanCode &&
                 a.status === 'confirmed'
             );
 
@@ -121,83 +127,172 @@ export const CheckIn = () => {
         setIsOtherDay(false);
     };
 
-    // Camera QR Scanner
-    const startScanner = async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: 'environment' }
-            });
-            streamRef.current = stream;
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-            }
-            setShowScanner(true);
-        } catch (err) {
-            console.error('Camera error:', err);
-            setError(t('checkin.cameraError'));
-        }
+    // QR Scanner using html5-qrcode
+    const startScanner = () => {
+        setShowScanner(true);
     };
 
     const stopScanner = () => {
-        if (streamRef.current) {
-            streamRef.current.getTracks().forEach(track => track.stop());
-            streamRef.current = null;
+        if (scannerRef.current) {
+            scannerRef.current.clear().catch(console.error);
+            scannerRef.current = null;
         }
         setShowScanner(false);
     };
 
+    // Initialize scanner when modal opens
     React.useEffect(() => {
-        return () => stopScanner();
-    }, []);
+        if (showScanner && !scannerRef.current) {
+            // Wait for DOM element to be rendered
+            const timeoutId = setTimeout(() => {
+                try {
+                    const containerElement = document.getElementById(scannerContainerId);
+                    if (!containerElement) {
+                        console.error('QR scanner container not found');
+                        return;
+                    }
+
+                    const scanner = new Html5QrcodeScanner(
+                        scannerContainerId,
+                        {
+                            fps: 10,
+                            qrbox: { width: 250, height: 250 },
+                            supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
+                            rememberLastUsedCamera: true,
+                        },
+                        false // verbose
+                    );
+
+                    scanner.render(
+                        (decodedText) => {
+                            // Success - QR code scanned
+                            setCode(decodedText);
+                            stopScanner();
+                            handleSearch(decodedText);
+                        },
+                        (errorMessage) => {
+                            // Scanning in progress, ignore errors
+                        }
+                    );
+
+                    scannerRef.current = scanner;
+                } catch (error) {
+                    console.error('Failed to initialize QR scanner:', error);
+                }
+            }, 100); // Small delay to ensure DOM is ready
+
+            return () => clearTimeout(timeoutId);
+        }
+
+        return () => {
+            if (scannerRef.current) {
+                scannerRef.current.clear().catch(console.error);
+                scannerRef.current = null;
+            }
+        };
+    }, [showScanner]);
+
+    // Generate Master QR code for clients to scan
+    const masterQRValue = React.useMemo(() => {
+        // Simple format: barber://checkin/<master_id>/<timestamp>
+        const masterId = salonSettings?.name?.replace(/\s/g, '_') || 'master';
+        return `BARBER_CHECKIN:${masterId}:${Date.now()}`;
+    }, [salonSettings]);
 
     const service = foundAppointment ? services.find(s => s.id === foundAppointment.serviceId) : null;
 
     return (
         <div className="space-y-6 pb-20">
             {/* Header */}
-            <div className="flex items-center gap-3">
-                <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-                    <ArrowLeft className="w-5 h-5" />
-                </Button>
-                <h1 className="text-2xl font-bold flex items-center gap-2">
-                    <QrCode className="w-6 h-6" />
-                    {t('checkin.title')}
-                </h1>
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+                        <ArrowLeft className="w-5 h-5" />
+                    </Button>
+                    <h1 className="text-2xl font-bold flex items-center gap-2">
+                        <QrCode className="w-6 h-6" />
+                        {t('checkin.title')}
+                    </h1>
+                </div>
+                {/* Toggle to show Master QR - only if 'client_scans' or 'both' */}
+                {(checkinMode === 'client_scans' || checkinMode === 'both') && (
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowMasterQR(!showMasterQR)}
+                        className="gap-2"
+                    >
+                        <Share2 className="w-4 h-4" />
+                        {showMasterQR ? t('common.close') : t('checkin.masterQR') || 'Мой QR'}
+                    </Button>
+                )}
             </div>
 
-            {/* Code input */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-base">
-                        {t('checkin.enterCode')}
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="flex gap-2">
-                        <Input
-                            value={code}
-                            onChange={(e) => setCode(e.target.value.toUpperCase())}
-                            placeholder="XXXXXXXX"
-                            className="font-mono text-lg tracking-widest uppercase"
-                            maxLength={8}
-                            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                        />
-                        <Button variant="outline" size="icon" onClick={startScanner} title={language === 'en' ? 'Scan QR' : 'Сканировать QR'}>
-                            <Camera className="w-5 h-5" />
-                        </Button>
-                        <Button onClick={handleSearch} disabled={code.length < 4}>
-                            <Search className="w-4 h-4 mr-2" />
-                            {t('checkin.find')}
-                        </Button>
-                    </div>
-                    {error && (
-                        <p className="text-sm text-red-500">{error}</p>
-                    )}
-                    <p className="text-xs text-muted-foreground">
-                        {t('checkin.hint')}
-                    </p>
-                </CardContent>
-            </Card>
+            {/* Master QR Mode - Clients scan this */}
+            {showMasterQR && (checkinMode === 'client_scans' || checkinMode === 'both') && (
+                <Card className="border-primary/50 bg-primary/5">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-base flex items-center gap-2">
+                            <QrCode className="w-5 h-5 text-primary" />
+                            {t('checkin.masterQRTitle') || 'QR для клиентов'}
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <p className="text-sm text-muted-foreground">
+                            {t('checkin.masterQRDesc') || 'Покажите этот QR клиенту для регистрации'}
+                        </p>
+                        <div className="flex justify-center py-4">
+                            <div className="bg-white p-4 rounded-xl shadow-inner">
+                                <QRCodeSVG
+                                    value={masterQRValue}
+                                    size={200}
+                                    level="H"
+                                    includeMargin={false}
+                                />
+                            </div>
+                        </div>
+                        <p className="text-xs text-center text-muted-foreground">
+                            {salonSettings?.name || 'Barber Shop'}
+                        </p>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* Code input - only if 'master_scans' or 'both' */}
+            {(checkinMode === 'master_scans' || checkinMode === 'both') && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base">
+                            {t('checkin.enterCode')}
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="flex gap-2">
+                            <Input
+                                value={code}
+                                onChange={(e) => setCode(e.target.value.toUpperCase())}
+                                placeholder="XXXXXXXX"
+                                className="font-mono text-lg tracking-widest uppercase"
+                                maxLength={8}
+                                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                            />
+                            <Button variant="outline" size="icon" onClick={startScanner} title={t('checkin.scanQR')}>
+                                <Camera className="w-5 h-5" />
+                            </Button>
+                            <Button onClick={() => handleSearch()} disabled={code.length < 4}>
+                                <Search className="w-4 h-4 mr-2" />
+                                {t('checkin.find')}
+                            </Button>
+                        </div>
+                        {error && (
+                            <p className="text-sm text-red-500">{error}</p>
+                        )}
+                        <p className="text-xs text-muted-foreground">
+                            {t('checkin.hint')}
+                        </p>
+                    </CardContent>
+                </Card>
+            )}
 
             {/* Camera Scanner Modal */}
             {showScanner && (
@@ -209,10 +304,10 @@ export const CheckIn = () => {
                         </Button>
                     </div>
                     <div className="flex-1 flex items-center justify-center p-4">
-                        <div className="relative w-full max-w-sm aspect-square rounded-2xl overflow-hidden border-4 border-white/20">
-                            <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
-                            <div className="absolute inset-0 border-2 border-primary m-8 rounded-lg" />
-                        </div>
+                        <div
+                            id={scannerContainerId}
+                            className="w-full max-w-md"
+                        />
                     </div>
                     <div className="p-4 text-center text-white/70 text-sm">
                         {t('checkin.pointCamera')}
@@ -311,19 +406,37 @@ export const CheckIn = () => {
                 </Card>
             )}
 
-            {/* Instructions */}
-            <Card className="bg-muted/50">
-                <CardContent className="p-4">
-                    <h3 className="font-medium mb-2">
-                        {t('checkin.howItWorks')}
-                    </h3>
-                    <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
-                        <li>{t('checkin.step1')}</li>
-                        <li>{t('checkin.step2')}</li>
-                        <li>{t('checkin.step3')}</li>
-                    </ol>
-                </CardContent>
-            </Card>
+            {/* Instructions - only show for master_scans or both mode */}
+            {(checkinMode === 'master_scans' || checkinMode === 'both') && (
+                <Card className="bg-muted/50">
+                    <CardContent className="p-4">
+                        <h3 className="font-medium mb-2">
+                            {t('checkin.howItWorks')}
+                        </h3>
+                        <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+                            <li>{t('checkin.step1')}</li>
+                            <li>{t('checkin.step2')}</li>
+                            <li>{t('checkin.step3')}</li>
+                        </ol>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* Instructions for client_scans mode */}
+            {checkinMode === 'client_scans' && (
+                <Card className="bg-muted/50">
+                    <CardContent className="p-4">
+                        <h3 className="font-medium mb-2">
+                            {t('checkin.howItWorks')}
+                        </h3>
+                        <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+                            <li>{t('checkin.clientStep1') || 'Нажмите "Мой QR" чтобы показать код'}</li>
+                            <li>{t('checkin.clientStep2') || 'Клиент сканирует QR своим телефоном'}</li>
+                            <li>{t('checkin.clientStep3') || 'Вы получите уведомление о регистрации'}</li>
+                        </ol>
+                    </CardContent>
+                </Card>
+            )}
         </div>
     );
 };

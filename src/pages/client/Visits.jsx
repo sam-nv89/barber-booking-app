@@ -8,6 +8,7 @@ import { Chat } from '@/components/features/Chat';
 import { FeedbackModal } from '@/components/features/FeedbackModal';
 import { MessageCircle, Star, Calendar, Clock, Pencil, QrCode } from 'lucide-react';
 import { BookingQRCode } from '@/components/features/BookingQRCode';
+import { ClientQRScanner } from '@/components/features/ClientQRScanner';
 import { cn, formatPrice } from '@/lib/utils';
 
 import { DateTimeSelector } from '@/components/features/DateTimeSelector';
@@ -23,6 +24,7 @@ export const Visits = () => {
     const [rescheduleOpen, setRescheduleOpen] = React.useState(null); // ID of appointment to reschedule
     const [cancelConfirmationId, setCancelConfirmationId] = React.useState(null);
     const [qrModalAppointment, setQrModalAppointment] = React.useState(null);
+    const [showClientScanner, setShowClientScanner] = React.useState(false);
 
     // Reschedule state
     const [newDate, setNewDate] = React.useState(null);
@@ -134,7 +136,21 @@ export const Visits = () => {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-2xl font-bold">{t('nav.visits')}</h1>
+            <div className="flex justify-between items-center">
+                <h1 className="text-2xl font-bold">{t('nav.visits')}</h1>
+                {/* Scan Master QR Button - only show if checkinMode is 'client_scans' or 'both' */}
+                {(salonSettings?.checkinMode === 'client_scans' || salonSettings?.checkinMode === 'both') && (
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowClientScanner(true)}
+                        className="gap-2"
+                    >
+                        <QrCode className="w-4 h-4" />
+                        {t('checkin.scanMasterQR') || 'Сканировать QR'}
+                    </Button>
+                )}
+            </div>
 
             <div className="flex p-1 bg-muted rounded-lg">
                 <button
@@ -313,6 +329,24 @@ export const Visits = () => {
                 <BookingQRCode
                     appointment={qrModalAppointment}
                     onClose={() => setQrModalAppointment(null)}
+                />
+            )}
+
+            {/* Client QR Scanner Modal */}
+            {showClientScanner && (
+                <ClientQRScanner
+                    onClose={() => setShowClientScanner(false)}
+                    onScan={(code) => {
+                        console.log('Scanned master QR:', code);
+                        setShowClientScanner(false);
+                        // Handle check-in with master
+                        if (code.startsWith('BARBER_CHECKIN:')) {
+                            alert(t('checkin.checkinSuccess') || 'Регистрация успешна! Мастер получит уведомление.');
+                        } else {
+                            alert(t('checkin.invalidQR') || 'Неверный QR-код');
+                        }
+                    }}
+                    t={t}
                 />
             )}
         </div>

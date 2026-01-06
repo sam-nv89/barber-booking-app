@@ -272,6 +272,24 @@ export const Settings = () => {
                             </select>
                         </div>
 
+                        {/* Check-in Mode Selector */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">{t('settings.checkinMode') || 'Режим Check-in'}</label>
+                            <select
+                                name="checkinMode"
+                                value={formData.checkinMode || 'master_scans'}
+                                onChange={handleChange}
+                                className="w-full p-2 rounded-md border bg-background"
+                            >
+                                <option value="master_scans">{t('settings.masterScansClient') || 'Мастер сканирует клиента'}</option>
+                                <option value="client_scans">{t('settings.clientScansMaster') || 'Клиент сканирует мастера'}</option>
+                                <option value="both">{t('settings.bothModes') || 'Оба варианта'}</option>
+                            </select>
+                            <p className="text-xs text-muted-foreground">
+                                {t('settings.checkinModeDesc') || 'Выберите, кто инициирует регистрацию прихода'}
+                            </p>
+                        </div>
+
                         {/* Address suggestions dropdown */}
                         {showAddressSuggestions && addressSuggestions.length > 0 && (
                             <div className="absolute z-50 w-full mt-1 bg-background border rounded-lg shadow-lg max-h-48 overflow-y-auto">

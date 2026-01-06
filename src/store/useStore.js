@@ -83,7 +83,16 @@ export const useStore = create(
                     workHours: { start: '10:00', end: '20:00' }
                 },
                 schedule: DEFAULT_SCHEDULE,
-                currency: '₸' // Default currency
+                currency: '₸', // Legacy - kept for backward compatibility
+                currencySettings: {
+                    code: 'KZT',
+                    symbol: '₸',
+                    position: 'after', // 'before' | 'after'
+                    decimals: 0,
+                    thousandsSep: ' ',
+                    decimalSep: ','
+                },
+                checkinMode: 'master_scans' // 'master_scans' | 'client_scans'
             },
             setSalonSettings: (settings) => set((state) => ({ salonSettings: { ...state.salonSettings, ...settings } })),
 

@@ -11,7 +11,7 @@ import { cn, formatPrice } from '@/lib/utils';
 import { format } from 'date-fns';
 
 export const Records = () => {
-    const { appointments, updateAppointmentStatus, t, language, locale } = useStore();
+    const { appointments, updateAppointmentStatus, t, language, locale, salonSettings } = useStore();
     const location = useLocation();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = React.useState('pending');

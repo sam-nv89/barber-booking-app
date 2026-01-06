@@ -9,7 +9,7 @@ import { cn, formatPrice } from '@/lib/utils';
 import { motion } from 'framer-motion';
 
 export const Dashboard = () => {
-    const { appointments, services, reviews, t, locale } = useStore();
+    const { appointments, services, reviews, t, locale, salonSettings } = useStore();
     const [period, setPeriod] = useState('month'); // 'week' | 'month' | 'all'
 
     // Filter appointments based on period
