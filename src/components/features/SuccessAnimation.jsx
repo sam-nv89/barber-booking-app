@@ -3,11 +3,15 @@ import { motion } from 'framer-motion';
 
 export const SuccessAnimation = ({ onComplete, title = "Успешно!", message = "Ваша заявка отправлена мастеру", buttonText = "Отлично" }) => {
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
+            onClick={onComplete}
+        >
             <motion.div
                 initial={{ scale: 0.5, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 className="bg-card p-8 rounded-2xl shadow-xl flex flex-col items-center max-w-sm w-full mx-4 border"
+                onClick={(e) => e.stopPropagation()}
             >
                 <div className="relative w-32 h-32 mb-6">
                     {/* Pulsing background */}

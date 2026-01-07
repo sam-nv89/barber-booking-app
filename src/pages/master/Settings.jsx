@@ -9,7 +9,8 @@ import { cn, formatPrice, formatPhoneNumber } from '@/lib/utils';
 import { SuccessAnimation } from '@/components/features/SuccessAnimation';
 import { WelcomeAnimation } from '@/components/features/WelcomeAnimation';
 import { format } from 'date-fns';
-import { Trash2, UserX, Plus, Clock, Play } from 'lucide-react';
+import { Trash2, UserX, Plus, Clock, Play, Globe } from 'lucide-react';
+import { translateToAllLanguages, detectSourceLanguage } from '@/lib/translate';
 
 export const Settings = () => {
     const { t, salonSettings, setSalonSettings, setWorkScheduleOverrides, workScheduleOverrides, clearWorkScheduleOverrides, language, blockedPhones, addBlockedPhone, removeBlockedPhone } = useStore();
@@ -1106,16 +1107,90 @@ const MarketingManager = ({ onSuccess }) => {
 };
 
 const ServicesManager = ({ onSuccess }) => {
-    const { services, addService, updateService, deleteService, t, language } = useStore();
+    const { services, addService, updateService, deleteService, t, language, salonSettings } = useStore();
     const [isModalOpen, setIsModalOpen] = React.useState(false);
     const [editingService, setEditingService] = React.useState(null);
 
     // Store names for each language
     const [formData, setFormData] = React.useState({
-        name: { ru: '', kz: '', en: '' },
+        name: { ru: '', kz: '', en: '', es: '', tr: '' },
         price: '',
         duration: ''
     });
+    const [isTranslating, setIsTranslating] = React.useState(false);
+
+    // Auto-translate service name to all languages
+    const handleAutoTranslate = async () => {
+        const sourceLang = detectSourceLanguage(formData.name);
+        if (!sourceLang) {
+            alert(t('services.enterNameFirst') || 'Сначала введите название на любом языке');
+            return;
+        }
+
+        setIsTranslating(true);
+        try {
+            const translations = await translateToAllLanguages(formData.name[sourceLang], sourceLang);
+            setFormData({
+                ...formData,
+                name: translations
+            });
+        } catch (error) {
+            console.error('Translation error:', error);
+            alert(t('services.translationError') || 'Ошибка перевода. Попробуйте позже.');
+        } finally {
+            setIsTranslating(false);
+        }
+    };
+
+    // Get price placeholder - $10 USD equivalent in selected currency, rounded to nearest 10
+    const getPricePlaceholder = () => {
+        const currency = salonSettings?.currency || '₸';
+        // Approximate $10 USD equivalents (rounded to nearest 10)
+        const rates = {
+            '₸': 5000,      // KZT
+            '$': 10,        // USD
+            '€': 10,        // EUR
+            '£': 10,        // GBP
+            '₽': 1000,      // RUB
+            '₴': 420,       // UAH
+            'Br': 30,       // BYN
+            '₼': 20,        // AZN
+            'soʻm': 130000, // UZS
+            '₾': 30,        // GEL
+            '֏': 4000,      // AMD
+            'сом': 900,     // KGS
+            'SM': 110,      // TJS
+            'TMT': 40,      // TMT
+            'zł': 40,       // PLN
+            'Kč': 240,      // CZK
+            'Ft': 3700,     // HUF
+            'lei': 50,      // RON
+            'лв': 20,       // BGN
+            '₺': 350,       // TRY
+            '₹': 840,       // INR
+            '¥': 1500,      // CNY/JPY avg
+            '₩': 14000,     // KRW
+            '฿': 360,       // THB
+            'RM': 50,       // MYR
+            'S$': 14,       // SGD
+            'A$': 16,       // AUD
+            'CA$': 14,      // CAD
+            'CHF': 10,      // CHF
+            'kr': 110,      // SEK/NOK/DKK avg
+            'د.إ': 40,      // AED
+            'ر.س': 40,      // SAR
+            '₪': 40,        // ILS
+            'R': 190,       // ZAR
+            'R$': 60,       // BRL
+            'MX$': 180,     // MXN
+            'COP$': 43000,  // COP
+            'S/.': 40,      // PEN
+            'CLP$': 9800,   // CLP
+            'ARS$': 9800,   // ARS
+        };
+        const value = rates[currency] || 5000;
+        return value.toLocaleString('ru-RU').replace(/,/g, ' ');
+    };
 
     const getServiceName = (service) => {
         if (typeof service.name === 'object') {
@@ -1126,7 +1201,7 @@ const ServicesManager = ({ onSuccess }) => {
 
     const handleOpenAdd = () => {
         setEditingService(null);
-        setFormData({ name: { ru: '', kz: '', en: '' }, price: '', duration: '' });
+        setFormData({ name: { ru: '', kz: '', en: '', es: '', tr: '' }, price: '', duration: '' });
         setIsModalOpen(true);
     };
 
@@ -1134,8 +1209,8 @@ const ServicesManager = ({ onSuccess }) => {
         setEditingService(service);
         // Handle legacy string names by putting them in RU slot by default
         const names = typeof service.name === 'object'
-            ? service.name
-            : { ru: service.name, kz: '', en: '' };
+            ? { ru: service.name.ru || '', kz: service.name.kz || '', en: service.name.en || '', es: service.name.es || '', tr: service.name.tr || '' }
+            : { ru: service.name, kz: '', en: '', es: '', tr: '' };
 
         setFormData({ name: names, price: service.price, duration: service.duration });
         setIsModalOpen(true);
@@ -1187,7 +1262,7 @@ const ServicesManager = ({ onSuccess }) => {
                         <div key={service.id} className="flex justify-between items-center p-3 bg-muted rounded-lg border hover:border-primary/50 transition-colors">
                             <div>
                                 <div className="font-medium">{getServiceName(service)}</div>
-                                <div className="text-sm text-muted-foreground">{service.duration} {t('common.min')} • {formatPrice(service.price)} ₸</div>
+                                <div className="text-sm text-muted-foreground">{service.duration} {t('common.min')} • {formatPrice(service.price)} {salonSettings?.currency || '₸'}</div>
                             </div>
                             <div className="flex gap-2">
                                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenEdit(service)}>
@@ -1229,15 +1304,51 @@ const ServicesManager = ({ onSuccess }) => {
                             placeholder="Haircut"
                         />
                     </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">{t('services.name')} (ES)</label>
+                        <Input
+                            value={formData.name.es}
+                            onChange={e => setFormData({ ...formData, name: { ...formData.name, es: e.target.value } })}
+                            placeholder="Corte de pelo"
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">{t('services.name')} (TR)</label>
+                        <Input
+                            value={formData.name.tr}
+                            onChange={e => setFormData({ ...formData, name: { ...formData.name, tr: e.target.value } })}
+                            placeholder="Saç kesimi"
+                        />
+                    </div>
+
+                    {/* Auto-translate button */}
+                    <div className="space-y-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full gap-2"
+                            onClick={handleAutoTranslate}
+                            disabled={isTranslating}
+                        >
+                            <Globe className="w-4 h-4 text-blue-500" />
+                            {isTranslating
+                                ? (t('services.translating') || 'Перевод...')
+                                : (t('services.autoTranslateBtnText') || 'Автоперевод на все языки')}
+                        </Button>
+                        <div className="text-xs text-muted-foreground text-left space-y-1">
+                            <p>{t('services.translateHintPurpose') || 'Клиент увидит название на выбранном языке, а у вас оно останется на оригинальном.'}</p>
+                            <p>⚠️ {t('services.translateHintWarning') || 'Перевод может быть приближённым — при необходимости отредактируйте вручную.'}</p>
+                        </div>
+                    </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">{t('services.price')}</label>
+                            <label className="text-sm font-medium">{t('services.price')} ({salonSettings?.currency || '₸'})</label>
                             <Input
                                 type="number"
                                 value={formData.price}
                                 onChange={e => setFormData({ ...formData, price: e.target.value })}
-                                placeholder="5000"
+                                placeholder={getPricePlaceholder()}
                             />
                         </div>
                         <div className="space-y-2">
