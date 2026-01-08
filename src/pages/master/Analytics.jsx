@@ -286,7 +286,7 @@ export const Analytics = () => {
                         }}
                         disabled={isGenerating}
                         className="gap-1 text-muted-foreground"
-                        title={language === 'en' ? 'Add 100 test appointments' : 'Добавить 100 тестовых записей'}
+                        title={t('analytics.testData')}
                     >
                         <Database className="w-4 h-4" />
                         {isGenerating ? '...' : '+100'}

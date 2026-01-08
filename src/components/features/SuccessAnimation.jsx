@@ -1,7 +1,24 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
-export const SuccessAnimation = ({ onComplete, title = "Успешно!", message = "Ваша заявка отправлена мастеру", buttonText = "Отлично" }) => {
+export const SuccessAnimation = ({ onComplete, title = "Успешно!", message = "Ваша заявка отправлена мастеру", buttonText = "Отлично", type = 'success' }) => {
+
+    const config = {
+        success: {
+            bg: "bg-green-500/20",
+            circle: "from-green-400 to-green-600",
+            path: "M5 13l4 4L19 7"
+        },
+        cancel: {
+            bg: "bg-red-500/20",
+            circle: "from-red-400 to-red-600",
+            path: "M6 18L18 6M6 6l12 12"
+        }
+    };
+
+    const current = config[type] || config.success;
+
     return (
         <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
@@ -16,7 +33,7 @@ export const SuccessAnimation = ({ onComplete, title = "Успешно!", messag
                 <div className="relative w-32 h-32 mb-6">
                     {/* Pulsing background */}
                     <motion.div
-                        className="absolute inset-0 bg-green-500/20 rounded-full"
+                        className={cn("absolute inset-0 rounded-full", current.bg)}
                         animate={{ scale: [1, 1.2, 1] }}
                         transition={{ duration: 2, repeat: Infinity }}
                     />
@@ -26,9 +43,9 @@ export const SuccessAnimation = ({ onComplete, title = "Успешно!", messag
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                        className="absolute inset-0 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-lg"
+                        className={cn("absolute inset-0 bg-gradient-to-br rounded-full flex items-center justify-center shadow-lg", current.circle)}
                     >
-                        {/* Checkmark SVG */}
+                        {/* SVG */}
                         <svg
                             className="w-16 h-16 text-white drop-shadow-md"
                             fill="none"
@@ -42,7 +59,7 @@ export const SuccessAnimation = ({ onComplete, title = "Успешно!", messag
                                 transition={{ delay: 0.2, duration: 0.5 }}
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
-                                d="M5 13l4 4L19 7"
+                                d={current.path}
                             />
                         </svg>
                     </motion.div>

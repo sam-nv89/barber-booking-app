@@ -6,11 +6,11 @@ import { DAYS_OF_WEEK } from '@/lib/constants';
 import { cn, formatPrice, formatDuration } from '@/lib/utils';
 import { format, addDays } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { AlertTriangle, Check } from 'lucide-react';
+import { AlertTriangle, Check, Scissors, Dumbbell, Sparkles, Droplets, Palette, Zap, Crown, Sun, Trophy, User, Smile, Gem, Activity, Heart } from 'lucide-react';
 
 import { SuccessAnimation } from '@/components/features/SuccessAnimation';
 import { DateTimeSelector } from '@/components/features/DateTimeSelector';
-import { ClockWidget } from '@/components/features/ClockWidget';
+import { SalonInfo } from '@/components/features/SalonInfo';
 import { useMainButton, useBackButton, useHaptic } from '@/hooks/useTelegram';
 import { useTMA } from '@/components/providers/TMAProvider';
 
@@ -140,7 +140,8 @@ export const BookingWizard = () => {
                 <h1 className="text-2xl font-bold">{t('nav.book')}</h1>
             </div>
 
-            <ClockWidget />
+            {/* Salon Info with Clock - compact unified block */}
+            {step === 1 && <SalonInfo showClock />}
 
             {/* Step 1: Service */}
             {step === 1 && (
@@ -288,7 +289,25 @@ export const BookingWizard = () => {
                         <div className="p-4 bg-gradient-to-r from-primary/10 to-primary/5">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                                    <span className="text-lg">✂️</span>
+                                    {(() => {
+                                        const Icon = {
+                                            scissors: Scissors,
+                                            dumbbell: Dumbbell,
+                                            sparkles: Sparkles,
+                                            droplets: Droplets,
+                                            palette: Palette,
+                                            zap: Zap,
+                                            crown: Crown,
+                                            sun: Sun,
+                                            trophy: Trophy,
+                                            user: User,
+                                            smile: Smile,
+                                            gem: Gem,
+                                            activity: Activity,
+                                            heart: Heart
+                                        }[salonSettings?.icon] || Scissors;
+                                        return <Icon className="w-5 h-5 text-primary" />;
+                                    })()}
                                 </div>
                                 <div className="flex-1">
                                     <div className="text-xs text-muted-foreground uppercase tracking-wide">{t('booking.service')}</div>

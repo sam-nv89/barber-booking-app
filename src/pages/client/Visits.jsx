@@ -6,9 +6,11 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Chat } from '@/components/features/Chat';
 import { FeedbackModal } from '@/components/features/FeedbackModal';
+import { SalonInfo } from '@/components/features/SalonInfo';
 import { MessageCircle, Star, Calendar, Clock, Pencil, QrCode } from 'lucide-react';
 import { BookingQRCode } from '@/components/features/BookingQRCode';
 import { ClientQRScanner } from '@/components/features/ClientQRScanner';
+import { SuccessAnimation } from '@/components/features/SuccessAnimation';
 import { cn, formatPrice } from '@/lib/utils';
 
 import { DateTimeSelector } from '@/components/features/DateTimeSelector';
@@ -25,6 +27,7 @@ export const Visits = () => {
     const [cancelConfirmationId, setCancelConfirmationId] = React.useState(null);
     const [qrModalAppointment, setQrModalAppointment] = React.useState(null);
     const [showClientScanner, setShowClientScanner] = React.useState(false);
+    const [showCancelSuccess, setShowCancelSuccess] = React.useState(false);
 
     // Reschedule state
     const [newDate, setNewDate] = React.useState(null);
@@ -69,15 +72,13 @@ export const Visits = () => {
 
     const myAppointments = appointments.filter(app => app.clientPhone === user.phone);
 
-    const upcoming = myAppointments.filter(app => {
-        const appDate = new Date(app.date + 'T' + app.time);
-        return appDate >= new Date() && app.status !== 'completed' && app.status !== 'cancelled';
-    });
+    const upcoming = myAppointments.filter(app =>
+        app.status !== 'completed' && app.status !== 'cancelled'
+    ).sort((a, b) => new Date(a.date + 'T' + a.time) - new Date(b.date + 'T' + b.time));
 
-    const history = myAppointments.filter(app => {
-        const appDate = new Date(app.date + 'T' + app.time);
-        return appDate < new Date() || app.status === 'completed' || app.status === 'cancelled';
-    });
+    const history = myAppointments.filter(app =>
+        app.status === 'completed' || app.status === 'cancelled'
+    ).sort((a, b) => new Date(b.date + 'T' + b.time) - new Date(a.date + 'T' + a.time));
 
     const displayed = activeTab === 'upcoming' ? upcoming : history;
 
@@ -110,6 +111,7 @@ export const Visits = () => {
         if (cancelConfirmationId) {
             updateAppointmentStatus(cancelConfirmationId, 'cancelled');
             setCancelConfirmationId(null);
+            setShowCancelSuccess(true);
         }
     };
 
@@ -151,6 +153,9 @@ export const Visits = () => {
                     </Button>
                 )}
             </div>
+
+            {/* Salon Info - Location & Contacts */}
+            <SalonInfo showClock />
 
             <div className="flex p-1 bg-muted rounded-lg">
                 <button
@@ -347,6 +352,16 @@ export const Visits = () => {
                         }
                     }}
                     t={t}
+                />
+            )}
+
+            {showCancelSuccess && (
+                <SuccessAnimation
+                    onComplete={() => setShowCancelSuccess(false)}
+                    title={t('common.cancelled') || 'Отменено'}
+                    message={t('clientVisits.cancelSuccess') || 'Запись успешно отменена'}
+                    buttonText={t('common.ok') || 'OK'}
+                    type="cancel"
                 />
             )}
         </div>

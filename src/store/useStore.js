@@ -515,7 +515,7 @@ export const useStore = create(
                 const recurringClientPool = [];
                 for (let i = 0; i < 30; i++) {
                     const clientName = clientNames[Math.floor(Math.random() * clientNames.length)] + ' ' + (i + 1);
-                    const phone = '+7 7' + String(Math.floor(Math.random() * 100000000)).padStart(8, '0');
+                    const phone = '+7 7' + String(Math.floor(Math.random() * 1000000000)).padStart(9, '0');
                     recurringClientPool.push({ name: clientName, phone });
                 }
 
@@ -536,7 +536,7 @@ export const useStore = create(
                     } else {
                         // Create new unique client
                         clientName = clientNames[Math.floor(Math.random() * clientNames.length)] + ' Новый' + (i + 100);
-                        phone = '+7 7' + String(Math.floor(Math.random() * 100000000)).padStart(8, '0');
+                        phone = '+7 7' + String(Math.floor(Math.random() * 1000000000)).padStart(9, '0');
                     }
 
                     const service = services[Math.floor(Math.random() * services.length)];

@@ -7,7 +7,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Chat } from '@/components/features/Chat';
 import { MasterBookingModal } from '@/components/features/MasterBookingModal';
 import { MessageCircle, Plus, QrCode, CheckCheck, List, Calendar, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
-import { cn, formatPrice } from '@/lib/utils';
+import { cn, formatPrice, formatPhoneNumber } from '@/lib/utils';
 import { format, addDays, startOfWeek, isSameDay, isToday, isTomorrow, parseISO } from 'date-fns';
 
 export const Records = () => {
@@ -113,7 +113,7 @@ export const Records = () => {
         const date = parseISO(dateStr);
         if (isToday(date)) return t('records.today') || 'Сегодня';
         if (isTomorrow(date)) return t('records.tomorrow') || 'Завтра';
-        return format(date, 'd MMMM, EEEE', { locale: locale() });
+        return format(date, 'd MMMM yyyy, EEEE', { locale: locale() });
     };
 
     // Week days for calendar view
@@ -157,7 +157,11 @@ export const Records = () => {
         setShowCompleteAllConfirm(false);
     };
 
-    // Mini Calendar Component
+    // Helper for day names
+    const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const getDayLabel = (date) => t(`days.${dayKeys[date.getDay()]}`);
+
+    // MiniCalendar Component
     const MiniCalendar = () => {
         const daysInMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 0).getDate();
         const firstDayOfMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1).getDay();
@@ -166,6 +170,14 @@ export const Records = () => {
         const days = [];
         for (let i = 0; i < adjustedFirstDay; i++) days.push(null);
         for (let i = 1; i <= daysInMonth; i++) days.push(i);
+
+        const shortWeekDays = useMemo(() => {
+            const start = startOfWeek(new Date(), { weekStartsOn: 1 });
+            return Array.from({ length: 7 }, (_, i) => {
+                const d = addDays(start, i);
+                return getDayLabel(d);
+            });
+        }, [language]);
 
         return (
             <div className="bg-card rounded-lg border p-3 mb-4">
@@ -181,8 +193,8 @@ export const Records = () => {
                     </Button>
                 </div>
                 <div className="grid grid-cols-7 gap-1 text-center text-xs">
-                    {['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(d => (
-                        <div key={d} className="text-muted-foreground py-1">{d}</div>
+                    {shortWeekDays.map((d, i) => (
+                        <div key={i} className="text-muted-foreground py-1">{d}</div>
                     ))}
                     {days.map((day, i) => {
                         if (!day) return <div key={`empty-${i}`} />;
@@ -193,15 +205,15 @@ export const Records = () => {
                             <button
                                 key={day}
                                 className={cn(
-                                    "relative p-1 rounded-full text-sm transition-colors hover:bg-muted",
-                                    isSelected && "bg-primary text-primary-foreground",
+                                    "relative h-9 w-9 p-0 flex items-center justify-center rounded-md text-sm transition-all mx-auto",
+                                    isSelected ? "bg-primary text-primary-foreground shadow-md scale-105" : "hover:bg-muted",
                                     isToday(date) && !isSelected && "ring-1 ring-primary"
                                 )}
                                 onClick={() => setSelectedDate(date)}
                             >
                                 {day}
                                 {hasDots && (
-                                    <span className={cn("absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full", isSelected ? "bg-primary-foreground" : "bg-primary")} />
+                                    <span className={cn("absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full", isSelected ? "bg-primary-foreground" : "bg-primary")} />
                                 )}
                             </button>
                         );
@@ -232,12 +244,12 @@ export const Records = () => {
                     <div className="flex justify-between items-start">
                         <div>
                             <div className="font-bold">{app.clientName}</div>
-                            <div className="text-sm text-muted-foreground">{app.clientPhone}</div>
+                            <div className="text-sm text-muted-foreground">{formatPhoneNumber(app.clientPhone)}</div>
                         </div>
                         <div className="text-right">
                             <div className="font-medium">{app.time}</div>
                             <div className="text-sm text-muted-foreground capitalize">
-                                {format(new Date(app.date), 'd MMM', { locale: locale() })}
+                                {format(new Date(app.date), 'd MMMM yyyy', { locale: locale() })}
                             </div>
                         </div>
                     </div>
@@ -339,14 +351,18 @@ export const Records = () => {
                                     isToday(day) && !isSelected && "ring-2 ring-primary"
                                 )}
                             >
-                                <div className="text-xs opacity-70">{format(day, 'EEE', { locale: locale() })}</div>
+                                <div className="text-xs opacity-70">{getDayLabel(day)}</div>
                                 <div className="text-lg font-bold">{format(day, 'd')}</div>
                                 {dayApps.length > 0 && (
-                                    <div className="flex justify-center gap-0.5 mt-1">
-                                        {dayApps.slice(0, 3).map((_, i) => (
-                                            <span key={i} className={cn("w-1.5 h-1.5 rounded-full", isSelected ? "bg-primary-foreground" : "bg-primary")} />
-                                        ))}
-                                        {dayApps.length > 3 && <span className="text-xs">+{dayApps.length - 3}</span>}
+                                    <div className="flex flex-col items-center mt-1">
+                                        <div className="flex justify-center gap-0.5">
+                                            {dayApps.slice(0, 3).map((_, i) => (
+                                                <span key={i} className={cn("w-1.5 h-1.5 rounded-full", isSelected ? "bg-primary-foreground" : "bg-primary")} />
+                                            ))}
+                                        </div>
+                                        {dayApps.length > 3 && (
+                                            <span className={cn("text-[10px] mt-0.5", isSelected ? "text-primary-foreground/80" : "text-muted-foreground")}>(+{dayApps.length - 3})</span>
+                                        )}
                                     </div>
                                 )}
                             </button>
@@ -381,40 +397,50 @@ export const Records = () => {
 
                 <h3 className="font-medium capitalize">{formatDateHeader(format(selectedDate, 'yyyy-MM-dd'))}</h3>
 
-                <div className="relative">
-                    {/* Timeline */}
-                    <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-border" />
+                <div className="space-y-0">
+                    {timeSlots.filter((_, i) => i % 2 === 0).map((slot, index, array) => {
+                        const slotApps = dayApps.filter(app => app.time?.startsWith(slot.split(':')[0]));
+                        const hasApp = slotApps.length > 0;
+                        const isLast = index === array.length - 1;
 
-                    <div className="space-y-2">
-                        {timeSlots.filter((_, i) => i % 2 === 0).map(slot => {
-                            const slotApps = dayApps.filter(app => app.time?.startsWith(slot.split(':')[0]));
-                            const hasApp = slotApps.length > 0;
+                        return (
+                            <div key={slot} className="flex items-stretch gap-4">
+                                {/* Time Column */}
+                                <div className="w-14 text-sm text-muted-foreground text-right pt-1">{slot}</div>
 
-                            return (
-                                <div key={slot} className="flex items-start gap-4">
-                                    <div className="w-12 text-sm text-muted-foreground text-right pt-1">{slot}</div>
-                                    <div className={cn("relative w-3 h-3 rounded-full border-2 mt-1.5 z-10", hasApp ? "bg-primary border-primary" : "bg-background border-border")} />
-                                    <div className="flex-1 min-h-[40px]">
-                                        {hasApp ? (
-                                            <div className="space-y-2">
-                                                {slotApps.map(app => (
-                                                    <div key={app.id} className={cn("bg-card border rounded-lg p-2", getStatusColor(app.status))}>
-                                                        <div className="flex justify-between items-center">
-                                                            <span className="font-medium text-sm">{app.clientName}</span>
-                                                            <span className="text-xs text-muted-foreground">{app.time}</span>
-                                                        </div>
-                                                        <div className="text-xs text-muted-foreground">{getServiceNames(app)}</div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <div className="text-xs text-muted-foreground pt-1">{t('records.freeSlot') || 'Свободно'}</div>
-                                        )}
-                                    </div>
+                                {/* Track Column */}
+                                <div className="relative w-6 flex flex-col items-center">
+                                    {/* Vertical Line */}
+                                    <div className={cn("absolute top-0 w-px bg-border", isLast ? "h-4" : "bottom-0")} />
+
+                                    {/* Dot */}
+                                    <div className={cn(
+                                        "relative w-3 h-3 rounded-full border-2 mt-2 z-10 shrink-0",
+                                        hasApp ? "bg-primary border-primary" : "bg-background border-border"
+                                    )} />
                                 </div>
-                            );
-                        })}
-                    </div>
+
+                                {/* Content Column */}
+                                <div className="flex-1 min-h-[40px] pb-6">
+                                    {hasApp ? (
+                                        <div className="space-y-2">
+                                            {slotApps.map(app => (
+                                                <div key={app.id} className={cn("bg-card border rounded-lg p-2 shadow-sm transition-all hover:shadow-md", getStatusColor(app.status))}>
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="font-medium text-sm">{app.clientName}</span>
+                                                        <span className="text-xs text-muted-foreground">{app.time}</span>
+                                                    </div>
+                                                    <div className="text-xs text-muted-foreground mt-0.5">{getServiceNames(app)}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-xs text-muted-foreground pt-1.5 opacity-50 relative top-[-1px]">{t('records.freeSlot') || 'Свободно'}</div>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
         );

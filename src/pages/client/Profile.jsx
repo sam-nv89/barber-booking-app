@@ -1,6 +1,7 @@
 import React from 'react';
 import { useStore } from '@/store/useStore';
 import { Input } from '@/components/ui/Input';
+import { PhoneInput } from '@/components/ui/PhoneInput';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 import { useTMA } from '@/components/providers/TMAProvider';
@@ -158,17 +159,17 @@ export const Profile = () => {
                     <div className="space-y-2">
                         <label className="text-sm font-medium">{t('profile.phone')}</label>
                         <div className="relative">
-                            <Input
-                                name="phone"
-                                type="tel"
+                            <PhoneInput
                                 value={formData.phone || ''}
-                                onChange={handleChange}
+                                onChange={(phone) => {
+                                    setFormData({ ...formData, phone });
+                                    setIsDirty(true);
+                                }}
                                 placeholder="+7 700 000 00 00"
-                                className="pr-10"
                             />
                             {isTelegram && (
                                 <button
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md hover:bg-blue-500/10 transition-colors"
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md hover:bg-blue-500/10 transition-colors z-10"
                                     onClick={handleRequestPhone}
                                     disabled={requestingPhone}
                                     title={t('profile.loadFromTelegram')}

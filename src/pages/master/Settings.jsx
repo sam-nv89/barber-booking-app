@@ -5,11 +5,14 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { cn, formatPrice, formatPhoneNumber } from '@/lib/utils';
+import { PhoneInput } from '@/components/ui/PhoneInput';
+import { cn, formatPhoneNumber, formatPrice } from '@/lib/utils';
+import { AvatarSelector } from '@/components/features/AvatarSelector';
+import { CurrencySelector } from '@/components/features/CurrencySelector';
 import { SuccessAnimation } from '@/components/features/SuccessAnimation';
 import { WelcomeAnimation } from '@/components/features/WelcomeAnimation';
 import { format } from 'date-fns';
-import { Trash2, UserX, Plus, Clock, Play, Globe } from 'lucide-react';
+import { Trash2, UserX, Plus, Clock, Play, Globe, ChevronDown } from 'lucide-react';
 import { translateToAllLanguages, detectSourceLanguage } from '@/lib/translate';
 
 export const Settings = () => {
@@ -24,11 +27,7 @@ export const Settings = () => {
     const [isConfirmModalOpen, setIsConfirmModalOpen] = React.useState(false);
     const [newBlockedPhone, setNewBlockedPhone] = React.useState('');
 
-    // Address autocomplete state
-    const [addressSuggestions, setAddressSuggestions] = React.useState([]);
-    const [showAddressSuggestions, setShowAddressSuggestions] = React.useState(false);
-    const [isSearchingAddress, setIsSearchingAddress] = React.useState(false);
-    const addressTimeoutRef = React.useRef(null);
+    // TODO: Address autocomplete - activate when project generates revenue (DaData/Yandex API)
 
     const handleChange = (e) => {
         let { name, value } = e.target;
@@ -36,65 +35,6 @@ export const Settings = () => {
             value = formatPhoneNumber(value);
         }
         setFormData({ ...formData, [name]: value });
-        setIsDirty(true);
-    };
-
-    // Search addresses using OpenStreetMap Nominatim (free, no API key)
-    // TODO: In future - add geolocation-based search and better API (DaData/Yandex)
-    const searchAddresses = async (query) => {
-        if (query.length < 3) {
-            setAddressSuggestions([]);
-            return;
-        }
-
-        setIsSearchingAddress(true);
-        try {
-            const response = await fetch(
-                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1&accept-language=${language}`,
-                { headers: { 'User-Agent': 'BarberBookingApp/1.0' } }
-            );
-            const data = await response.json();
-            setAddressSuggestions(data.map(item => {
-                const addr = item.address || {};
-                const country = addr.country || '';
-                const city = addr.city || addr.town || addr.village || addr.state || '';
-                const street = addr.road || addr.street || '';
-                const house = addr.house_number || '';
-
-                const parts = [country, city, street, house].filter(Boolean);
-                const shortAddress = parts.join(', ') || item.display_name.split(',').slice(0, 3).join(', ');
-
-                return {
-                    display: item.display_name,
-                    short: shortAddress,
-                    lat: item.lat,
-                    lon: item.lon
-                };
-            }));
-            setShowAddressSuggestions(true);
-        } catch (error) {
-            console.error('Address search error:', error);
-        } finally {
-            setIsSearchingAddress(false);
-        }
-    };
-
-    // Handle address input change with debounce
-    const handleAddressChange = (e) => {
-        const value = e.target.value;
-        setFormData({ ...formData, address: value });
-        setIsDirty(true);
-
-        // Debounce search
-        if (addressTimeoutRef.current) clearTimeout(addressTimeoutRef.current);
-        addressTimeoutRef.current = setTimeout(() => searchAddresses(value), 400);
-    };
-
-    // Select address from suggestions
-    const selectAddress = (suggestion) => {
-        setFormData({ ...formData, address: suggestion.short || suggestion.display });
-        setShowAddressSuggestions(false);
-        setAddressSuggestions([]);
         setIsDirty(true);
     };
 
@@ -188,7 +128,7 @@ export const Settings = () => {
 
     const formatScheduleDisplay = (schedule) => {
         if (!schedule.start || !schedule.end) return t('settings.dayOff');
-        return `${schedule.start} - ${schedule.end}`;
+        return `${schedule.start} - ${schedule.end} `;
     };
 
     const timeOptions = Array.from({ length: 13 }, (_, i) => {
@@ -207,124 +147,119 @@ export const Settings = () => {
                     <CardTitle className="text-lg">{t('settings.profile')}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                    {/* Icon Selector */}
                     <div className="space-y-2">
                         <label className="text-sm font-medium">{t('settings.name')}</label>
                         <Input name="name" value={formData.name} onChange={handleChange} />
                     </div>
-                    <div className="space-y-2 relative">
+
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">{t('settings.avatar') || 'Аватар сервиса'}</label>
+                        <AvatarSelector
+                            value={formData.icon || 'scissors'}
+                            onChange={(icon) => {
+                                setFormData({ ...formData, icon });
+                                setIsDirty(true);
+                            }}
+                            label={t('settings.avatar') || 'Аватар сервиса'}
+                        />
+                    </div>
+                    <div className="space-y-2">
                         <label className="text-sm font-medium">{t('settings.address')}</label>
-                        <div className="relative">
-                            <Input
-                                name="address"
-                                value={formData.address}
-                                onChange={handleAddressChange}
-                                onFocus={() => addressSuggestions.length > 0 && setShowAddressSuggestions(true)}
-                                onBlur={() => setTimeout(() => setShowAddressSuggestions(false), 200)}
-                                placeholder={language === 'en' ? 'Start typing address...' : language === 'kz' ? 'Мекенжайды теріңіз...' : 'Начните вводить адрес...'}
-                                autoComplete="off"
-                            />
-                            {isSearchingAddress && (
-                                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                                </div>
-                            )}
-                        </div>
+                        <Input
+                            name="address"
+                            value={formData.address}
+                            onChange={handleChange}
+                            placeholder={language === 'en' ? 'Enter your address...' : language === 'kz' ? 'Мекенжайды енгізіңіз...' : language === 'tr' ? 'Adresinizi girin...' : language === 'es' ? 'Ingrese su dirección...' : 'Введите адрес...'}
+                        />
+                        {/* Navigation links - show only if address is filled */}
+                        {formData.address && (
+                            <div className="flex items-center gap-2 pt-1">
+                                <span className="text-xs text-muted-foreground">
+                                    {language === 'en' ? 'Build route:' : language === 'kz' ? 'Маршрут құру:' : language === 'tr' ? 'Rota oluştur:' : language === 'es' ? 'Crear ruta:' : 'Построить маршрут:'}
+                                </span>
+                                <a
+                                    href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(formData.address)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1 px-2 py-1 text-xs bg-muted hover:bg-muted/80 rounded-md transition-colors"
+                                    title="Google Maps"
+                                >
+                                    <img src="https://www.google.com/favicon.ico" alt="" className="w-4 h-4" />
+                                    <span className="hidden sm:inline">Google</span>
+                                </a >
+                                <a
+                                    href={`https://yandex.ru/maps/?rtext=~${encodeURIComponent(formData.address)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1 px-2 py-1 text-xs bg-muted hover:bg-muted/80 rounded-md transition-colors"
+                                    title="Yandex Maps"
+                                >
+                                    <img src="https://yandex.ru/favicon.ico" alt="" className="w-4 h-4" />
+                                    <span className="hidden sm:inline">Yandex</span>
+                                </a>
+                                <a
+                                    href={`https://2gis.ru/search/${encodeURIComponent(formData.address)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1 px-2 py-1 text-xs bg-muted hover:bg-muted/80 rounded-md transition-colors"
+                                    title="2GIS"
+                                >
+                                    <img src="https://2gis.ru/favicon.ico" alt="" className="w-4 h-4" />
+                                    <span className="hidden sm:inline">2GIS</span>
+                                </a>
+                            </div >
+                        )}
+                    </div >
 
-                        {/* Currency Selector */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">{t('settings.currency')}</label>
-                            <select
-                                name="currency"
-                                value={formData.currency || '₸'}
-                                onChange={handleChange}
-                                className="w-full p-2 rounded-md border bg-background"
-                            >
-                                <optgroup label="Popular / Популярные">
-                                    <option value="₸">Kazakhstani Tenge (₸)</option>
-                                    <option value="₽">Russian Ruble (₽)</option>
-                                    <option value="$">US Dollar ($)</option>
-                                    <option value="€">Euro (€)</option>
-                                    <option value="₺">Turkish Lira (₺)</option>
-                                </optgroup>
-                                <optgroup label="CIS / СНГ">
-                                    <option value="s'om">Uzbekistani Som (s'om)</option>
-                                    <option value="Br">Belarusian Ruble (Br)</option>
-                                    <option value="с">Kyrgyzstani Som (c)</option>
-                                    <option value="SM">Tajikistani Somoni (SM)</option>
-                                    <option value="֏">Armenian Dram (֏)</option>
-                                    <option value="₼">Azerbaijani Manat (₼)</option>
-                                    <option value="₾">Georgian Lari (₾)</option>
-                                    <option value="₴">Ukrainian Hryvnia (₴)</option>
-                                </optgroup>
-                                <optgroup label="English Speaking / Англоязычные">
-                                    <option value="£">British Pound (£)</option>
-                                    <option value="C$">Canadian Dollar (C$)</option>
-                                    <option value="A$">Australian Dollar (A$)</option>
-                                </optgroup>
-                                <optgroup label="Spanish Speaking / Испаноязычные">
-                                    <option value="MXN$">Mexican Peso (MXN$)</option>
-                                    <option value="ARS$">Argentine Peso (ARS$)</option>
-                                    <option value="CLP$">Chilean Peso (CLP$)</option>
-                                    <option value="COP$">Colombian Peso (COP$)</option>
-                                    <option value="S/">Peruvian Sol (S/)</option>
-                                    <option value="$U">Uruguayan Peso ($U)</option>
-                                    <option value="RD$">Dominican Peso (RD$)</option>
-                                </optgroup>
-                            </select>
-                        </div>
+                    {/* Currency Selector */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">{t('settings.currency')}</label>
+                        <CurrencySelector
+                            value={formData.currency || '₸'}
+                            onChange={handleChange}
+                        />
+                    </div>
 
-                        {/* Check-in Mode Selector */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">{t('settings.checkinMode') || 'Режим Check-in'}</label>
+                    {/* Check-in Mode Selector */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">{t('settings.checkinMode') || 'Режим Check-in'}</label>
+                        <p className="text-xs text-muted-foreground">
+                            {t('settings.checkinModeDesc') || 'Выберите, кто инициирует регистрацию прихода'}
+                        </p>
+                        <div className="relative group">
                             <select
                                 name="checkinMode"
                                 value={formData.checkinMode || 'master_scans'}
                                 onChange={handleChange}
-                                className="w-full p-2 rounded-md border bg-background"
+                                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
                             >
                                 <option value="master_scans">{t('settings.masterScansClient') || 'Мастер сканирует клиента'}</option>
                                 <option value="client_scans">{t('settings.clientScansMaster') || 'Клиент сканирует мастера'}</option>
                                 <option value="both">{t('settings.bothModes') || 'Оба варианта'}</option>
                             </select>
-                            <p className="text-xs text-muted-foreground">
-                                {t('settings.checkinModeDesc') || 'Выберите, кто инициирует регистрацию прихода'}
-                            </p>
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50 group-hover:text-foreground transition-colors pointer-events-none" />
                         </div>
-
-                        {/* Address suggestions dropdown */}
-                        {showAddressSuggestions && addressSuggestions.length > 0 && (
-                            <div className="absolute z-50 w-full mt-1 bg-background border rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                                {addressSuggestions.map((suggestion, i) => (
-                                    <button
-                                        key={i}
-                                        type="button"
-                                        className="w-full px-3 py-2 text-left text-sm hover:bg-muted transition-colors border-b last:border-b-0"
-                                        onMouseDown={() => selectAddress(suggestion)}
-                                    >
-                                        <div className="font-medium truncate">{suggestion.short}</div>
-                                        <div className="text-xs text-muted-foreground truncate">{suggestion.display}</div>
-                                    </button>
-                                ))}
-                            </div>
-                        )}
                     </div>
                     <div className="space-y-2">
                         <label className="text-sm font-medium">{t('settings.phone')}</label>
-                        <Input
-                            name="phone"
-                            type="tel"
+                        <PhoneInput
                             value={formData.phone || ''}
-                            onChange={handleChange}
-                            placeholder="+7 700 000 00 00"
+                            onChange={(phone) => {
+                                setFormData({ ...formData, phone });
+                                setIsDirty(true);
+                            }}
                         />
                     </div>
-                    {isDirty && (
-                        <Button className="w-full" onClick={handleSaveProfile}>
-                            {t('common.save')}
-                        </Button>
-                    )}
-                </CardContent>
-            </Card>
+                    {
+                        isDirty && (
+                            <Button className="w-full" onClick={handleSaveProfile}>
+                                {t('common.save')}
+                            </Button>
+                        )
+                    }
+                </CardContent >
+            </Card >
 
             <Card>
                 <CardHeader>
@@ -381,16 +316,19 @@ export const Settings = () => {
                             <div className="space-y-2 mt-4 pt-4 border-t">
                                 <label className="text-sm font-medium">{t('settings.bookingPeriod')}</label>
                                 <p className="text-xs text-muted-foreground">{t('settings.bookingPeriodDesc')}</p>
-                                <select
-                                    value={salonSettings.bookingPeriodMonths || 1}
-                                    onChange={(e) => setSalonSettings({ ...salonSettings, bookingPeriodMonths: parseInt(e.target.value) })}
-                                    className="w-full p-2 rounded-md border bg-background"
-                                >
-                                    <option value={1}>1 {t('common.month')}</option>
-                                    <option value={3}>3 {t('common.months')}</option>
-                                    <option value={6}>6 {t('common.months')}</option>
-                                    <option value={12}>12 {t('common.months')}</option>
-                                </select>
+                                <div className="relative group">
+                                    <select
+                                        value={salonSettings.bookingPeriodMonths || 1}
+                                        onChange={(e) => setSalonSettings({ ...salonSettings, bookingPeriodMonths: parseInt(e.target.value) })}
+                                        className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+                                    >
+                                        <option value={1}>1 {t('common.month')}</option>
+                                        <option value={3}>3 {t('common.months')}</option>
+                                        <option value={6}>6 {t('common.months')}</option>
+                                        <option value={12}>12 {t('common.months')}</option>
+                                    </select>
+                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50 group-hover:text-foreground transition-colors pointer-events-none" />
+                                </div>
                             </div>
 
                             {/* Buffer Time */}
@@ -501,12 +439,13 @@ export const Settings = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="flex gap-2">
-                        <Input
-                            type="tel"
-                            placeholder={t('settings.enterPhone')}
-                            value={newBlockedPhone}
-                            onChange={(e) => setNewBlockedPhone(formatPhoneNumber(e.target.value))}
-                        />
+                        <div className="flex-1">
+                            <PhoneInput
+                                value={newBlockedPhone}
+                                onChange={setNewBlockedPhone}
+                                placeholder={t('settings.enterPhone')}
+                            />
+                        </div>
                         <Button
                             variant="destructive"
                             onClick={() => {
@@ -678,15 +617,17 @@ export const Settings = () => {
                 </div>
             </Modal>
 
-            {successMessage && (
-                <SuccessAnimation
-                    onComplete={() => setSuccessMessage(null)}
-                    title={t('common.success')}
-                    message={successMessage}
-                    buttonText={t('common.great')}
-                />
-            )}
-        </div>
+            {
+                successMessage && (
+                    <SuccessAnimation
+                        onComplete={() => setSuccessMessage(null)}
+                        title={t('common.success')}
+                        message={successMessage}
+                        buttonText={t('common.great')}
+                    />
+                )
+            }
+        </div >
     );
 };
 
@@ -840,16 +781,19 @@ const ShiftGeneratorModal = ({ isOpen, onClose, onSave }) => {
 
                 <div className="space-y-2">
                     <label className="text-sm font-medium">{t('settings.generationPeriod')}</label>
-                    <select
-                        value={periodMonths}
-                        onChange={(e) => setPeriodMonths(parseInt(e.target.value))}
-                        className="w-full p-2 rounded-md border bg-background"
-                    >
-                        <option value={1}>1 {t('common.month')}</option>
-                        <option value={3}>3 {t('common.months')}</option>
-                        <option value={6}>6 {t('common.months')}</option>
-                        <option value={12}>12 {t('common.months')}</option>
-                    </select>
+                    <div className="relative group">
+                        <select
+                            value={periodMonths}
+                            onChange={(e) => setPeriodMonths(parseInt(e.target.value))}
+                            className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+                        >
+                            <option value={1}>1 {t('common.month')}</option>
+                            <option value={3}>3 {t('common.months')}</option>
+                            <option value={6}>6 {t('common.months')}</option>
+                            <option value={12}>12 {t('common.months')}</option>
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50 group-hover:text-foreground transition-colors pointer-events-none" />
+                    </div>
                 </div>
 
                 <Button className="w-full" onClick={handleGenerate}>
