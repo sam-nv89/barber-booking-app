@@ -1,7 +1,7 @@
 {
   "name": "barber-booking-mvp",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "homepage": "https://sam-nv89.github.io/barber-booking-app",
   "scripts": {
