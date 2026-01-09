@@ -15,9 +15,10 @@ import { useMainButton, useBackButton, useHaptic } from '@/hooks/useTelegram';
 import { useTMA } from '@/components/providers/TMAProvider';
 
 export const BookingWizard = () => {
-    const { t, addAppointment, user, salonSettings, services, appointments, language, locale, workScheduleOverrides, blockedPhones } = useStore();
+    const { t, addAppointment, user, salonSettings, services, appointments, language, locale, workScheduleOverrides, blockedPhones, getMasters, getNextAvailableMaster, activeSalonId, userSalons } = useStore();
     const [step, setStep] = React.useState(1);
     const [selectedServices, setSelectedServices] = React.useState([]);
+    const [selectedMaster, setSelectedMaster] = React.useState(null); // null = "Any Master"
     const [selectedDate, setSelectedDate] = React.useState(null);
     const [selectedTime, setSelectedTime] = React.useState(null);
     const [showSuccess, setShowSuccess] = React.useState(false);
@@ -107,10 +108,19 @@ export const BookingWizard = () => {
         return true;
     };
 
+
     const handleBook = () => {
         if (selectedServices.length === 0 || !selectedDate || !selectedTime) return;
 
         if (!validateBooking()) return;
+
+        // Determine master: specific selection or Round Robin
+        let assignedMaster = selectedMaster;
+        if (!assignedMaster) {
+            // "Any Master" selected - use Round Robin
+            const dateStr = format(selectedDate, 'yyyy-MM-dd');
+            assignedMaster = getNextAvailableMaster?.(activeSalonId, dateStr, selectedTime);
+        }
 
         addAppointment({
             serviceIds: selectedServices.map(s => s.id),
@@ -120,7 +130,9 @@ export const BookingWizard = () => {
             clientPhone: user.phone,
             telegramUsername: user.telegramUsername,
             totalPrice: totalPrice,
-            totalDuration: totalDuration
+            totalDuration: totalDuration,
+            masterId: assignedMaster?.tgUserId || null,
+            masterName: assignedMaster?.name || null
         });
 
         setShowSuccess(true);
@@ -130,6 +142,7 @@ export const BookingWizard = () => {
         setShowSuccess(false);
         setStep(1);
         setSelectedServices([]);
+        setSelectedMaster(null);
         setSelectedDate(null);
         setSelectedTime(null);
     };
@@ -239,8 +252,93 @@ export const BookingWizard = () => {
                 </div>
             )}
 
-            {/* Step 2: Date & Time */}
-            {step === 2 && (
+            {/* Step 2: Select Master */}
+            {step === 2 && (() => {
+                const masters = getMasters?.(activeSalonId) || userSalons?.filter(us => us.status === 'active') || [];
+                const levelEmojis = { apprentice: '🌱', master: '✂️', senior: '⭐', top: '👑' };
+                const levelLabels = {
+                    apprentice: { ru: 'Ученик', en: 'Apprentice' },
+                    master: { ru: 'Мастер', en: 'Master' },
+                    senior: { ru: 'Старший', en: 'Senior' },
+                    top: { ru: 'Топ', en: 'Top' }
+                };
+
+                return (
+                    <div className="space-y-4">
+                        <h2 className="text-lg font-semibold">{t('booking.selectMaster') || 'Выберите мастера'}</h2>
+
+                        <div className="grid gap-3">
+                            {/* Any Master option */}
+                            <div
+                                className={cn(
+                                    "p-4 rounded-lg border-2 cursor-pointer transition-all flex items-center gap-4",
+                                    selectedMaster === null
+                                        ? "border-primary bg-primary/5"
+                                        : "border-border hover:border-primary/50"
+                                )}
+                                onClick={() => setSelectedMaster(null)}
+                            >
+                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-xl">
+                                    🎲
+                                </div>
+                                <div className="flex-1">
+                                    <div className="font-bold">{t('booking.anyMaster') || 'Любой мастер'}</div>
+                                    <div className="text-sm text-muted-foreground">{t('booking.anyMasterDesc') || 'Система выберет свободного'}</div>
+                                </div>
+                                {selectedMaster === null && (
+                                    <Check className="w-5 h-5 text-primary" />
+                                )}
+                            </div>
+
+                            {/* List of masters */}
+                            {masters.map((master) => (
+                                <div
+                                    key={master.tgUserId}
+                                    className={cn(
+                                        "p-4 rounded-lg border-2 cursor-pointer transition-all flex items-center gap-4",
+                                        selectedMaster?.tgUserId === master.tgUserId
+                                            ? "border-primary bg-primary/5"
+                                            : "border-border hover:border-primary/50"
+                                    )}
+                                    onClick={() => setSelectedMaster(master)}
+                                >
+                                    <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-xl overflow-hidden">
+                                        {master.avatar ? (
+                                            <img src={master.avatar} alt="" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <span>{master.name?.charAt(0) || '👤'}</span>
+                                        )}
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="font-bold flex items-center gap-2">
+                                            {master.name || 'Мастер'}
+                                            <span className="text-sm">{levelEmojis[master.level] || '✂️'}</span>
+                                        </div>
+                                        <div className="text-sm text-muted-foreground">
+                                            {levelLabels[master.level]?.[language] || levelLabels[master.level]?.ru || master.level}
+                                        </div>
+                                    </div>
+                                    {selectedMaster?.tgUserId === master.tgUserId && (
+                                        <Check className="w-5 h-5 text-primary" />
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="flex gap-2 mt-6">
+                            <Button variant="outline" className="w-full" onClick={() => setStep(1)}>
+                                {t('common.back')}
+                            </Button>
+                            <Button className="w-full" onClick={() => setStep(3)}>
+                                {t('common.next')} →
+                            </Button>
+                        </div>
+                    </div>
+                );
+            })()}
+
+            {/* Step 3: Date & Time */}
+            {step === 3 && (
                 <div className="space-y-6">
                     <DateTimeSelector
                         selectedDate={selectedDate}
@@ -252,21 +350,23 @@ export const BookingWizard = () => {
                         services={services}
                         workScheduleOverrides={workScheduleOverrides}
                         serviceDuration={totalDuration}
+                        masterId={selectedMaster?.tgUserId || null}
+                        masters={getMasters?.(activeSalonId) || userSalons?.filter(us => us.status === 'active') || []}
                     />
 
                     <div className="flex gap-2 mt-6">
-                        <Button variant="outline" className="w-full" onClick={() => setStep(1)}>
+                        <Button variant="outline" className="w-full" onClick={() => setStep(2)}>
                             {t('common.back')}
                         </Button>
-                        <Button className="w-full" disabled={!selectedDate || !selectedTime} onClick={() => setStep(3)}>
+                        <Button className="w-full" disabled={!selectedDate || !selectedTime} onClick={() => setStep(4)}>
                             {t('common.confirm')}
                         </Button>
                     </div>
                 </div>
             )}
 
-            {/* Step 3: Confirmation */}
-            {step === 3 && (
+            {/* Step 4: Confirmation */}
+            {step === 4 && (
                 <div className="space-y-6">
                     {/* Header with check icon + edit link */}
                     <div className="text-center space-y-2">
@@ -277,7 +377,7 @@ export const BookingWizard = () => {
                         <p className="text-muted-foreground text-sm">{t('booking.reviewDetails')}</p>
                         <button
                             className="text-primary text-sm hover:underline"
-                            onClick={() => { setStep(2); setBookingError(null); }}
+                            onClick={() => { setStep(3); setBookingError(null); }}
                         >
                             ← {t('booking.edit')}
                         </button>
@@ -319,6 +419,26 @@ export const BookingWizard = () => {
                         </div>
 
                         <CardContent className="p-0">
+                            {/* Master Row */}
+                            <div className="flex items-center gap-4 p-4 border-b border-border/50">
+                                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+                                    {selectedMaster ? (
+                                        selectedMaster.avatar ? (
+                                            <img src={selectedMaster.avatar} alt={selectedMaster.name} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <span className="text-xs">{selectedMaster.name[0]}</span>
+                                        )
+                                    ) : (
+                                        <span className="text-xs">🎲</span>
+                                    )}
+                                </div>
+                                <div className="flex-1">
+                                    <div className="text-xs text-muted-foreground uppercase tracking-wide">{t('booking.selectedMaster')}</div>
+                                    <div className="font-medium">
+                                        {selectedMaster ? selectedMaster.name : t('booking.anyMaster')}
+                                    </div>
+                                </div>
+                            </div>
                             {/* Date & Time Row */}
                             <div className="grid grid-cols-2 divide-x divide-border">
                                 <div className="p-4 text-center">
@@ -355,12 +475,14 @@ export const BookingWizard = () => {
                     </Card>
 
                     {/* Error Message */}
-                    {bookingError && (
-                        <div className="flex items-center gap-3 p-4 rounded-xl bg-destructive/10 text-destructive border border-destructive/20">
-                            <AlertTriangle className="w-5 h-5 shrink-0" />
-                            <span className="text-sm">{bookingError}</span>
-                        </div>
-                    )}
+                    {
+                        bookingError && (
+                            <div className="flex items-center gap-3 p-4 rounded-xl bg-destructive/10 text-destructive border border-destructive/20">
+                                <AlertTriangle className="w-5 h-5 shrink-0" />
+                                <span className="text-sm">{bookingError}</span>
+                            </div>
+                        )
+                    }
 
                     {/* Booking button */}
                     <Button
@@ -370,14 +492,16 @@ export const BookingWizard = () => {
                     >
                         {t('booking.bookNow')}
                     </Button>
-                </div>
+                </div >
             )}
-            {showSuccess && <SuccessAnimation
-                onComplete={handleSuccessComplete}
-                title={t('booking.success')}
-                message={t('booking.requestSentMessage')}
-                buttonText={t('common.great')}
-            />}
-        </div>
+            {
+                showSuccess && <SuccessAnimation
+                    onComplete={handleSuccessComplete}
+                    title={t('booking.success')}
+                    message={t('booking.requestSentMessage')}
+                    buttonText={t('common.great')}
+                />
+            }
+        </div >
     );
 };

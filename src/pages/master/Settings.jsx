@@ -12,7 +12,7 @@ import { CurrencySelector } from '@/components/features/CurrencySelector';
 import { SuccessAnimation } from '@/components/features/SuccessAnimation';
 import { WelcomeAnimation } from '@/components/features/WelcomeAnimation';
 import { format } from 'date-fns';
-import { Trash2, UserX, Plus, Clock, Play, Globe, ChevronDown } from 'lucide-react';
+import { Trash2, UserX, Plus, Clock, Play, Globe, ChevronDown, Edit, Check } from 'lucide-react';
 import { translateToAllLanguages, detectSourceLanguage } from '@/lib/translate';
 
 export const Settings = () => {
@@ -485,6 +485,7 @@ export const Settings = () => {
             {/* Animation Preview */}
             <AnimationPreviewCard />
 
+            <TeamManager onSuccess={setSuccessMessage} />
             <ServicesManager onSuccess={setSuccessMessage} />
             <MarketingManager onSuccess={setSuccessMessage} />
 
@@ -1047,6 +1048,517 @@ const MarketingManager = ({ onSuccess }) => {
                 </div>
             </Modal>
         </>
+    );
+};
+
+// Team Management Component for multi-master salons
+const TeamManager = ({ onSuccess }) => {
+    const {
+        t,
+        salons,
+        userSalons,
+        activeSalonId,
+        user,
+        generateInviteLink,
+        invitations,
+        getActiveRole,
+        getMasters,
+        terminateMaster,
+        addMasterToSalon,
+        addNotification,
+        language,
+        updateMasterInSalon
+    } = useStore();
+
+    const [showInviteModal, setShowInviteModal] = React.useState(false);
+    const [copiedLink, setCopiedLink] = React.useState(false);
+    const [editingMember, setEditingMember] = React.useState(null);
+    const [editFormData, setEditFormData] = React.useState({ name: '', phone: '', role: 'employee', level: 'master' });
+    const [memberToDelete, setMemberToDelete] = React.useState(null);
+    const [roleDropdownOpen, setRoleDropdownOpen] = React.useState(false);
+    const [levelDropdownOpen, setLevelDropdownOpen] = React.useState(false);
+    const roleDropdownRef = React.useRef(null);
+    const levelDropdownRef = React.useRef(null);
+
+    // Click outside handler for dropdowns
+    React.useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (roleDropdownRef.current && !roleDropdownRef.current.contains(event.target)) {
+                setRoleDropdownOpen(false);
+            }
+            if (levelDropdownRef.current && !levelDropdownRef.current.contains(event.target)) {
+                setLevelDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // Get current salon and role
+    const activeSalon = salons?.find(s => s.id === activeSalonId);
+    const activeRole = getActiveRole?.() || 'owner'; // Default to owner for solo masters
+    const masters = getMasters?.(activeSalonId) || [];
+
+    // Check if user can manage team (owner or admin)
+    const canManageTeam = activeRole === 'owner' || activeRole === 'admin';
+
+    // Get current invite link for this salon
+    const currentInvite = invitations?.find(inv => inv.salonId === activeSalonId && new Date(inv.expiresAt) > new Date());
+
+    // Translations for TeamManager
+    const tr = {
+        team: { ru: 'Команда', en: 'Team', kz: 'Команда', tr: 'Ekip', es: 'Equipo' },
+        invite: { ru: 'Пригласить', en: 'Invite', kz: 'Шақыру', tr: 'Davet Et', es: 'Invitar' },
+        teamMembers: { ru: 'Участники команды', en: 'Team Members', kz: 'Команда мүшелері', tr: 'Ekip Üyeleri', es: 'Miembros del equipo' },
+        onlyMember: { ru: 'Вы единственный участник', en: 'You are the only team member', kz: 'Сіз жалғыз қатысушысыз', tr: 'Tek ekip üyesi sizsiniz', es: 'Eres el único miembro' },
+        inviteMasters: { ru: 'Пригласите мастеров в команду', en: 'Invite masters to grow your team', kz: 'Шеберлерді командаға шақырыңыз', tr: 'Ekibinizi büyütmek için ustalar davet edin', es: 'Invita maestros para hacer crecer tu equipo' },
+        expires: { ru: 'До', en: 'Expires', kz: 'Дейін', tr: 'Bitiş', es: 'Expira' },
+        inviteMaster: { ru: 'Пригласить мастера', en: 'Invite Master', kz: 'Шеберді шақыру', tr: 'Usta Davet Et', es: 'Invitar Maestro' },
+        inviteDesc: { ru: 'Отправьте эту ссылку мастеру. Он увидит информацию о салоне и сможет принять приглашение.', en: 'Share this link with a master. They will see salon info and can accept the invitation.', kz: 'Бұл сілтемені шеберге жіберіңіз. Ол салон туралы ақпаратты көріп, шақыруды қабылдай алады.', tr: 'Bu bağlantıyı bir usta ile paylaşın. Salon bilgilerini görecek ve daveti kabul edebilecek.', es: 'Comparte este enlace con un maestro. Verá la información del salón y podrá aceptar la invitación.' },
+        copyLink: { ru: 'Копировать ссылку', en: 'Copy Link', kz: 'Сілтемені көшіру', tr: 'Bağlantıyı Kopyala', es: 'Copiar enlace' },
+        copied: { ru: 'Скопировано!', en: 'Copied!', kz: 'Көшірілді!', tr: 'Kopyalandı!', es: '¡Copiado!' },
+        linkExpires: { ru: 'Ссылка действует 7 дней', en: 'Link expires in 7 days', kz: 'Сілтеме 7 күн жарамды', tr: 'Bağlantı 7 gün geçerli', es: 'El enlace expira en 7 días' },
+        generateLink: { ru: 'Сгенерировать ссылку', en: 'Generate Invite Link', kz: 'Сілтеме жасау', tr: 'Davet Bağlantısı Oluştur', es: 'Generar enlace' },
+        terminateTitle: { ru: 'Увольнение мастера', en: 'Terminate Master', kz: 'Шеберді жұмыстан шығару', tr: 'Ustayı İşten Çıkar', es: 'Despedir maestro' },
+        terminateConfirm: { ru: 'Вы уверены, что хотите уволить этого мастера?', en: 'Are you sure you want to terminate this master?', kz: 'Бұл шеберді жұмыстан шығарғыңыз келетініне сенімдісіз бе?', tr: 'Bu ustayı işten çıkarmak istediğinizden emin misiniz?', es: '¿Está seguro de que desea despedir a este maestro?' },
+        terminateWarning: { ru: 'Мастер сохранит доступ к истории в течение 30 дней.', en: 'Master will retain access to history for 30 days.', kz: 'Шебер 30 күн ішінде тарихқа қол жеткізе алады.', tr: 'Usta 30 gün boyunca geçmişe erişimini koruyacak.', es: 'El maestro conservará acceso al historial durante 30 días.' },
+        terminated: { ru: 'Мастер уволен', en: 'Master terminated', kz: 'Шебер жұмыстан шығарылды', tr: 'Usta işten çıkarıldı', es: 'Maestro despedido' },
+        terminatedStatus: { ru: 'Уволен', en: 'Terminated', kz: 'Шығарылды', tr: 'İşten çıkarıldı', es: 'Despedido' },
+        addTestMaster: { ru: 'Добавить тестового мастера', en: 'Add Test Master', kz: 'Тест шеберін қосу', tr: 'Test Ustası Ekle', es: 'Añadir maestro de prueba' },
+        editMember: { ru: 'Редактировать', en: 'Edit', kz: 'Өңдеу', tr: 'Düzenle', es: 'Editar' },
+        deleteMember: { ru: 'Уволить', en: 'Terminate', kz: 'Жұмыстан шығару', tr: 'İşten çıkar', es: 'Despedir' },
+        editMemberTitle: { ru: 'Редактирование участника', en: 'Edit Team Member', kz: 'Қатысушыны өңдеу', tr: 'Ekip Üyesini Düzenle', es: 'Editar miembro' },
+        name: { ru: 'Имя', en: 'Name', kz: 'Аты', tr: 'İsim', es: 'Nombre' },
+        phone: { ru: 'Телефон', en: 'Phone', kz: 'Телефон', tr: 'Telefon', es: 'Teléfono' },
+        role: { ru: 'Роль', en: 'Role', kz: 'Рөлі', tr: 'Rol', es: 'Rol' },
+        level: { ru: 'Уровень', en: 'Level', kz: 'Деңгей', tr: 'Seviye', es: 'Nivel' },
+        save: { ru: 'Сохранить', en: 'Save', kz: 'Сақтау', tr: 'Kaydet', es: 'Guardar' },
+        cancel: { ru: 'Отмена', en: 'Cancel', kz: 'Болдырмау', tr: 'İptal', es: 'Cancelar' },
+        confirm: { ru: 'Подтвердить', en: 'Confirm', kz: 'Растау', tr: 'Onayla', es: 'Confirmar' },
+        memberUpdated: { ru: 'Данные обновлены', en: 'Member updated', kz: 'Деректер жаңартылды', tr: 'Üye güncellendi', es: 'Miembro actualizado' }
+    };
+
+    const lang = language || 'ru';
+    const getText = (key) => tr[key]?.[lang] || tr[key]?.ru || key;
+
+    // Generate or get invite link
+    const handleGenerateInvite = () => {
+        if (!currentInvite) {
+            generateInviteLink?.(activeSalonId);
+        }
+        setShowInviteModal(true);
+    };
+
+    // Copy invite link
+    const handleCopyLink = async () => {
+        const invite = invitations?.find(inv => inv.salonId === activeSalonId);
+        const link = `${window.location.origin}/#/invite/${invite?.token}`;
+        try {
+            await navigator.clipboard.writeText(link);
+            setCopiedLink(true);
+            setTimeout(() => setCopiedLink(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy:', err);
+        }
+    };
+
+    // Add test master function
+    const handleAddTestMaster = () => {
+        const testNames = ['Алексей', 'Мария', 'Дмитрий', 'Анна', 'Сергей', 'Елена', 'Максим', 'Ольга'];
+        const testLevels = ['apprentice', 'master', 'senior', 'top'];
+        const testRoles = ['employee', 'admin'];
+
+        const testMaster = {
+            tgUserId: `test_${Date.now()}`,
+            name: testNames[Math.floor(Math.random() * testNames.length)],
+            phone: '+7 7' + String(Math.floor(Math.random() * 1000000000)).padStart(9, '0'),
+            avatar: null,
+            role: testRoles[Math.floor(Math.random() * testRoles.length)],
+            level: testLevels[Math.floor(Math.random() * testLevels.length)],
+            compensation: { model: 'percent', value: 50 + Math.floor(Math.random() * 20) }
+        };
+
+        addMasterToSalon?.(activeSalonId, testMaster);
+        onSuccess?.(lang === 'en' ? 'Test master added' : 'Тестовый мастер добавлен');
+    };
+
+    // Handle edit member
+    const handleEditMember = (member) => {
+        setEditingMember(member);
+        setEditFormData({
+            name: member.name || '',
+            phone: member.phone || '',
+            role: member.role || 'employee',
+            level: member.level || 'master'
+        });
+    };
+
+    // Save edited member
+    const handleSaveEdit = () => {
+        if (editingMember && updateMasterInSalon) {
+            updateMasterInSalon(activeSalonId, editingMember.tgUserId, editFormData);
+            onSuccess?.(getText('memberUpdated'));
+            setEditingMember(null);
+        }
+    };
+
+    // Confirm terminate
+    const handleConfirmTerminate = () => {
+        if (memberToDelete && terminateMaster) {
+            terminateMaster(activeSalonId, memberToDelete.tgUserId);
+            onSuccess?.(getText('terminated'));
+            setMemberToDelete(null);
+        }
+    };
+
+    // Level options with descriptions
+    const levelOptions = [
+        {
+            value: 'apprentice',
+            label: { ru: 'Ученик', en: 'Apprentice', kz: 'Шәкірт', es: 'Aprendiz', tr: 'Çırak' },
+            desc: { ru: 'Начинающий, базовые цены', en: 'Beginner, basic prices', kz: 'Бастаушы, негізгі бағалар', tr: 'Başlangıç, temel fiyatlar', es: 'Principiante, precios básicos' },
+            emoji: '🌱'
+        },
+        {
+            value: 'master',
+            label: { ru: 'Мастер', en: 'Master', kz: 'Шебер', es: 'Maestro', tr: 'Usta' },
+            desc: { ru: 'Опытный, стандартные цены', en: 'Experienced, standard prices', kz: 'Тәжірибелі, стандартты бағалар', tr: 'Tecrübeli, standart fiyatlar', es: 'Experimentado, precios estándar' },
+            emoji: '✂️'
+        },
+        {
+            value: 'senior',
+            label: { ru: 'Старший', en: 'Senior', kz: 'Аға шебер', es: 'Senior', tr: 'Kıdemli' },
+            desc: { ru: 'Высокий приоритет в списке', en: 'High priority in list', kz: 'Тізімде жоғары басымдық', tr: 'Listede yüksek öncelik', es: 'Alta prioridad en lista' },
+            emoji: '⭐'
+        },
+        {
+            value: 'top',
+            label: { ru: 'Топ', en: 'Top', kz: 'Топ', es: 'Top', tr: 'Top' },
+            desc: { ru: 'VIP-мастер, премиум цены', en: 'VIP master, premium prices', kz: 'VIP-шебер, премиум бағалар', tr: 'VIP usta, premium fiyatlar', es: 'Maestro VIP, precios premium' },
+            emoji: '👑'
+        }
+    ];
+
+    // Role options with descriptions  
+    const roleOptions = [
+        {
+            value: 'employee',
+            label: { ru: 'Специалист', en: 'Specialist', kz: 'Маман', tr: 'Uzman', es: 'Especialista' },
+            desc: { ru: 'Видит только своих клиентов и записи', en: 'Sees only own clients and bookings', kz: 'Тек өз клиенттерін және жазбаларын көреді', tr: 'Sadece kendi müşterilerini görür', es: 'Ve solo sus clientes y citas' },
+            color: 'bg-green-500',
+            emoji: '👤'
+        },
+        {
+            value: 'admin',
+            label: { ru: 'Админ', en: 'Admin', kz: 'Әкімші', tr: 'Yönetici', es: 'Admin' },
+            desc: { ru: 'Управляет командой, видит все записи', en: 'Manages team, sees all bookings', kz: 'Команданы басқарады, барлық жазбаларды көреді', tr: 'Ekibi yönetir, tüm randevuları görür', es: 'Gestiona equipo, ve todas las citas' },
+            color: 'bg-blue-500',
+            emoji: '🛡️'
+        }
+    ];
+
+    // Legacy labels for display
+    const levelLabels = Object.fromEntries(levelOptions.map(o => [o.value, o.label]));
+    const roleBadges = {
+        owner: { label: { ru: 'Владелец', en: 'Owner', kz: 'Иесі', tr: 'Sahip', es: 'Propietario' }, color: 'bg-amber-500' },
+        ...Object.fromEntries(roleOptions.map(o => [o.value, { label: o.label, color: o.color }]))
+    };
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="text-lg flex items-center justify-between">
+                    <span>👥 {getText('team')}</span>
+                    {canManageTeam && (
+                        <div className="flex gap-1">
+                            <Button size="sm" variant="outline" onClick={handleAddTestMaster} title={getText('addTestMaster')}>
+                                +🧪
+                            </Button>
+                            <Button size="sm" onClick={handleGenerateInvite}>
+                                <Plus className="w-4 h-4 mr-1" />
+                                {getText('invite')}
+                            </Button>
+                        </div>
+                    )}
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                {/* Salon Info */}
+                {activeSalon && (
+                    <div className="p-3 rounded-lg bg-muted/50 border">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-lg">
+                                🏠
+                            </div>
+                            <div>
+                                <div className="font-medium">{activeSalon.name}</div>
+                                <div className="text-xs text-muted-foreground">
+                                    {activeSalon.subscription?.plan === 'trial'
+                                        ? `Trial • ${getText('expires')}: ${new Date(activeSalon.subscription.expiresAt).toLocaleDateString()}`
+                                        : activeSalon.subscription?.plan || 'Solo'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Masters List */}
+                <div className="space-y-2">
+                    <div className="text-sm font-medium text-muted-foreground">
+                        {getText('teamMembers')} ({masters.length})
+                    </div>
+
+                    {masters.length === 0 ? (
+                        <div className="text-center py-6 text-muted-foreground">
+                            <div className="text-3xl mb-2">👤</div>
+                            <p>{getText('onlyMember')}</p>
+                            <p className="text-xs mt-1">{getText('inviteMasters')}</p>
+                        </div>
+                    ) : (
+                        masters.map((member, index) => (
+                            <div key={member.tgUserId || index} className="flex items-center justify-between p-3 rounded-lg border bg-card">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                                        {member.avatar ? (
+                                            <img src={member.avatar} alt="" className="w-full h-full rounded-full object-cover" />
+                                        ) : (
+                                            <span className="text-lg">👤</span>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <div className="font-medium flex items-center gap-2">
+                                            {member.name || 'Мастер'}
+                                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full text-white ${roleBadges[member.role]?.color || 'bg-gray-500'}`}>
+                                                {roleBadges[member.role]?.label?.[lang] || member.role}
+                                            </span>
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">
+                                            {levelLabels[member.level]?.[lang] || member.level}
+                                            {member.status === 'terminated' && (
+                                                <span className="text-destructive ml-2">• {getText('terminatedStatus')}</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {canManageTeam && member.role !== 'owner' && member.status !== 'terminated' && (
+                                    <div className="flex gap-1">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-muted-foreground hover:text-primary hover:bg-primary/10"
+                                            onClick={() => handleEditMember(member)}
+                                            title={getText('editMember')}
+                                        >
+                                            <Edit className="w-4 h-4" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                            onClick={() => setMemberToDelete(member)}
+                                            title={getText('deleteMember')}
+                                        >
+                                            <UserX className="w-4 h-4" />
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
+                        ))
+                    )}
+                </div>
+            </CardContent>
+
+            {/* Invite Modal */}
+            <Modal isOpen={showInviteModal} onClose={() => setShowInviteModal(false)} title={getText('inviteMaster')}>
+                <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                        {getText('inviteDesc')}
+                    </p>
+
+                    {currentInvite || invitations?.find(inv => inv.salonId === activeSalonId) ? (
+                        <div className="space-y-3">
+                            <div className="p-3 bg-muted rounded-lg text-sm break-all font-mono">
+                                {`${window.location.origin}/#/invite/${(currentInvite || invitations?.find(inv => inv.salonId === activeSalonId))?.token}`}
+                            </div>
+
+                            <Button className="w-full" onClick={handleCopyLink}>
+                                {copiedLink ? `✓ ${getText('copied')}` : getText('copyLink')}
+                            </Button>
+
+                            <p className="text-xs text-muted-foreground text-center">
+                                {getText('linkExpires')}
+                            </p>
+                        </div>
+                    ) : (
+                        <Button className="w-full" onClick={() => generateInviteLink?.(activeSalonId)}>
+                            {getText('generateLink')}
+                        </Button>
+                    )}
+                </div>
+            </Modal>
+
+            {/* Edit Member Modal */}
+            <Modal isOpen={!!editingMember} onClose={() => setEditingMember(null)} title={getText('editMemberTitle')}>
+                <div className="space-y-4">
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">{getText('name')}</label>
+                        <Input
+                            value={editFormData.name}
+                            onChange={(e) => setEditFormData(prev => ({ ...prev, name: e.target.value }))}
+                            placeholder={getText('name')}
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">{getText('phone')}</label>
+                        <PhoneInput
+                            value={editFormData.phone}
+                            onChange={(value) => setEditFormData(prev => ({ ...prev, phone: value }))}
+                        />
+                    </div>
+
+                    {/* Role Dropdown */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">{getText('role')}</label>
+                        <div className="relative" ref={roleDropdownRef}>
+                            <div
+                                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background cursor-pointer hover:bg-accent/5 transition-colors group"
+                                onClick={() => setRoleDropdownOpen(!roleDropdownOpen)}
+                            >
+                                <div className="flex items-center gap-2">
+                                    <span>{roleOptions.find(r => r.value === editFormData.role)?.emoji}</span>
+                                    <span className="font-medium">{roleOptions.find(r => r.value === editFormData.role)?.label?.[lang] || editFormData.role}</span>
+                                </div>
+                                <ChevronDown className={cn("w-4 h-4 text-muted-foreground/50 group-hover:text-foreground transition-all", roleDropdownOpen && "rotate-180")} />
+                            </div>
+
+                            {roleDropdownOpen && (
+                                <div className="absolute z-50 w-full mt-1 bg-popover text-popover-foreground border rounded-md shadow-md outline-none animate-in fade-in-0 zoom-in-95 overflow-hidden">
+                                    <div className="p-1">
+                                        {roleOptions.map((option) => (
+                                            <div
+                                                key={option.value}
+                                                className={cn(
+                                                    "relative flex w-full cursor-pointer select-none items-center rounded-sm py-2 px-3 text-sm outline-none hover:bg-accent hover:text-accent-foreground transition-colors",
+                                                    editFormData.role === option.value && "bg-accent/50"
+                                                )}
+                                                onClick={() => {
+                                                    setEditFormData(prev => ({ ...prev, role: option.value }));
+                                                    setRoleDropdownOpen(false);
+                                                }}
+                                            >
+                                                <div className="flex items-center gap-3 flex-1">
+                                                    <span className="text-lg">{option.emoji}</span>
+                                                    <div>
+                                                        <div className="font-medium">{option.label?.[lang]}</div>
+                                                        <div className="text-xs text-muted-foreground">{option.desc?.[lang]}</div>
+                                                    </div>
+                                                </div>
+                                                {editFormData.role === option.value && (
+                                                    <Check className="w-4 h-4 text-primary" />
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Level Dropdown */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">{getText('level')}</label>
+                        <div className="relative" ref={levelDropdownRef}>
+                            <div
+                                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background cursor-pointer hover:bg-accent/5 transition-colors group"
+                                onClick={() => setLevelDropdownOpen(!levelDropdownOpen)}
+                            >
+                                <div className="flex items-center gap-2">
+                                    <span>{levelOptions.find(l => l.value === editFormData.level)?.emoji}</span>
+                                    <span className="font-medium">{levelOptions.find(l => l.value === editFormData.level)?.label?.[lang] || editFormData.level}</span>
+                                </div>
+                                <ChevronDown className={cn("w-4 h-4 text-muted-foreground/50 group-hover:text-foreground transition-all", levelDropdownOpen && "rotate-180")} />
+                            </div>
+
+                            {levelDropdownOpen && (
+                                <div className="absolute z-50 w-full mt-1 bg-popover text-popover-foreground border rounded-md shadow-md outline-none animate-in fade-in-0 zoom-in-95 overflow-hidden">
+                                    <div className="p-1">
+                                        {levelOptions.map((option) => (
+                                            <div
+                                                key={option.value}
+                                                className={cn(
+                                                    "relative flex w-full cursor-pointer select-none items-center rounded-sm py-2 px-3 text-sm outline-none hover:bg-accent hover:text-accent-foreground transition-colors",
+                                                    editFormData.level === option.value && "bg-accent/50"
+                                                )}
+                                                onClick={() => {
+                                                    setEditFormData(prev => ({ ...prev, level: option.value }));
+                                                    setLevelDropdownOpen(false);
+                                                }}
+                                            >
+                                                <div className="flex items-center gap-3 flex-1">
+                                                    <span className="text-lg">{option.emoji}</span>
+                                                    <div>
+                                                        <div className="font-medium">{option.label?.[lang]}</div>
+                                                        <div className="text-xs text-muted-foreground">{option.desc?.[lang]}</div>
+                                                    </div>
+                                                </div>
+                                                {editFormData.level === option.value && (
+                                                    <Check className="w-4 h-4 text-primary" />
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                        <Button variant="outline" className="flex-1" onClick={() => setEditingMember(null)}>
+                            {getText('cancel')}
+                        </Button>
+                        <Button className="flex-1" onClick={handleSaveEdit}>
+                            {getText('save')}
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Confirm Terminate Modal */}
+            <Modal isOpen={!!memberToDelete} onClose={() => setMemberToDelete(null)} title={getText('terminateTitle')}>
+                <div className="space-y-4">
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                        <div className="w-10 h-10 rounded-full bg-destructive/20 flex items-center justify-center">
+                            <UserX className="w-5 h-5 text-destructive" />
+                        </div>
+                        <div>
+                            <div className="font-medium">{memberToDelete?.name || 'Мастер'}</div>
+                            <div className="text-sm text-muted-foreground">
+                                {levelLabels[memberToDelete?.level]?.[lang] || memberToDelete?.level}
+                            </div>
+                        </div>
+                    </div>
+
+                    <p className="text-sm text-muted-foreground">
+                        {getText('terminateConfirm')}
+                    </p>
+
+                    <p className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-900/20 p-2 rounded-md">
+                        ⚠️ {getText('terminateWarning')}
+                    </p>
+
+                    <div className="flex gap-2 pt-2">
+                        <Button variant="outline" className="flex-1" onClick={() => setMemberToDelete(null)}>
+                            {getText('cancel')}
+                        </Button>
+                        <Button variant="destructive" className="flex-1" onClick={handleConfirmTerminate}>
+                            {getText('confirm')}
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
+        </Card>
     );
 };
 

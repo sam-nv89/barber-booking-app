@@ -107,7 +107,7 @@ export const timeToMinutes = (time) => {
     return h * 60 + m;
 };
 
-export const getSlotsForDate = (date, salonSettings, appointments = [], services = [], workScheduleOverrides = {}, serviceDuration = 60) => {
+export const getSlotsForDate = (date, salonSettings, appointments = [], services = [], workScheduleOverrides = {}, serviceDuration = 60, masterId = null, masters = []) => {
     if (!date || !salonSettings) return [];
 
     // Use local date to avoid timezone issues (toISOString uses UTC which can shift the date)
@@ -177,7 +177,7 @@ export const getSlotsForDate = (date, salonSettings, appointments = [], services
         // B. Check if slot fits within working hours
         if (slotEndMin > endMinutes) return false;
 
-        // B. Check Breaks
+        // C. Check Breaks
         if (schedule.breaks?.length) {
             for (const brk of schedule.breaks) {
                 const brkStart = timeToMinutes(brk.start);
@@ -187,9 +187,11 @@ export const getSlotsForDate = (date, salonSettings, appointments = [], services
             }
         }
 
-        // C. Check Appointments (with Buffer)
+        // D. Check Appointments (with Buffer)
         const daysAppointments = appointments.filter(a => a.date === dateStr && a.status !== 'cancelled');
-        for (const appt of daysAppointments) {
+
+        // Helper to check overlap with a specific appointment
+        const isOverlapping = (appt) => {
             // Find service duration - support both single service and multi-service
             let apptDuration = appt.totalDuration;
             if (!apptDuration) {
@@ -201,7 +203,39 @@ export const getSlotsForDate = (date, salonSettings, appointments = [], services
             const apptEndMin = apptStartMin + apptDuration + buffer;
 
             // Check if slot overlaps with appointment
-            if (slotStartMin < apptEndMin && slotEndMin > apptStartMin) return false;
+            return slotStartMin < apptEndMin && slotEndMin > apptStartMin;
+        };
+
+        if (masterId) {
+            // Case 1: Specific Master selected
+            // Slot is blocked if THIS master has an overlapping appointment
+            const isBooked = daysAppointments.some(appt => {
+                if (!isOverlapping(appt)) return false;
+                // If appointment has no masterId (legacy), assume it blocks everyone/this master
+                if (!appt.masterId) return true;
+                return appt.masterId === masterId;
+            });
+            if (isBooked) return false;
+        } else {
+            // Case 2: "Any Master" (masterId is null)
+            // Slot is available if AT LEAST ONE master is free
+            if (!masters || masters.length === 0) {
+                // Fallback: If no masters list provided (or legacy mode), check if ANY appointment overlaps
+                const isBooked = daysAppointments.some(appt => isOverlapping(appt));
+                if (isBooked) return false;
+            } else {
+                // Check if ALL masters are booked
+                const freeMastersCount = masters.filter(m => {
+                    const isMasterBooked = daysAppointments.some(appt => {
+                        if (!isOverlapping(appt)) return false;
+                        if (!appt.masterId) return true; // Global/Legacy booking - blocks everyone
+                        return appt.masterId === m.tgUserId;
+                    });
+                    return !isMasterBooked;
+                }).length;
+
+                if (freeMastersCount === 0) return false; // All active masters are booked
+            }
         }
 
         return true;

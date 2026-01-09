@@ -6,12 +6,12 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Chat } from '@/components/features/Chat';
 import { MasterBookingModal } from '@/components/features/MasterBookingModal';
-import { MessageCircle, Plus, QrCode, CheckCheck, List, Calendar, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MessageCircle, Plus, QrCode, CheckCheck, List, Calendar, Clock, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, User, Pencil } from 'lucide-react';
 import { cn, formatPrice, formatPhoneNumber } from '@/lib/utils';
 import { format, addDays, startOfWeek, isSameDay, isToday, isTomorrow, parseISO } from 'date-fns';
 
 export const Records = () => {
-    const { appointments, updateAppointmentStatus, t, language, locale, salonSettings, workSchedule } = useStore();
+    const { appointments, updateAppointmentStatus, t, language, locale, salonSettings, workSchedule, getMasters, getNextAvailableMaster, updateAppointment } = useStore();
     const location = useLocation();
     const navigate = useNavigate();
 
@@ -21,6 +21,7 @@ export const Records = () => {
     const [selectedDate, setSelectedDate] = React.useState(new Date());
     const [chatOpen, setChatOpen] = React.useState(null);
     const [isBookingModalOpen, setIsBookingModalOpen] = React.useState(false);
+    const [bookingPreset, setBookingPreset] = React.useState({ date: null, time: null, masterId: null });
     const [showCompleteAllConfirm, setShowCompleteAllConfirm] = React.useState(false);
     const [calendarMonth, setCalendarMonth] = React.useState(new Date());
 
@@ -225,11 +226,75 @@ export const Records = () => {
 
     // Appointment Card Component
     const AppointmentCard = ({ app, showActions = true }) => {
+        const [isAssigning, setIsAssigning] = React.useState(false);
+        const [pendingMaster, setPendingMaster] = React.useState(null);
+        const masters = getMasters();
+
         const handleInteraction = () => {
             if (app.unreadChanges) {
                 useStore.getState().updateAppointment(app.id, { unreadChanges: false });
             }
         };
+
+        // Get appointments at the same date/time to check availability
+        const conflictingApps = appointments.filter(a =>
+            a.date === app.date &&
+            a.time === app.time &&
+            a.id !== app.id &&
+            a.status !== 'cancelled'
+        );
+
+        // Get available masters (not booked at this time)
+        const getAvailableMasters = () => {
+            return masters.map(m => {
+                const masterId = m.tgUserId || m.id;
+                const isBusy = conflictingApps.some(a => a.masterId === masterId);
+                return { ...m, id: masterId, isBusy };
+            });
+        };
+
+        const availableMasters = getAvailableMasters();
+
+        const handleAutoAssign = (e) => {
+            e.stopPropagation();
+            // Use Round Robin algorithm from store
+            const master = getNextAvailableMaster(null, app.date, app.time);
+            if (master) {
+                // Format master object consistently
+                const formattedMaster = {
+                    ...master,
+                    id: master.tgUserId || master.id,
+                };
+                setPendingMaster(formattedMaster);
+            } else {
+                alert(t('records.noMasters'));
+            }
+        };
+
+        const handleSelectMaster = (e, master) => {
+            e.stopPropagation();
+            if (master.isBusy) return; // Don't allow selecting busy masters
+            setPendingMaster(master);
+        };
+
+        const handleConfirmAssignment = (e) => {
+            e.stopPropagation();
+            if (pendingMaster) {
+                updateAppointment(app.id, { masterId: pendingMaster.id, masterName: pendingMaster.name });
+                setPendingMaster(null);
+                setIsAssigning(false);
+            }
+        };
+
+        const handleCancelAssignment = (e) => {
+            e.stopPropagation();
+            setPendingMaster(null);
+            setIsAssigning(false);
+        };
+
+        const assignedMaster = masters.find(m => (m.tgUserId || m.id) === app.masterId);
+        // Fallback name if master deleted but name preserved, or just use stored name
+        const masterName = assignedMaster?.name || app.masterName;
 
         return (
             <Card
@@ -241,28 +306,151 @@ export const Records = () => {
                     {app.unreadChanges && (
                         <span className="absolute top-4 right-4 h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
                     )}
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <div className="font-bold">{app.clientName}</div>
-                            <div className="text-sm text-muted-foreground">{formatPhoneNumber(app.clientPhone)}</div>
+
+                    {/* Header: Time */}
+                    <div className="flex justify-between items-start border-b pb-2 mb-2">
+                        <div className="text-xs text-muted-foreground w-full flex justify-between">
+                            <span className="capitalize">{format(new Date(app.date), 'd MMMM', { locale: locale() })}</span>
+                            <span className="font-bold text-foreground text-sm">{app.time}</span>
                         </div>
-                        <div className="text-right">
-                            <div className="font-medium">{app.time}</div>
-                            <div className="text-sm text-muted-foreground capitalize">
-                                {format(new Date(app.date), 'd MMMM yyyy', { locale: locale() })}
+                    </div>
+
+                    {/* Details Grid */}
+                    <div className="space-y-1.5 text-sm">
+                        <div className="grid grid-cols-[80px,1fr] items-baseline gap-2">
+                            <span className="text-muted-foreground text-xs">{t('roles.client')}:</span>
+                            <span className="font-medium truncate">{app.clientName}</span>
+                        </div>
+
+                        <div className="grid grid-cols-[80px,1fr] items-baseline gap-2">
+                            <span className="text-muted-foreground text-xs">{t('profile.phone')}:</span>
+                            <span className="font-mono text-xs">{formatPhoneNumber(app.clientPhone)}</span>
+                        </div>
+
+                        <div className="grid grid-cols-[80px,1fr] items-center gap-2">
+                            <span className="text-muted-foreground text-xs">{t('roles.specialist')}:</span>
+                            <div className="flex-1 min-w-0">
+                                {isAssigning ? (
+                                    <div className="text-primary animate-pulse">{t('records.selectMaster')}...</div>
+                                ) : masterName ? (
+                                    <div className="flex items-center gap-2">
+                                        {assignedMaster?.avatar && (
+                                            <img src={assignedMaster.avatar} alt="" className="w-4 h-4 rounded-full object-cover" />
+                                        )}
+                                        <span className="truncate">{masterName}</span>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-5 w-5 text-muted-foreground hover:text-primary"
+                                            onClick={(e) => { e.stopPropagation(); setIsAssigning(true); setPendingMaster(null); }}
+                                        >
+                                            <Pencil className="h-3 w-3" />
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <Button
+                                        variant="link"
+                                        className="p-0 h-auto font-medium text-muted-foreground hover:text-primary"
+                                        onClick={(e) => { e.stopPropagation(); setIsAssigning(true); }}
+                                    >
+                                        {t('records.assignMaster')}
+                                    </Button>
+                                )}
                             </div>
                         </div>
                     </div>
 
+                    {/* Selection UI with confirmation */}
+                    {isAssigning && (
+                        <div className="p-2 bg-muted/50 rounded-md space-y-2 animate-in fade-in slide-in-from-top-2">
+                            {pendingMaster ? (
+                                // Confirmation step
+                                <div className="space-y-2">
+                                    <div className="text-sm text-center">
+                                        {t('records.confirmAssignment') || 'Подтвердите назначение'}:
+                                    </div>
+                                    <div className="flex items-center justify-center gap-2 p-2 bg-background rounded">
+                                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                                            {pendingMaster.avatar ? <img src={pendingMaster.avatar} className="h-full w-full object-cover" /> : <span className="text-sm">{pendingMaster.name?.[0]}</span>}
+                                        </div>
+                                        <span className="font-medium">{pendingMaster.name}</span>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="flex-1"
+                                            onClick={handleCancelAssignment}
+                                        >
+                                            {t('common.cancel')}
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            className="flex-1"
+                                            onClick={handleConfirmAssignment}
+                                        >
+                                            {t('common.confirm')}
+                                        </Button>
+                                    </div>
+                                </div>
+                            ) : (
+                                // Selection step
+                                <>
+                                    <Button
+                                        size="sm"
+                                        variant="secondary"
+                                        className="w-full justify-start"
+                                        onClick={handleAutoAssign}
+                                    >
+                                        <span className="mr-2">⚡</span> {t('records.autoAssign')}
+                                    </Button>
+                                    <div className="h-px bg-border my-1" />
+                                    <div className="max-h-32 overflow-y-auto space-y-1">
+                                        {availableMasters.map(m => (
+                                            <Button
+                                                key={m.id}
+                                                size="sm"
+                                                variant="ghost"
+                                                className={cn("w-full justify-start px-2 py-1.5 h-auto", m.isBusy && "opacity-50 cursor-not-allowed")}
+                                                onClick={(e) => handleSelectMaster(e, m)}
+                                                disabled={m.isBusy}
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <div className="h-6 w-6 shrink-0 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                                                        {m.avatar ? <img src={m.avatar} className="h-full w-full object-cover" /> : <span className="text-xs font-medium">{m.name?.[0]}</span>}
+                                                    </div>
+                                                    <span className="text-sm truncate">{m.name}</span>
+                                                    {m.isBusy && <span className="text-[10px] text-destructive ml-auto">{t('records.busy') || 'Занят'}</span>}
+                                                </div>
+                                            </Button>
+                                        ))}
+                                    </div>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="w-full mt-2"
+                                        onClick={handleCancelAssignment}
+                                    >
+                                        {t('common.cancel')}
+                                    </Button>
+                                </>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Service Info */}
                     <div className="flex justify-between items-center bg-muted p-2 rounded">
-                        <span className="text-sm">{getServiceNames(app)} • {formatPrice(getAppointmentPrice(app))} {salonSettings?.currency || '₸'}</span>
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => {
-                            e.stopPropagation();
-                            setChatOpen(app.id);
-                            handleInteraction();
-                        }}>
-                            <MessageCircle className="h-4 w-4" />
-                        </Button>
+                        <span className="text-sm font-medium">{getServiceNames(app)}</span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold text-primary">{formatPrice(getAppointmentPrice(app))} {salonSettings?.currency || '₸'}</span>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 ml-1" onClick={(e) => {
+                                e.stopPropagation();
+                                setChatOpen(app.id);
+                                handleInteraction();
+                            }}>
+                                <MessageCircle className="h-4 w-4" />
+                            </Button>
+                        </div>
                     </div>
 
                     {showActions && activeTab === 'pending' && (
@@ -337,7 +525,7 @@ export const Records = () => {
                 <MiniCalendar />
 
                 {/* Week Strip */}
-                <div className="flex gap-1 overflow-x-auto pb-2">
+                <div className="flex gap-1 overflow-x-auto pt-1 pb-2">
                     {weekDays.map(day => {
                         const dayApps = getAppointmentsForDate(day);
                         const isSelected = isSameDay(day, selectedDate);
@@ -389,58 +577,274 @@ export const Records = () => {
 
     // Timeline View
     const TimelineView = () => {
+        const masters = getMasters();
         const dayApps = getAppointmentsForDate(selectedDate);
+        const unassignedApps = dayApps.filter(app => !app.masterId);
+        const showUnassigned = unassignedApps.length > 0;
+
+        // Map masters to use consistent id field (tgUserId is the actual ID)
+        const gridColumns = masters.map(m => ({ ...m, id: m.tgUserId || m.id }));
+        if (showUnassigned) {
+            gridColumns.unshift({ id: 'unassigned', name: t('records.unassigned'), isUnassigned: true });
+        }
+
+        // Slot height in pixels (h-16 = 64px) for 30 mins
+        const SLOT_HEIGHT_CLASS = "h-16";
+        const SLOT_HEIGHT_PX = 64;
 
         return (
             <div className="space-y-4">
                 <MiniCalendar />
 
-                <h3 className="font-medium capitalize">{formatDateHeader(format(selectedDate, 'yyyy-MM-dd'))}</h3>
+                <div className="flex items-center justify-between">
+                    <h3 className="font-medium capitalize">{formatDateHeader(format(selectedDate, 'yyyy-MM-dd'))}</h3>
+                    <div className="flex gap-2">
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <div className="w-3 h-3 rounded bg-yellow-500" />
+                            <span>{t('status.pending')}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <div className="w-3 h-3 rounded bg-green-500" />
+                            <span>{t('status.confirmed')}</span>
+                        </div>
+                    </div>
+                </div>
 
-                <div className="space-y-0">
-                    {timeSlots.filter((_, i) => i % 2 === 0).map((slot, index, array) => {
-                        const slotApps = dayApps.filter(app => app.time?.startsWith(slot.split(':')[0]));
-                        const hasApp = slotApps.length > 0;
-                        const isLast = index === array.length - 1;
+                <ScrollableTimeline gridColumns={gridColumns} dayApps={dayApps} timeSlots={timeSlots} />
+            </div>
+        );
+    };
 
-                        return (
-                            <div key={slot} className="flex items-stretch gap-4">
-                                {/* Time Column */}
-                                <div className="w-14 text-sm text-muted-foreground text-right pt-1">{slot}</div>
+    // Internal component for Scrollable Timeline to allow hooks
+    const ScrollableTimeline = ({ gridColumns, dayApps, timeSlots }) => {
+        const scrollRef = React.useRef(null);
+        const scrollInterval = React.useRef(null);
+        const hoverTimeout = React.useRef(null);
+        const [canScroll, setCanScroll] = React.useState({ left: false, right: false, top: false, bottom: false });
+        const [hoveredAppId, setHoveredAppId] = React.useState(null);
 
-                                {/* Track Column */}
-                                <div className="relative w-6 flex flex-col items-center">
-                                    {/* Vertical Line */}
-                                    <div className={cn("absolute top-0 w-px bg-border", isLast ? "h-4" : "bottom-0")} />
+        const checkScroll = () => {
+            if (scrollRef.current) {
+                const { scrollLeft, scrollTop, scrollWidth, scrollHeight, clientWidth, clientHeight } = scrollRef.current;
+                setCanScroll({
+                    left: scrollLeft > 0,
+                    right: scrollLeft < scrollWidth - clientWidth - 1,
+                    top: scrollTop > 0,
+                    bottom: scrollTop < scrollHeight - clientHeight - 1
+                });
+            }
+        };
 
-                                    {/* Dot */}
-                                    <div className={cn(
-                                        "relative w-3 h-3 rounded-full border-2 mt-2 z-10 shrink-0",
-                                        hasApp ? "bg-primary border-primary" : "bg-background border-border"
-                                    )} />
-                                </div>
+        useEffect(() => {
+            checkScroll();
+            window.addEventListener('resize', checkScroll);
+            return () => {
+                window.removeEventListener('resize', checkScroll);
+                stopScrolling();
+            };
+        }, [gridColumns, dayApps]);
 
-                                {/* Content Column */}
-                                <div className="flex-1 min-h-[40px] pb-6">
-                                    {hasApp ? (
-                                        <div className="space-y-2">
-                                            {slotApps.map(app => (
-                                                <div key={app.id} className={cn("bg-card border rounded-lg p-2 shadow-sm transition-all hover:shadow-md", getStatusColor(app.status))}>
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="font-medium text-sm">{app.clientName}</span>
-                                                        <span className="text-xs text-muted-foreground">{app.time}</span>
-                                                    </div>
-                                                    <div className="text-xs text-muted-foreground mt-0.5">{getServiceNames(app)}</div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="text-xs text-muted-foreground pt-1.5 opacity-50 relative top-[-1px]">{t('records.freeSlot') || 'Свободно'}</div>
-                                    )}
-                                </div>
+        const stopScrolling = () => {
+            if (scrollInterval.current) {
+                clearInterval(scrollInterval.current);
+                scrollInterval.current = null;
+            }
+        };
+
+        const startScrolling = (direction) => {
+            stopScrolling();
+            if (!scrollRef.current) return;
+
+            // Speed settings
+            const step = 10;
+            const intervalTime = 16; // ~60fps check
+
+            scrollInterval.current = setInterval(() => {
+                const curr = scrollRef.current;
+                if (!curr) return;
+
+                switch (direction) {
+                    case 'left': curr.scrollLeft -= step; break;
+                    case 'right': curr.scrollLeft += step; break;
+                    case 'top': curr.scrollTop -= step; break;
+                    case 'bottom': curr.scrollTop += step; break;
+                }
+                // We don't call checkScroll here to avoid excessive React updates,
+                // but the onScroll event on the div will trigger it naturally.
+            }, intervalTime);
+        };
+
+        const handleMouseEnterCard = (app, e) => {
+            if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
+
+            const target = e.currentTarget;
+            const scrollContainer = scrollRef.current;
+
+            if (scrollContainer) {
+                const containerRect = scrollContainer.getBoundingClientRect();
+                const cardRect = target.getBoundingClientRect();
+                const headerHeight = 80;
+                const timeColumnWidth = 80; // Sticky time column width
+
+                // Calculate distance from the sticky header bottom
+                const topOffset = cardRect.top - containerRect.top;
+
+                // If card is too close to the header (overlapped or nearly overlapped)
+                // We want to scroll UP (move content DOWN) so it clears the header
+                if (topOffset < headerHeight + 10) {
+                    const scrollAmount = topOffset - headerHeight - 20; // Target 20px below header
+                    scrollContainer.scrollBy({ top: scrollAmount, behavior: 'smooth' });
+                }
+
+                // Calculate distance from the sticky time column right edge
+                const leftOffset = cardRect.left - containerRect.left;
+
+                // If card is too close to or overlapping the time column
+                // We want to scroll LEFT so the card clears the time column
+                if (leftOffset < timeColumnWidth + 10) {
+                    const scrollAmount = leftOffset - timeColumnWidth - 20; // Target 20px after time column
+                    scrollContainer.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+                }
+            }
+
+            // Delay the expansion slightly to allow scroll to start
+            hoverTimeout.current = setTimeout(() => {
+                setHoveredAppId(app.id);
+            }, 150);
+        };
+
+        const handleMouseLeaveCard = () => {
+            if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
+            setHoveredAppId(null);
+        };
+
+        const SLOT_HEIGHT_CLASS = "h-16";
+        const SLOT_HEIGHT_PX = 64;
+        const HEADER_HEIGHT = 80; // Slightly taller to accommodate content comfortably
+
+        return (
+            <div className="border rounded-lg bg-background shadow-sm overflow-hidden flex flex-col h-[calc(100vh-220px)] relative group/timeline">
+
+
+
+                <div className="overflow-auto relative bg-background h-full w-full overlay-scrollbar" ref={scrollRef} onScroll={checkScroll}>
+                    <div className="min-w-max">
+                        {/* Header */}
+                        <div className="flex border-b border-border/60 bg-muted/40 sticky top-0 z-50 backdrop-blur-md shadow-sm w-full" style={{ minHeight: HEADER_HEIGHT }}>
+                            {/* Corner (Time header) */}
+                            <div className="w-16 shrink-0 border-r border-border/60 bg-background/80 sticky left-0 z-[60] border-b border-border/60 flex items-center justify-center" style={{ borderBottomColor: 'transparent' }}>
+                                <Clock className="w-4 h-4 text-muted-foreground" />
                             </div>
-                        );
-                    })}
+
+
+                            {/* Master Headers */}
+                            {gridColumns.map(master => {
+                                const count = dayApps.filter(a => master.isUnassigned ? !a.masterId : a.masterId === master.id).length;
+
+                                return (
+                                    <div key={master.id} className="w-[200px] shrink-0 p-2 text-center border-r border-transparent last:border-r-0 flex flex-col items-center justify-center gap-2 relative group/header">
+                                        {/* Strong Divider */}
+                                        <div className="absolute right-0 top-2 bottom-2 w-[1px] bg-foreground/20 block last:hidden" />
+                                        <div className="relative shrink-0">
+                                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden ring-2 ring-background shadow-sm">
+                                                {master.avatar ? <img src={master.avatar} alt={master.name} className="h-full w-full object-cover" /> : <User className="h-5 w-5 text-primary" />}
+                                            </div>
+                                            {count > 0 && (
+                                                <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] font-bold h-5 w-5 flex items-center justify-center rounded-full shadow-sm border-2 border-background">
+                                                    {count}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="text-sm font-medium w-full overflow-hidden text-ellipsis whitespace-nowrap px-1" title={master.name}>
+                                            {master.name}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Body */}
+                        <div className="divide-y relative w-full">
+                            {timeSlots.map(slot => (
+                                <div key={slot} className={cn("flex transition-colors group/row", SLOT_HEIGHT_CLASS)}>
+                                    {/* Time Column */}
+                                    <div className="w-16 shrink-0 flex items-start justify-center pt-2 text-xs font-mono text-muted-foreground border-r bg-background/95 backdrop-blur sticky left-0 z-50 select-none">
+                                        {slot}
+                                    </div>
+
+                                    {/* Master Columns */}
+                                    {/* Master Columns */}
+                                    {gridColumns.map(master => {
+                                        const colApps = dayApps.filter(app => {
+                                            const isMaster = master.isUnassigned ? !app.masterId : app.masterId === master.id;
+                                            return isMaster && app.time === slot;
+                                        });
+
+                                        return (
+                                            <div key={`${slot}-${master.id}`} className="w-[200px] shrink-0 border-r last:border-r-0 relative p-1 group/cell">
+                                                {colApps.map(app => {
+                                                    const durationSlots = (app.totalDuration || app.duration || 60) / 30;
+                                                    const heightPx = durationSlots * SLOT_HEIGHT_PX - 8;
+                                                    const isHovered = hoveredAppId === app.id;
+
+                                                    return (
+                                                        <div
+                                                            key={app.id}
+                                                            className={cn(
+                                                                "absolute inset-x-1 top-1 rounded-md border p-2 text-xs shadow-sm cursor-pointer transition-all duration-200",
+                                                                getStatusColor(app.status),
+                                                                "bg-card overflow-hidden",
+                                                                isHovered ? "z-40 shadow-lg scale-[1.02]" : "z-10"
+                                                            )}
+                                                            style={{ height: `${heightPx}px` }}
+                                                            onMouseEnter={(e) => handleMouseEnterCard(app, e)}
+                                                            onMouseLeave={handleMouseLeaveCard}
+                                                            onClick={() => {
+                                                                setViewMode('list');
+                                                                setActiveTab(app.status === 'pending' ? 'pending' : (app.status === 'confirmed' || app.status === 'in_progress') ? 'active' : 'archive');
+                                                                setTimeout(() => {
+                                                                    const el = document.getElementById(`record-${app.id}`);
+                                                                    if (el) {
+                                                                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                                        // Add highlight animation
+                                                                        el.classList.add('ring-2', 'ring-primary', 'animate-pulse');
+                                                                        setTimeout(() => {
+                                                                            el.classList.remove('ring-2', 'ring-primary', 'animate-pulse');
+                                                                        }, 2000);
+                                                                    }
+                                                                }, 100);
+                                                            }}
+                                                        >
+                                                            <div className="flex justify-between items-start gap-1">
+                                                                <span className="font-bold truncate">{app.clientName}</span>
+                                                                <span className="opacity-75 text-[10px] whitespace-nowrap bg-background/50 px-1 rounded">{app.time}</span>
+                                                            </div>
+                                                            <div className="truncate opacity-75 mt-0.5">{getServiceNames(app)}</div>
+                                                            <div className="absolute bottom-1 right-2 opacity-50 font-mono">{formatPrice(getAppointmentPrice(app))}</div>
+                                                        </div>
+                                                    );
+                                                })}
+                                                {/* Add Button */}
+                                                {!colApps.length && (
+                                                    <button
+                                                        className="w-full h-full opacity-0 group-hover/cell:opacity-100 flex items-center justify-center transition-all"
+                                                        onClick={() => {
+                                                            setBookingPreset({ date: selectedDate, time: slot, masterId: master.isUnassigned ? null : master.id });
+                                                            setIsBookingModalOpen(true);
+                                                        }}
+                                                    >
+                                                        <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                                                            <Plus className="w-4 h-4" />
+                                                        </div>
+                                                    </button>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             </div>
         );
@@ -528,8 +932,8 @@ export const Records = () => {
                 <Chat appointmentId={chatOpen} onClose={() => setChatOpen(null)} />
             </Modal>
 
-            <Modal isOpen={isBookingModalOpen} onClose={() => setIsBookingModalOpen(false)} title={t('records.newAppointment')}>
-                <MasterBookingModal onClose={() => setIsBookingModalOpen(false)} />
+            <Modal isOpen={isBookingModalOpen} onClose={() => { setIsBookingModalOpen(false); setBookingPreset({ date: null, time: null, masterId: null }); }} title={t('records.newAppointment')}>
+                <MasterBookingModal onClose={() => { setIsBookingModalOpen(false); setBookingPreset({ date: null, time: null, masterId: null }); }} initialDate={bookingPreset.date} initialTime={bookingPreset.time} initialMasterId={bookingPreset.masterId} />
             </Modal>
 
             <Modal isOpen={showCompleteAllConfirm} onClose={() => setShowCompleteAllConfirm(false)} title={language === 'en' ? 'Complete All?' : language === 'es' ? '¿Completar todo?' : language === 'tr' ? 'Tümünü tamamla?' : language === 'kz' ? 'Барлығын аяқтау?' : 'Завершить все?'}>

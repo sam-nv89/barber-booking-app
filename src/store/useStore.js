@@ -22,6 +22,195 @@ export const useStore = create(
             ],
             dismissedPrompts: [], // IDs of appointments where user clicked "Later"
             dismissedPrompts: [], // IDs of appointments where user clicked "Later"
+
+            // ===== MULTI-SALON STATE =====
+            // Version flag for migration
+            dataVersion: 2, // v2 = multi-salon support
+
+            // Array of all salons user has access to
+            salons: [], // [{ id, name, avatar, address, ownerId, subscription, createdAt }]
+
+            // User-salon relationships with roles
+            userSalons: [], // [{ tgUserId, salonId, role: 'owner'|'admin'|'employee', level, compensation, status, joinedAt }]
+
+            // Current active salon context
+            activeSalonId: null,
+
+            // Pending invitations
+            invitations: [], // [{ id, salonId, salonName, token, createdAt, expiresAt }]
+
+            // Get current salon (helper computed in components)
+            getActiveSalon: () => {
+                const state = get();
+                return state.salons.find(s => s.id === state.activeSalonId);
+            },
+
+            // Get user's role in current salon
+            getActiveRole: () => {
+                const state = get();
+                const userSalon = state.userSalons.find(
+                    us => us.salonId === state.activeSalonId && us.tgUserId === state.user?.telegramId
+                );
+                return userSalon?.role || null;
+            },
+
+            // Get all masters in current salon
+            getMasters: (salonId) => {
+                const state = get();
+                const targetSalonId = salonId || state.activeSalonId;
+                return state.userSalons.filter(us => us.salonId === targetSalonId && us.status === 'active');
+            },
+
+            // Get next available master using Round Robin algorithm
+            getNextAvailableMaster: (salonId, date, time) => {
+                const state = get();
+                const targetSalonId = salonId || state.activeSalonId;
+                const masters = state.userSalons.filter(us => us.salonId === targetSalonId && us.status === 'active');
+
+                if (masters.length === 0) return null;
+
+                const lastIndex = state.salonSettings?.lastAssignedMasterIndex || 0;
+
+                // Find appointments for the given date/time to check availability
+                const dateAppointments = state.appointments.filter(a =>
+                    a.date === date &&
+                    a.time === time &&
+                    a.status !== 'cancelled'
+                );
+
+                // Start from next master after last assigned (Round Robin)
+                for (let i = 0; i < masters.length; i++) {
+                    const idx = (lastIndex + 1 + i) % masters.length;
+                    const master = masters[idx];
+
+                    // Check if master is already booked at this time
+                    const isBooked = dateAppointments.some(a => a.masterId === master.tgUserId);
+
+                    if (!isBooked) {
+                        // Update last assigned index
+                        set((s) => ({
+                            salonSettings: { ...s.salonSettings, lastAssignedMasterIndex: idx }
+                        }));
+                        return master;
+                    }
+                }
+
+                // If all masters are booked, return first master anyway (shouldn't happen if slots are filtered)
+                return masters[0];
+            },
+
+            // Set active salon context
+            setActiveSalonId: (salonId) => set({ activeSalonId: salonId }),
+
+            // Create new salon (when user becomes owner)
+            createSalon: (salonData) => set((state) => {
+                const salonId = `salon_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                const newSalon = {
+                    id: salonId,
+                    name: salonData.name || state.salonSettings?.name || 'Мой салон',
+                    avatar: salonData.avatar || null,
+                    address: salonData.address || state.salonSettings?.address || '',
+                    phone: salonData.phone || state.salonSettings?.phone || '',
+                    ownerId: state.user?.telegramId,
+                    subscription: { plan: 'trial', expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() }, // 1 month trial
+                    settings: salonData.settings || {},
+                    createdAt: new Date().toISOString()
+                };
+
+                const ownerRelation = {
+                    tgUserId: state.user?.telegramId,
+                    salonId: salonId,
+                    role: 'owner',
+                    level: 'top',
+                    compensation: null, // Owners don't have compensation
+                    compensationHistory: [],
+                    status: 'active',
+                    joinedAt: new Date().toISOString()
+                };
+
+                return {
+                    salons: [...state.salons, newSalon],
+                    userSalons: [...state.userSalons, ownerRelation],
+                    activeSalonId: salonId
+                };
+            }),
+
+            // Add master to salon (invite accepted)
+            addMasterToSalon: (salonId, masterData) => set((state) => {
+                const relation = {
+                    tgUserId: masterData.tgUserId,
+                    salonId: salonId,
+                    role: masterData.role || 'employee',
+                    level: masterData.level || 'master',
+                    name: masterData.name,
+                    phone: masterData.phone,
+                    avatar: masterData.avatar,
+                    compensation: masterData.compensation || { model: 'percent', value: 50 },
+                    compensationHistory: [{ ...masterData.compensation || { model: 'percent', value: 50 }, effectiveFrom: new Date().toISOString() }],
+                    status: 'active',
+                    joinedAt: new Date().toISOString()
+                };
+
+                return { userSalons: [...state.userSalons, relation] };
+            }),
+
+            // Update master in salon
+            updateMasterInSalon: (salonId, tgUserId, updates) => set((state) => ({
+                userSalons: state.userSalons.map(us =>
+                    (us.salonId === salonId && us.tgUserId === tgUserId)
+                        ? { ...us, ...updates }
+                        : us
+                )
+            })),
+
+            // Terminate master (30-day grace period)
+            terminateMaster: (salonId, tgUserId) => set((state) => {
+                const terminationDate = new Date();
+                const accessExpiresAt = new Date(terminationDate.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
+
+                return {
+                    userSalons: state.userSalons.map(us =>
+                        (us.salonId === salonId && us.tgUserId === tgUserId)
+                            ? {
+                                ...us,
+                                status: 'terminated',
+                                terminatedAt: terminationDate.toISOString(),
+                                accessExpiresAt: accessExpiresAt.toISOString()
+                            }
+                            : us
+                    ),
+                    notifications: [{
+                        id: Date.now().toString(),
+                        type: 'termination',
+                        recipient: 'master',
+                        targetUserId: tgUserId,
+                        title: 'Уведомление об увольнении',
+                        message: `Вы были отстранены от салона. Доступ к истории сохранится 30 дней.`,
+                        date: new Date().toISOString(),
+                        read: false
+                    }, ...state.notifications]
+                };
+            }),
+
+            // Generate invite link
+            generateInviteLink: (salonId) => set((state) => {
+                const token = `inv_${Date.now()}_${Math.random().toString(36).substr(2, 12)}`;
+                const salon = state.salons.find(s => s.id === salonId);
+
+                const invitation = {
+                    id: token,
+                    salonId: salonId,
+                    salonName: salon?.name || 'Салон',
+                    token: token,
+                    createdAt: new Date().toISOString(),
+                    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days
+                };
+
+                return { invitations: [...state.invitations, invitation] };
+            }),
+
+            // ===== END MULTI-SALON STATE =====
+
             // User State
             user: {
                 role: 'client', // 'client' | 'master'
@@ -92,7 +281,8 @@ export const useStore = create(
                     thousandsSep: ' ',
                     decimalSep: ','
                 },
-                checkinMode: 'master_scans' // 'master_scans' | 'client_scans'
+                checkinMode: 'master_scans', // 'master_scans' | 'client_scans'
+                lastAssignedMasterIndex: 0 // For Round Robin master assignment
             },
             setSalonSettings: (settings) => set((state) => ({ salonSettings: { ...state.salonSettings, ...settings } })),
 
@@ -314,6 +504,18 @@ export const useStore = create(
                     }, 0);
                 }
 
+                // Auto-assign master if not specified
+                let assignedMasterId = appointment.masterId;
+                let assignedMasterName = appointment.masterName;
+
+                if (!assignedMasterId) {
+                    const autoMaster = get().getNextAvailableMaster(get().activeSalonId, appointment.date, appointment.time);
+                    if (autoMaster) {
+                        assignedMasterId = autoMaster.tgUserId || autoMaster.id;
+                        assignedMasterName = autoMaster.name;
+                    }
+                }
+
                 // Check for suspicious booking (client has 2+ active bookings)
                 const clientActiveBookings = get().appointments.filter(a =>
                     a.clientPhone === appointment.clientPhone &&
@@ -328,6 +530,8 @@ export const useStore = create(
                     serviceId: serviceIds[0], // Keep first for backward compatibility
                     price: priceSnapshot,
                     totalDuration: totalDuration,
+                    masterId: assignedMasterId || null, // Assigned master ID
+                    masterName: assignedMasterName || null, // Assigned master name
                     id: Date.now().toString(),
                     status: appointment.status || 'pending',
                     createdAt: new Date().toISOString(),
@@ -610,10 +814,22 @@ export const useStore = create(
         {
             name: 'barber-app-storage',
             partialize: (state) => ({
+                // Core user data
                 user: state.user,
                 language: state.language,
                 theme: state.theme,
+
+                // Multi-salon data (v2)
+                dataVersion: state.dataVersion,
+                salons: state.salons,
+                userSalons: state.userSalons,
+                activeSalonId: state.activeSalonId,
+                invitations: state.invitations,
+
+                // Legacy salon settings (kept for backward compatibility)
                 salonSettings: state.salonSettings,
+
+                // Business data
                 appointments: state.appointments,
                 notifications: state.notifications,
                 services: state.services,
@@ -622,8 +838,87 @@ export const useStore = create(
                 dismissedPrompts: state.dismissedPrompts,
                 blockedPhones: state.blockedPhones,
                 workScheduleOverrides: state.workScheduleOverrides,
-                clients: state.clients
+                clients: state.clients,
+                customTags: state.customTags
             }),
+
+            // Migration: convert v1 (solo-master) to v2 (multi-salon)
+            onRehydrateStorage: () => (state, error) => {
+                if (error) {
+                    console.error('Error rehydrating storage:', error);
+                    return;
+                }
+
+                if (!state) return;
+
+                // Check if migration needed (no dataVersion or dataVersion < 2)
+                if (!state.dataVersion || state.dataVersion < 2) {
+                    console.log('Migrating data to v2 (multi-salon)...');
+
+                    // Only migrate if user exists and has master role
+                    if (state.user?.role === 'master' && state.salonSettings) {
+                        const salonId = `salon_migrated_${Date.now()}`;
+
+                        // Create salon from existing salonSettings
+                        const migratedSalon = {
+                            id: salonId,
+                            name: state.salonSettings.name || 'Мой салон',
+                            avatar: state.salonSettings.avatar || null,
+                            address: state.salonSettings.address || '',
+                            phone: state.salonSettings.phone || '',
+                            ownerId: state.user.telegramId || 'local_user',
+                            subscription: { plan: 'trial', expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() },
+                            settings: {
+                                bufferTime: state.salonSettings.bufferTime,
+                                slotInterval: state.salonSettings.slotInterval,
+                                bookingPeriodMonths: state.salonSettings.bookingPeriodMonths,
+                                scheduleMode: state.salonSettings.scheduleMode,
+                                shiftPattern: state.salonSettings.shiftPattern,
+                                schedule: state.salonSettings.schedule,
+                                currencySettings: state.salonSettings.currencySettings,
+                                checkinMode: state.salonSettings.checkinMode
+                            },
+                            createdAt: new Date().toISOString()
+                        };
+
+                        // Create owner relation
+                        const ownerRelation = {
+                            tgUserId: state.user.telegramId || 'local_user',
+                            salonId: salonId,
+                            role: 'owner',
+                            level: 'top',
+                            name: state.user.name,
+                            phone: state.user.phone,
+                            avatar: state.user.avatar,
+                            compensation: null,
+                            compensationHistory: [],
+                            status: 'active',
+                            joinedAt: new Date().toISOString()
+                        };
+
+                        // Update appointments with salonId and masterId
+                        const migratedAppointments = (state.appointments || []).map(app => ({
+                            ...app,
+                            salonId: salonId,
+                            masterId: state.user.telegramId || 'local_user'
+                        }));
+
+                        // Apply migration
+                        useStore.setState({
+                            dataVersion: 2,
+                            salons: [migratedSalon],
+                            userSalons: [ownerRelation],
+                            activeSalonId: salonId,
+                            appointments: migratedAppointments
+                        });
+
+                        console.log('Migration complete! Salon created:', salonId);
+                    } else {
+                        // Just set version for clients or new users
+                        useStore.setState({ dataVersion: 2 });
+                    }
+                }
+            }
         }
     )
 )

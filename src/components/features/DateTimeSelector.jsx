@@ -6,7 +6,7 @@ import { ru, enUS } from 'date-fns/locale';
 import { useStore } from '@/store/useStore';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-export const DateTimeSelector = ({ selectedDate, onDateSelect, selectedTime, onTimeSelect, salonSettings, appointments = [], services = [], workScheduleOverrides = {}, serviceDuration = 60 }) => {
+export const DateTimeSelector = ({ selectedDate, onDateSelect, selectedTime, onTimeSelect, salonSettings, appointments = [], services = [], workScheduleOverrides = {}, serviceDuration = 60, masterId = null, masters = [] }) => {
     const { t, language } = useStore();
     const [currentMonth, setCurrentMonth] = React.useState(new Date());
 
@@ -18,8 +18,8 @@ export const DateTimeSelector = ({ selectedDate, onDateSelect, selectedTime, onT
     const maxDate = addMonths(today, bookingPeriodMonths);
 
     const availableTimes = React.useMemo(() => {
-        return getSlotsForDate(selectedDate, salonSettings, appointments, services, workScheduleOverrides, serviceDuration);
-    }, [selectedDate, salonSettings, appointments, services, workScheduleOverrides, serviceDuration]);
+        return getSlotsForDate(selectedDate, salonSettings, appointments, services, workScheduleOverrides, serviceDuration, masterId, masters);
+    }, [selectedDate, salonSettings, appointments, services, workScheduleOverrides, serviceDuration, masterId, masters]);
 
     // Generate calendar days for current month view
     const monthStart = startOfMonth(currentMonth);
@@ -36,7 +36,7 @@ export const DateTimeSelector = ({ selectedDate, onDateSelect, selectedTime, onT
         if (isAfter(date, maxDate)) return false;
 
         // Check if there are slots available (considering existing appointments)
-        const slots = getSlotsForDate(date, salonSettings, appointments, services, workScheduleOverrides, serviceDuration);
+        const slots = getSlotsForDate(date, salonSettings, appointments, services, workScheduleOverrides, serviceDuration, masterId, masters);
         return slots.length > 0;
     };
 
