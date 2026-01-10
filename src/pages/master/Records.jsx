@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Chat } from '@/components/features/Chat';
 import { MasterBookingModal } from '@/components/features/MasterBookingModal';
+import { MasterDetailsModal } from '@/components/features/MasterDetailsModal';
 import { MessageCircle, Plus, QrCode, CheckCheck, List, Calendar, Clock, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, User, Pencil } from 'lucide-react';
 import { cn, formatPrice, formatPhoneNumber } from '@/lib/utils';
 import { format, addDays, startOfWeek, isSameDay, isToday, isTomorrow, parseISO } from 'date-fns';
@@ -22,8 +23,26 @@ export const Records = () => {
     const [chatOpen, setChatOpen] = React.useState(null);
     const [isBookingModalOpen, setIsBookingModalOpen] = React.useState(false);
     const [bookingPreset, setBookingPreset] = React.useState({ date: null, time: null, masterId: null });
+    const [selectedMaster, setSelectedMaster] = React.useState(null);
     const [showCompleteAllConfirm, setShowCompleteAllConfirm] = React.useState(false);
     const [calendarMonth, setCalendarMonth] = React.useState(new Date());
+
+    const lang = language || 'ru';
+
+    // Level labels
+    const levelLabels = {
+        apprentice: { ru: 'Ученик', en: 'Apprentice', kz: 'Шәкірт', es: 'Aprendiz', tr: 'Çırak' },
+        master: { ru: 'Мастер', en: 'Master', kz: 'Шебер', es: 'Maestro', tr: 'Usta' },
+        senior: { ru: 'Старший', en: 'Senior', kz: 'Аға шебер', es: 'Senior', tr: 'Kıdemli' },
+        top: { ru: 'Топ', en: 'Top', kz: 'Топ', es: 'Top', tr: 'Top' }
+    };
+
+    // Role badges configuration
+    const roleBadges = {
+        owner: { label: { ru: 'Владелец', en: 'Owner', kz: 'Иесі', tr: 'Sahip', es: 'Propietario' }, className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
+        admin: { label: { ru: 'Админ', en: 'Admin', kz: 'Әкімші', tr: 'Yönetici', es: 'Admin' }, className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
+        employee: { label: { ru: 'Специалист', en: 'Specialist', kz: 'Маман', tr: 'Uzman', es: 'Especialista' }, className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' }
+    };
 
     // Filter appointments
     const pending = appointments.filter(app => app.status === 'pending');
@@ -615,13 +634,19 @@ export const Records = () => {
         );
     };
 
-    // Internal component for Scrollable Timeline to allow hooks
     const ScrollableTimeline = ({ gridColumns, dayApps, timeSlots }) => {
         const scrollRef = React.useRef(null);
+        const floatingScrollRef = React.useRef(null);
+        const contentRef = React.useRef(null);
+        const containerRef = React.useRef(null);
         const scrollInterval = React.useRef(null);
         const hoverTimeout = React.useRef(null);
         const [canScroll, setCanScroll] = React.useState({ left: false, right: false, top: false, bottom: false });
         const [hoveredAppId, setHoveredAppId] = React.useState(null);
+        const [contentWidth, setContentWidth] = React.useState(0);
+        const [showFloatingScrollbar, setShowFloatingScrollbar] = React.useState(true);
+        const [tableRect, setTableRect] = React.useState({ left: 0, right: 0, width: 0 });
+        const isSyncingScroll = React.useRef(false);
 
         const checkScroll = () => {
             if (scrollRef.current) {
@@ -632,17 +657,66 @@ export const Records = () => {
                     top: scrollTop > 0,
                     bottom: scrollTop < scrollHeight - clientHeight - 1
                 });
+
+                // Robust visibility logic: Hide floating scrollbar if we are near the bottom
+                // Use a generous buffer (e.g. 20px) to ensure it hides before we see the native one fully
+                const isAtBottom = scrollHeight - scrollTop - clientHeight < 20;
+                setShowFloatingScrollbar(!isAtBottom);
+            }
+            if (containerRef.current) {
+                const rect = containerRef.current.getBoundingClientRect();
+                setTableRect({ left: rect.left, right: window.innerWidth - rect.right, width: rect.width });
             }
         };
 
+        // ResizeObserver for accurate content width
         useEffect(() => {
-            checkScroll();
+            if (!contentRef.current) return;
+            const observer = new ResizeObserver((entries) => {
+                for (const entry of entries) {
+                    // Use borderBoxSize if available for better accuracy, fall back to contentRect
+                    const width = entry.borderBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
+                    setContentWidth(width);
+                    checkScroll(); // Re-check scroll on resize
+                }
+            });
+            observer.observe(contentRef.current);
+            return () => observer.disconnect();
+        }, []);
+
+        useEffect(() => {
+            // Delay to ensure DOM is fully rendered
+            const timer = setTimeout(() => {
+                checkScroll();
+            }, 50);
             window.addEventListener('resize', checkScroll);
             return () => {
+                clearTimeout(timer);
                 window.removeEventListener('resize', checkScroll);
                 stopScrolling();
             };
         }, [gridColumns, dayApps]);
+
+        // Sync main scroll to floating scrollbar
+        const handleMainScroll = () => {
+            if (isSyncingScroll.current) return;
+            isSyncingScroll.current = true;
+            if (floatingScrollRef.current && scrollRef.current) {
+                floatingScrollRef.current.scrollLeft = scrollRef.current.scrollLeft;
+            }
+            checkScroll();
+            requestAnimationFrame(() => { isSyncingScroll.current = false; });
+        };
+
+        // Sync floating scrollbar to main scroll
+        const handleFloatingScroll = () => {
+            if (isSyncingScroll.current) return;
+            isSyncingScroll.current = true;
+            if (scrollRef.current && floatingScrollRef.current) {
+                scrollRef.current.scrollLeft = floatingScrollRef.current.scrollLeft;
+            }
+            requestAnimationFrame(() => { isSyncingScroll.current = false; });
+        };
 
         const stopScrolling = () => {
             if (scrollInterval.current) {
@@ -723,12 +797,38 @@ export const Records = () => {
         const HEADER_HEIGHT = 80; // Slightly taller to accommodate content comfortably
 
         return (
-            <div className="border rounded-lg bg-background shadow-sm overflow-hidden flex flex-col h-[calc(100vh-220px)] relative group/timeline">
+            <div ref={containerRef} className="border rounded-lg bg-background shadow-sm overflow-visible flex flex-col h-[calc(100vh-220px)] relative group/timeline">
 
-
-
-                <div className="overflow-auto relative bg-background h-full w-full overlay-scrollbar" ref={scrollRef} onScroll={checkScroll}>
-                    <div className="min-w-max">
+                <style>
+                    {`
+                        .custom-scrollbar::-webkit-scrollbar {
+                            width: 8px;
+                            height: 8px;
+                        }
+                        .custom-scrollbar::-webkit-scrollbar-track {
+                            background: transparent;
+                        }
+                        .custom-scrollbar::-webkit-scrollbar-thumb {
+                            background-color: rgba(160, 160, 160, 0.2);
+                            border-radius: 9999px;
+                        }
+                        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                            background-color: rgba(160, 160, 160, 0.4);
+                        }
+                        /* Firefox */
+                        .custom-scrollbar {
+                            scrollbar-width: thin;
+                            scrollbar-color: rgba(160, 160, 160, 0.2) transparent;
+                        }
+                    `}
+                </style>
+                {/* Single scrollable container for both directions */}
+                <div
+                    className="flex-1 overflow-auto relative custom-scrollbar"
+                    ref={scrollRef}
+                    onScroll={handleMainScroll}
+                >
+                    <div className="min-w-max" ref={contentRef}>
                         {/* Header */}
                         <div className="flex border-b border-border/60 bg-muted/40 sticky top-0 z-50 backdrop-blur-md shadow-sm w-full" style={{ minHeight: HEADER_HEIGHT }}>
                             {/* Corner (Time header) */}
@@ -740,23 +840,70 @@ export const Records = () => {
                             {/* Master Headers */}
                             {gridColumns.map(master => {
                                 const count = dayApps.filter(a => master.isUnassigned ? !a.masterId : a.masterId === master.id).length;
+                                const isUnassigned = master.isUnassigned;
 
                                 return (
-                                    <div key={master.id} className="w-[200px] shrink-0 p-2 text-center border-r border-transparent last:border-r-0 flex flex-col items-center justify-center gap-2 relative group/header">
+                                    <div
+                                        key={master.id}
+                                        className={cn(
+                                            "w-[200px] shrink-0 border-r border-transparent last:border-r-0 flex items-center justify-start relative group/header transition-colors",
+                                            !isUnassigned && "cursor-pointer hover:bg-muted/50"
+                                        )}
+                                        onClick={() => !isUnassigned && setSelectedMaster(master)}
+                                    >
                                         {/* Strong Divider */}
                                         <div className="absolute right-0 top-2 bottom-2 w-[1px] bg-foreground/20 block last:hidden" />
-                                        <div className="relative shrink-0">
-                                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden ring-2 ring-background shadow-sm">
-                                                {master.avatar ? <img src={master.avatar} alt={master.name} className="h-full w-full object-cover" /> : <User className="h-5 w-5 text-primary" />}
+
+                                        <div className="flex items-center gap-3 p-3 w-full">
+                                            {/* Left: Avatar */}
+                                            <div className="relative shrink-0">
+                                                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden ring-2 ring-background shadow-sm">
+                                                    {master.avatar ? (
+                                                        <img
+                                                            src={master.avatar}
+                                                            alt={master.name}
+                                                            className="h-full w-full object-cover"
+                                                            onError={(e) => {
+                                                                e.currentTarget.style.display = 'none';
+                                                                e.currentTarget.nextSibling.style.display = 'block';
+                                                            }}
+                                                        />
+                                                    ) : null}
+                                                    <User className="h-5 w-5 text-primary" style={{ display: master.avatar ? 'none' : 'block' }} />
+                                                </div>
+                                                {count > 0 && (
+                                                    <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] font-bold h-5 w-5 flex items-center justify-center rounded-full shadow-sm border-2 border-background">
+                                                        {count}
+                                                    </span>
+                                                )}
                                             </div>
-                                            {count > 0 && (
-                                                <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] font-bold h-5 w-5 flex items-center justify-center rounded-full shadow-sm border-2 border-background">
-                                                    {count}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="text-sm font-medium w-full overflow-hidden text-ellipsis whitespace-nowrap px-1" title={master.name}>
-                                            {master.name}
+
+                                            {/* Right: Info */}
+                                            <div className="flex flex-col items-start min-w-0 flex-1 justify-center gap-0.5">
+                                                <div className="text-sm font-bold truncate w-full text-foreground" title={master.name}>
+                                                    {master.name}
+                                                </div>
+
+                                                <div className="flex items-center gap-1.5 w-full">
+                                                    {!isUnassigned && (
+                                                        <span className={cn("text-[10px] px-1.5 py-px rounded-[4px] font-medium shrink-0 opacity-90", roleBadges[master.role]?.className || 'bg-gray-100 text-gray-700')}>
+                                                            {roleBadges[master.role]?.label?.[lang] || master.role}
+                                                        </span>
+                                                    )}
+
+                                                    {!isUnassigned && master.level && (
+                                                        <span className="text-[11px] text-muted-foreground/80 truncate font-medium">
+                                                            {levelLabels[master.level]?.[lang] || master.level}
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                {isUnassigned && (
+                                                    <span className="text-xs text-muted-foreground italic">
+                                                        Очередь
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 );
@@ -817,10 +964,12 @@ export const Records = () => {
                                                         >
                                                             <div className="flex justify-between items-start gap-1">
                                                                 <span className="font-bold truncate">{app.clientName}</span>
-                                                                <span className="opacity-75 text-[10px] whitespace-nowrap bg-background/50 px-1 rounded">{app.time}</span>
+                                                                <span className="opacity-75 text-[10px] whitespace-nowrap bg-background/50 px-1 rounded">
+                                                                    {format(new Date(app.date), 'dd.MM.yyyy')}, {app.time}
+                                                                </span>
                                                             </div>
                                                             <div className="truncate opacity-75 mt-0.5">{getServiceNames(app)}</div>
-                                                            <div className="absolute bottom-1 right-2 opacity-50 font-mono">{formatPrice(getAppointmentPrice(app))}</div>
+                                                            <div className="absolute bottom-1 right-2 opacity-50 font-mono">{formatPrice(getAppointmentPrice(app))} {salonSettings?.currency || '₸'}</div>
                                                         </div>
                                                     );
                                                 })}
@@ -846,7 +995,10 @@ export const Records = () => {
                         </div>
                     </div>
                 </div>
-            </div>
+
+
+
+            </div >
         );
     };
 
@@ -950,6 +1102,13 @@ export const Records = () => {
                     </div>
                 </div>
             </Modal>
+
+            {/* Master Details Modal */}
+            <MasterDetailsModal
+                master={selectedMaster}
+                isOpen={!!selectedMaster}
+                onClose={() => setSelectedMaster(null)}
+            />
         </div>
     );
 };

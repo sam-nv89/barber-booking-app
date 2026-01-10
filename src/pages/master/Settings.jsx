@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { PhoneInput } from '@/components/ui/PhoneInput';
 import { cn, formatPhoneNumber, formatPrice } from '@/lib/utils';
 import { AvatarSelector } from '@/components/features/AvatarSelector';
+import { PhotoUploader } from '@/components/features/PhotoUploader';
 import { CurrencySelector } from '@/components/features/CurrencySelector';
 import { SuccessAnimation } from '@/components/features/SuccessAnimation';
 import { WelcomeAnimation } from '@/components/features/WelcomeAnimation';
@@ -1132,6 +1133,7 @@ const TeamManager = ({ onSuccess }) => {
         phone: { ru: 'Телефон', en: 'Phone', kz: 'Телефон', tr: 'Telefon', es: 'Teléfono' },
         role: { ru: 'Роль', en: 'Role', kz: 'Рөлі', tr: 'Rol', es: 'Rol' },
         level: { ru: 'Уровень', en: 'Level', kz: 'Деңгей', tr: 'Seviye', es: 'Nivel' },
+        avatar: { ru: 'Фото профиля', en: 'Profile Photo', kz: 'Профиль суреті', tr: 'Profil Fotoğrafı', es: 'Foto de perfil' },
         save: { ru: 'Сохранить', en: 'Save', kz: 'Сақтау', tr: 'Kaydet', es: 'Guardar' },
         cancel: { ru: 'Отмена', en: 'Cancel', kz: 'Болдырмау', tr: 'İptal', es: 'Cancelar' },
         confirm: { ru: 'Подтвердить', en: 'Confirm', kz: 'Растау', tr: 'Onayla', es: 'Confirmar' },
@@ -1186,6 +1188,7 @@ const TeamManager = ({ onSuccess }) => {
     const handleEditMember = (member) => {
         setEditingMember(member);
         setEditFormData({
+            avatar: member.avatar || null,
             name: member.name || '',
             phone: member.phone || '',
             role: member.role || 'employee',
@@ -1401,6 +1404,13 @@ const TeamManager = ({ onSuccess }) => {
             {/* Edit Member Modal */}
             <Modal isOpen={!!editingMember} onClose={() => setEditingMember(null)} title={getText('editMemberTitle')}>
                 <div className="space-y-4">
+                    <div className="flex justify-center pb-2">
+                        <PhotoUploader
+                            value={editFormData.avatar}
+                            onChange={(avatar) => setEditFormData(prev => ({ ...prev, avatar }))}
+                            label={getText('avatar')}
+                        />
+                    </div>
                     <div className="space-y-2">
                         <label className="text-sm font-medium">{getText('name')}</label>
                         <Input

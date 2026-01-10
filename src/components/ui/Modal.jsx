@@ -8,7 +8,7 @@ export const Modal = ({ isOpen, onClose, title, children }) => {
 
     return createPortal(
         <div
-            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-4 sm:p-0"
+            className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-4 sm:p-0"
             onClick={onClose}
         >
             <div

@@ -209,9 +209,6 @@ export const MasterBookingModal = ({ onClose, initialDate = null, initialTime = 
                                 <div className="text-2xl font-bold text-primary">
                                     {initialTime}
                                 </div>
-                                <div className="text-xs text-muted-foreground">
-                                    {t('booking.timePreselected') || 'Время выбрано автоматически'}
-                                </div>
                             </div>
                         ) : (
                             // Full picker when opened without preset
@@ -245,7 +242,6 @@ export const MasterBookingModal = ({ onClose, initialDate = null, initialTime = 
                                 </div>
                                 <div>
                                     <div className="font-medium">{getMasterName(initialMasterId)}</div>
-                                    <div className="text-xs text-muted-foreground">{t('booking.timePreselected') || 'Выбран автоматически'}</div>
                                 </div>
                             </div>
                         </div>
