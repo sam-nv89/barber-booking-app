@@ -439,7 +439,7 @@ export const Settings = () => {
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                         <div className="flex-1">
                             <PhoneInput
                                 value={newBlockedPhone}
@@ -449,6 +449,7 @@ export const Settings = () => {
                         </div>
                         <Button
                             variant="destructive"
+                            className="w-full sm:w-auto"
                             onClick={() => {
                                 if (newBlockedPhone.replace(/\D/g, '').length >= 10) {
                                     addBlockedPhone(newBlockedPhone);
@@ -517,12 +518,13 @@ export const Settings = () => {
                             ) : (
                                 <div className="space-y-3">
                                     {/* Work hours */}
-                                    <div className="flex gap-2 items-center">
+                                    <div className="flex flex-wrap gap-2 items-center">
                                         <Input
                                             type="time"
                                             list="time-options"
                                             value={scheduleData[day.key].start}
                                             onChange={(e) => setScheduleData({ ...scheduleData, [day.key]: { ...scheduleData[day.key], start: e.target.value } })}
+                                            className="w-24 sm:w-auto flex-1"
                                         />
                                         <span>-</span>
                                         <Input
@@ -530,6 +532,7 @@ export const Settings = () => {
                                             list="time-options"
                                             value={scheduleData[day.key].end}
                                             onChange={(e) => setScheduleData({ ...scheduleData, [day.key]: { ...scheduleData[day.key], end: e.target.value } })}
+                                            className="w-24 sm:w-auto flex-1"
                                         />
                                     </div>
 
@@ -537,25 +540,25 @@ export const Settings = () => {
                                     {(scheduleData[day.key].breaks || []).length > 0 && (
                                         <div className="space-y-2 pl-2 border-l-2 border-muted">
                                             {scheduleData[day.key].breaks.map((brk, idx) => (
-                                                <div key={idx} className="flex gap-2 items-center">
-                                                    <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
+                                                <div key={idx} className="flex flex-wrap gap-2 items-center bg-background p-1 rounded-md border border-transparent hover:border-border transition-colors">
+                                                    <Clock className="w-4 h-4 text-muted-foreground shrink-0 hidden sm:block" />
                                                     <Input
                                                         type="time"
-                                                        className="w-24"
+                                                        className="w-20 lg:w-24 flex-1 h-8"
                                                         value={brk.start}
                                                         onChange={(e) => updateBreak(day.key, idx, 'start', e.target.value)}
                                                     />
                                                     <span className="text-sm">-</span>
                                                     <Input
                                                         type="time"
-                                                        className="w-24"
+                                                        className="w-20 lg:w-24 flex-1 h-8"
                                                         value={brk.end}
                                                         onChange={(e) => updateBreak(day.key, idx, 'end', e.target.value)}
                                                     />
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
-                                                        className="h-8 w-8 p-0 text-destructive"
+                                                        className="h-8 w-8 p-0 text-destructive shrink-0"
                                                         onClick={() => removeBreak(day.key, idx)}
                                                     >
                                                         <Trash2 className="w-4 h-4" />
