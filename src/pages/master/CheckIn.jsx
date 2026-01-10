@@ -6,13 +6,12 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { QrCode, Search, User, Clock, Scissors, CheckCircle, Play, ArrowLeft, Camera, AlertTriangle, X, Calendar, Share2 } from 'lucide-react';
 import { format, isToday, parseISO } from 'date-fns';
-import { locale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { ClientQRScanner } from '@/components/features/ClientQRScanner';
 import { QRCodeSVG } from 'qrcode.react';
 
 export const CheckIn = () => {
-    const { t, language, appointments, services, updateAppointment, addNotification, salonSettings } = useStore();
+    const { t, language, locale, appointments, services, updateAppointment, addNotification, salonSettings } = useStore();
     const navigate = useNavigate();
 
     const [code, setCode] = React.useState('');
@@ -312,7 +311,7 @@ export const CheckIn = () => {
                         <div className="bg-yellow-500/20 rounded-lg p-3 text-sm">
                             <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-400 font-medium">
                                 <Calendar className="w-4 h-4" />
-                                {t('checkin.scheduledFor', { date: format(parseISO(foundAppointment.date), 'dd MMMM yyyy', { locale: (typeof locale === 'function' ? locale() : locale) }) })}
+                                {t('checkin.scheduledFor', { date: format(parseISO(foundAppointment.date), 'dd MMMM yyyy', { locale: locale() }) })}
                             </div>
                         </div>
 
