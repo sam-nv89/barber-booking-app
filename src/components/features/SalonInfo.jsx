@@ -139,36 +139,53 @@ export const SalonInfo = ({ showClock = false, className }) => {
                 <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-indigo-500/10 via-transparent to-purple-500/10 pointer-events-none" />
 
                 <div className="px-5 py-4 relative z-10">
-                    <div className="flex items-center justify-between gap-3 relative min-h-[50px]">
-                        {/* Salon info - left */}
-                        <div className="flex items-center gap-3 min-w-0 flex-1 z-20">
-                            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center shrink-0 shadow-lg group cursor-pointer">
-                                <IconComponent className={cn("w-5 h-5 text-white/90", animation)} />
+                    <div className="flex flex-col sm:flex-row items-center sm:justify-between gap-4 sm:gap-3 relative min-h-[50px]">
+
+                        {/* Top Row on Mobile: Salon Info + Date Icon */}
+                        <div className="w-full flex items-center justify-between sm:w-auto sm:flex-1 sm:justify-start gap-3">
+                            {/* Salon info - left */}
+                            <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center shrink-0 shadow-lg group cursor-pointer">
+                                    <IconComponent className={cn("w-5 h-5 text-white/90", animation)} />
+                                </div>
+                                <div className="min-w-0">
+                                    <h3 className="font-bold text-lg leading-tight truncate tracking-tight">{name || 'Салон'}</h3>
+                                    {address && (
+                                        <p className="text-xs text-white/60 flex items-center gap-1.5 truncate mt-1 font-medium uppercase tracking-widest">
+                                            <MapPin className="w-3.5 h-3.5 shrink-0" />
+                                            <span className="truncate">{address}</span>
+                                        </p>
+                                    )}
+                                </div>
                             </div>
-                            <div className="min-w-0">
-                                <h3 className="font-bold text-lg leading-tight truncate tracking-tight">{name || 'Салон'}</h3>
-                                {address && (
-                                    <p className="text-xs text-white/60 flex items-center gap-1.5 truncate mt-1 font-medium uppercase tracking-widest">
-                                        <MapPin className="w-3.5 h-3.5 shrink-0" />
-                                        <span className="truncate">{address}</span>
-                                    </p>
-                                )}
-                            </div>
+
+                            {/* Date info - visible only on mobile here (optional, or keeping layout consistent) */}
+                            {/* Actually, let's keep Date on the right for Desktop, and maybe show just icon on mobile right? */}
+                            {/* For now, let's stick to the plan: Stack Clock below */}
+                            {showClock && (
+                                <div className="sm:hidden w-11 h-11 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center shrink-0 shadow-lg">
+                                    <CalendarIcon className="w-5 h-5 text-white/90" />
+                                </div>
+                            )}
                         </div>
 
-                        {/* Clock - absolute center */}
+                        {/* Clock - Stacked on Mobile, Centered on Desktop */}
                         {showClock && (
-                            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center z-10 pointer-events-none">
-                                <div className="text-5xl font-bold tabular-nums tracking-tighter leading-none bg-gradient-to-b from-white to-white/80 bg-clip-text text-transparent drop-shadow-sm">
+                            <div className="text-center z-10 sm:absolute sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2">
+                                <div className="text-5xl sm:text-5xl font-bold tabular-nums tracking-tighter leading-none bg-gradient-to-b from-white to-white/80 bg-clip-text text-transparent drop-shadow-sm">
                                     {format(time, 'HH:mm')}
+                                </div>
+                                {/* Date text below clock on mobile? */}
+                                <div className="sm:hidden text-xs text-white/60 mt-1 uppercase tracking-widest font-medium">
+                                    {format(time, 'd MMM, EEEE', { locale: locale() })}
                                 </div>
                             </div>
                         )}
 
-                        {/* Date info - right (Symmetrical to left) */}
+                        {/* Date info - Desktop Right */}
                         {showClock && (
-                            <div className="flex items-center gap-3 min-w-0 flex-1 justify-end z-20 text-right">
-                                <div className="min-w-0 hidden sm:flex flex-col items-center">
+                            <div className="hidden sm:flex items-center gap-3 min-w-0 flex-1 justify-end z-20 text-right">
+                                <div className="min-w-0 flex flex-col items-center">
                                     <h3 className="font-bold text-lg leading-tight truncate tracking-tight">
                                         {format(time, 'd MMMM yyyy', { locale: locale() })}
                                     </h3>
