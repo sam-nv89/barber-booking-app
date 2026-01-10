@@ -195,6 +195,7 @@ export const TRANSLATIONS = {
             clientScansMaster: 'Клиент сканирует мастера',
             bothModes: 'Оба варианта',
             checkinModeDesc: 'Выберите, кто инициирует регистрацию прихода',
+            checkinDisabled: 'Отключено (без QR)',
         },
         analytics: {
             title: 'Аналитика',
@@ -441,6 +442,8 @@ export const TRANSLATIONS = {
         },
         checkin: {
             title: 'Регистрация прихода',
+            disabledTitle: 'Check-in отключен',
+            disabledDesc: 'В настройках салона отключена система QR регистрации.',
             enterCode: 'Введите код клиента',
             find: 'Найти',
             minChars: 'Введите минимум 4 символа',
@@ -676,6 +679,7 @@ export const TRANSLATIONS = {
             clientScansMaster: 'Клиент шеберді сканерлейді',
             bothModes: 'Екі нұсқа да',
             checkinModeDesc: 'Келуді кім тіркейтінін таңдаңыз',
+            checkinDisabled: 'Өшірілген (QR-сыз)',
         },
         analytics: {
             title: 'Аналитика',
@@ -1174,6 +1178,7 @@ export const TRANSLATIONS = {
             clientScansMaster: 'Client scans master',
             bothModes: 'Both modes',
             checkinModeDesc: 'Choose who initiates arrival registration',
+            checkinDisabled: 'Disabled (No QR)',
         },
         // Analytics page translations - updated 2025-12-31
         analytics: {
@@ -1421,6 +1426,8 @@ export const TRANSLATIONS = {
         },
         checkin: {
             title: 'Check-in',
+            disabledTitle: 'Check-in Disabled',
+            disabledDesc: 'QR check-in system is disabled in salon settings.',
             enterCode: 'Enter client code',
             find: 'Find',
             minChars: 'Enter at least 4 characters',
@@ -1685,6 +1692,15 @@ export const TRANSLATIONS = {
             busy: 'Ocupado',
         },
         visits: {
+            assignMaster: 'Asignar especialista',
+            selectMaster: 'Especialista',
+            noMasters: 'No hay especialistas disponibles',
+            unassigned: 'Sin asignar',
+            autoAssign: 'Asignar automáticamente',
+            confirmAssignment: 'Confirmar asignación',
+            busy: 'Ocupado',
+        },
+        visits: {
             upcoming: 'Próximas',
             past: 'Pasadas',
             noRecords: 'No hay reservas',
@@ -1811,6 +1827,8 @@ export const TRANSLATIONS = {
         },
         checkin: {
             title: 'Check-in',
+            disabledTitle: 'Check-in Desactivado',
+            disabledDesc: 'El sistema de registro QR está desactivado en la configuración.',
             enterCode: 'Ingrese código del cliente',
             find: 'Buscar',
             minChars: 'Ingrese al menos 4 caracteres',
@@ -1909,6 +1927,7 @@ export const TRANSLATIONS = {
             clientScansMaster: 'Cliente escanea especialista',
             bothModes: 'Ambos modos',
             checkinModeDesc: 'Elija quién inicia el registro de llegada',
+            checkinDisabled: 'Desactivado (Sin QR)',
         },
         analyticsTooltips: {
             completed: 'Completadas',
@@ -2335,6 +2354,8 @@ export const TRANSLATIONS = {
         },
         checkin: {
             title: 'Giriş',
+            disabledTitle: 'Check-in Devre Dışı',
+            disabledDesc: 'Salon ayarlarında QR kayıt sistemi devre dışı bırakıldı.',
             enterCode: 'Müşteri kodunu girin',
             find: 'Bul',
             minChars: 'En az 4 karakter girin',
@@ -2431,6 +2452,7 @@ export const TRANSLATIONS = {
             clientScansMaster: 'Müşteri uzmanı tarar',
             bothModes: 'Her iki mod',
             checkinModeDesc: 'Varış kaydını kimin başlatacağını seçin',
+            checkinDisabled: 'Devre Dışı (QR yok)',
         },
         analyticsTooltips: {
             completed: 'Tamamlanan',
