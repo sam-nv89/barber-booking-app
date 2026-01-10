@@ -7,7 +7,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Chat } from '@/components/features/Chat';
 import { FeedbackModal } from '@/components/features/FeedbackModal';
 import { SalonInfo } from '@/components/features/SalonInfo';
-import { MessageCircle, Star, Calendar, Clock, Pencil, QrCode } from 'lucide-react';
+import { MessageCircle, Star, Calendar, Clock, Pencil, QrCode, User } from 'lucide-react';
 import { BookingQRCode } from '@/components/features/BookingQRCode';
 import { ClientQRScanner } from '@/components/features/ClientQRScanner';
 import { SuccessAnimation } from '@/components/features/SuccessAnimation';
@@ -200,6 +200,12 @@ export const Visits = () => {
                                     <div className="flex items-center gap-2 text-foreground/80">
                                         <Clock className="w-4 h-4 text-primary" />
                                         <span className="text-base">{app.time}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-foreground/80">
+                                        <User className="w-4 h-4 text-primary" />
+                                        <span className="text-base">
+                                            {app.masterName || (app.masterId ? useStore.getState().getMasters().find(m => (m.tgUserId || m.id) === app.masterId)?.name : t('booking.anyMaster'))}
+                                        </span>
                                     </div>
                                 </div>
 

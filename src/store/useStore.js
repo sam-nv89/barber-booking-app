@@ -693,6 +693,47 @@ export const useStore = create(
                     unreadChanges = true;
                 }
 
+                // Detect master assignment (was null/unassigned, now has ID)
+                if (updates.masterId && !app.masterId && updates.masterId !== app.masterId) {
+                    const master = get().getMasters().find(m => (m.tgUserId || m.id) === updates.masterId);
+                    const masterName = master?.name || updates.masterName || 'Специалист';
+
+                    // 1. Notify Client about Master Assignment
+                    notifications = [{
+                        id: Date.now().toString() + '_assign',
+                        type: 'info',
+                        recipient: 'client',
+                        appointmentId: id,
+                        titleKey: 'notifications.masterAssignedTitle',
+                        messageKey: 'notifications.masterAssignedMessage',
+                        params: { masterName: masterName, date: app.date, time: app.time },
+
+                        title: 'Назначен специалист',
+                        message: `На вашу запись назначен специалист: ${masterName}`,
+                        date: new Date().toISOString(),
+                        read: false
+                    }, ...notifications];
+
+                    // 2. If status is also becoming confirmed (or already is), send confirmation if not sent yet
+                    // This handles the "Any Master -> Assigned & Confirmed" flow
+                    if ((updates.status === 'confirmed' || app.status === 'confirmed') && !notifications.some(n => n.type === 'confirmed' && n.appointmentId === id)) {
+                        notifications = [{
+                            id: Date.now().toString() + '_conf',
+                            type: 'confirmed',
+                            recipient: 'client',
+                            appointmentId: id,
+                            titleKey: 'notifications.confirmedTitle',
+                            messageKey: 'notifications.confirmedMessage',
+                            params: { date: app.date, time: app.time },
+
+                            title: 'Запись подтверждена',
+                            message: `Ваша запись на ${app.date} в ${app.time} подтверждена!`,
+                            date: new Date().toISOString(),
+                            read: false
+                        }, ...notifications];
+                    }
+                }
+
                 // If explicitly setting unreadChanges (e.g. clearing it), use that value
                 if (updates.unreadChanges !== undefined) {
                     unreadChanges = updates.unreadChanges;
