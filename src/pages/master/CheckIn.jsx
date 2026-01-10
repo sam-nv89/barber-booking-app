@@ -6,12 +6,13 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { QrCode, Search, User, Clock, Scissors, CheckCircle, Play, ArrowLeft, Camera, AlertTriangle, X, Calendar, Share2 } from 'lucide-react';
 import { format, isToday, parseISO } from 'date-fns';
+import { locale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
-import { Html5QrcodeScanner, Html5QrcodeScanType } from 'html5-qrcode';
+import { ClientQRScanner } from '@/components/features/ClientQRScanner';
 import { QRCodeSVG } from 'qrcode.react';
 
 export const CheckIn = () => {
-    const { t, language, locale, appointments, services, updateAppointment, addNotification, salonSettings } = useStore();
+    const { t, language, appointments, services, updateAppointment, addNotification, salonSettings } = useStore();
     const navigate = useNavigate();
 
     const [code, setCode] = React.useState('');
@@ -21,8 +22,6 @@ export const CheckIn = () => {
     const [processing, setProcessing] = React.useState(false);
     const [showScanner, setShowScanner] = React.useState(false);
     const [showMasterQR, setShowMasterQR] = React.useState(false);
-    const scannerRef = React.useRef(null);
-    const scannerContainerId = 'qr-scanner-container';
 
     // Check-in mode from settings (default: master scans client)
     const checkinMode = salonSettings?.checkinMode || 'master_scans';
@@ -127,71 +126,6 @@ export const CheckIn = () => {
         setIsOtherDay(false);
     };
 
-    // QR Scanner using html5-qrcode
-    const startScanner = () => {
-        setShowScanner(true);
-    };
-
-    const stopScanner = () => {
-        if (scannerRef.current) {
-            scannerRef.current.clear().catch(console.error);
-            scannerRef.current = null;
-        }
-        setShowScanner(false);
-    };
-
-    // Initialize scanner when modal opens
-    React.useEffect(() => {
-        if (showScanner && !scannerRef.current) {
-            // Wait for DOM element to be rendered
-            const timeoutId = setTimeout(() => {
-                try {
-                    const containerElement = document.getElementById(scannerContainerId);
-                    if (!containerElement) {
-                        console.error('QR scanner container not found');
-                        return;
-                    }
-
-                    const scanner = new Html5QrcodeScanner(
-                        scannerContainerId,
-                        {
-                            fps: 10,
-                            qrbox: { width: 250, height: 250 },
-                            supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
-                            rememberLastUsedCamera: true,
-                        },
-                        false // verbose
-                    );
-
-                    scanner.render(
-                        (decodedText) => {
-                            // Success - QR code scanned
-                            setCode(decodedText);
-                            stopScanner();
-                            handleSearch(decodedText);
-                        },
-                        (errorMessage) => {
-                            // Scanning in progress, ignore errors
-                        }
-                    );
-
-                    scannerRef.current = scanner;
-                } catch (error) {
-                    console.error('Failed to initialize QR scanner:', error);
-                }
-            }, 100); // Small delay to ensure DOM is ready
-
-            return () => clearTimeout(timeoutId);
-        }
-
-        return () => {
-            if (scannerRef.current) {
-                scannerRef.current.clear().catch(console.error);
-                scannerRef.current = null;
-            }
-        };
-    }, [showScanner]);
-
     // Generate Master QR code for clients to scan
     const masterQRValue = React.useMemo(() => {
         // Simple format: barber://checkin/<master_id>/<timestamp>
@@ -200,6 +134,27 @@ export const CheckIn = () => {
     }, [salonSettings]);
 
     const service = foundAppointment ? services.find(s => s.id === foundAppointment.serviceId) : null;
+
+    if (checkinMode === 'disabled') {
+        return (
+            <div className="space-y-6 pb-20 pt-10 text-center">
+                <div className="flex justify-center">
+                    <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center">
+                        <QrCode className="h-10 w-10 text-muted-foreground" />
+                    </div>
+                </div>
+                <div>
+                    <h2 className="text-xl font-bold">{t('checkin.disabledTitle') || 'Check-in отключен'}</h2>
+                    <p className="text-muted-foreground mt-2 max-w-xs mx-auto">
+                        {t('checkin.disabledDesc') || 'В настройках салона отключена система QR регистрации.'}
+                    </p>
+                </div>
+                <Button onClick={() => navigate(-1)} variant="outline">
+                    {t('common.back')}
+                </Button>
+            </div>
+        )
+    }
 
     return (
         <div className="space-y-6 pb-20">
@@ -276,7 +231,7 @@ export const CheckIn = () => {
                                 maxLength={8}
                                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                             />
-                            <Button variant="outline" size="icon" onClick={startScanner} title={t('checkin.scanQR')}>
+                            <Button variant="outline" size="icon" onClick={() => setShowScanner(true)} title={t('checkin.scanQR')}>
                                 <Camera className="w-5 h-5" />
                             </Button>
                             <Button onClick={() => handleSearch()} disabled={code.length < 4}>
@@ -294,25 +249,17 @@ export const CheckIn = () => {
                 </Card>
             )}
 
-            {/* Camera Scanner Modal */}
+            {/* Reused Client Scanner Component */}
             {showScanner && (
-                <div className="fixed inset-0 z-50 bg-black/90 flex flex-col">
-                    <div className="flex justify-between items-center p-4">
-                        <h2 className="text-white font-bold">{t('checkin.scanQR')}</h2>
-                        <Button variant="ghost" size="icon" onClick={stopScanner}>
-                            <X className="w-6 h-6 text-white" />
-                        </Button>
-                    </div>
-                    <div className="flex-1 flex items-center justify-center p-4">
-                        <div
-                            id={scannerContainerId}
-                            className="w-full max-w-md"
-                        />
-                    </div>
-                    <div className="p-4 text-center text-white/70 text-sm">
-                        {t('checkin.pointCamera')}
-                    </div>
-                </div>
+                <ClientQRScanner
+                    onClose={() => setShowScanner(false)}
+                    onScan={(decodedText) => {
+                        setCode(decodedText);
+                        setShowScanner(false);
+                        handleSearch(decodedText);
+                    }}
+                    t={t}
+                />
             )}
 
             {/* Found appointment - Today */}
@@ -365,7 +312,7 @@ export const CheckIn = () => {
                         <div className="bg-yellow-500/20 rounded-lg p-3 text-sm">
                             <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-400 font-medium">
                                 <Calendar className="w-4 h-4" />
-                                {t('checkin.scheduledFor', { date: format(parseISO(foundAppointment.date), 'dd MMMM yyyy', { locale: locale() }) })}
+                                {t('checkin.scheduledFor', { date: format(parseISO(foundAppointment.date), 'dd MMMM yyyy', { locale: (typeof locale === 'function' ? locale() : locale) }) })}
                             </div>
                         </div>
 

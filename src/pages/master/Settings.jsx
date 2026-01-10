@@ -238,6 +238,7 @@ export const Settings = () => {
                                 <option value="master_scans">{t('settings.masterScansClient') || 'Мастер сканирует клиента'}</option>
                                 <option value="client_scans">{t('settings.clientScansMaster') || 'Клиент сканирует мастера'}</option>
                                 <option value="both">{t('settings.bothModes') || 'Оба варианта'}</option>
+                                <option value="disabled">{t('settings.checkinDisabled') || 'Отключено (без QR)'}</option>
                             </select>
                             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50 group-hover:text-foreground transition-colors pointer-events-none" />
                         </div>

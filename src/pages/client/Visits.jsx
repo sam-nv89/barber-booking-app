@@ -141,7 +141,7 @@ export const Visits = () => {
             <div className="flex justify-between items-center">
                 <h1 className="text-2xl font-bold">{t('nav.visits')}</h1>
                 {/* Scan Master QR Button - only show if checkinMode is 'client_scans' or 'both' */}
-                {(salonSettings?.checkinMode === 'client_scans' || salonSettings?.checkinMode === 'both') && (
+                {(salonSettings?.checkinMode === 'client_scans' || salonSettings?.checkinMode === 'both') && salonSettings?.checkinMode !== 'disabled' && (
                     <Button
                         variant="outline"
                         size="sm"
@@ -276,7 +276,7 @@ export const Visits = () => {
                                         >
                                             {t('clientVisits.cancel')}
                                         </Button>
-                                        {app.status === 'confirmed' && (
+                                        {app.status === 'confirmed' && salonSettings?.checkinMode !== 'disabled' && (
                                             <Button
                                                 variant="outline"
                                                 size="sm"

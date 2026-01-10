@@ -1008,10 +1008,12 @@ export const Records = () => {
             <div className="flex justify-between items-center">
                 <h1 className="text-2xl font-bold">{t('nav.records')}</h1>
                 <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => navigate('/master/checkin')}>
-                        <QrCode className="w-4 h-4 mr-2" />
-                        Check-in
-                    </Button>
+                    {salonSettings?.checkinMode !== 'disabled' && (
+                        <Button size="sm" variant="outline" onClick={() => navigate('/master/checkin')}>
+                            <QrCode className="w-4 h-4 mr-2" />
+                            Check-in
+                        </Button>
+                    )}
                     <Button size="sm" onClick={() => setIsBookingModalOpen(true)}>
                         <Plus className="w-4 h-4 mr-2" />
                         {t('records.addAppointment')}
