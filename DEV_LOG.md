@@ -45,3 +45,17 @@ This file tracks the detailed implementation history of the project.
 
 ### Next Steps
 *   Monitor user feedback on chart performance on older devices.
+
+---
+
+## [2026-01-11] - Master Studio Header Update
+**Status:** ✅ Completed
+
+### Changes
+*   **`src/pages/master/Dashboard.jsx`**: Replaced legacy `ClockWidget` with `SalonInfo` (with clock enabled).
+     *   This unifies the design with the Client interface (Booking Wizard header).
+*   **`src/components/features/ClockWidget.jsx`**: Deleted unused component.
+
+### Technical Details
+*   Reused `SalonInfo` component to ensure visual consistency between Client and Master views.
+*   Enabled `showClock` prop on `SalonInfo` for the live digital clock.

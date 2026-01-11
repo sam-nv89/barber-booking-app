@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useStore } from '@/store/useStore';
-import { ClockWidget } from '@/components/features/ClockWidget';
+import { SalonInfo } from '@/components/features/SalonInfo';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Users, CreditCard, CalendarCheck, XCircle, Clock, Star } from 'lucide-react';
 import { format, isSameMonth, isSameWeek, parseISO } from 'date-fns';
@@ -117,7 +117,7 @@ export const Dashboard = () => {
         <div className="space-y-6 pb-20">
             <h1 className="text-2xl font-bold">{t('nav.studio')}</h1>
 
-            <ClockWidget />
+            <SalonInfo showClock />
 
             {/* Period Filter */}
             <div className="flex p-1 bg-muted rounded-lg w-full">
