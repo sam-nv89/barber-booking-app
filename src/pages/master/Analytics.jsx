@@ -399,21 +399,24 @@ export const Analytics = () => {
                 const yLabels = [niceMax, niceMax * 0.75, niceMax * 0.5, niceMax * 0.25, 0];
                 const chartHeight = 180;
 
-                // Full number format with currency, only abbreviate for billions
+                // Compact number format with currency for Y-axis (K/M/B abbreviations)
                 const formatYLabel = (val) => {
-                    if (val >= 1000000000) return `${(val / 1000000000).toFixed(1)} млрд ${salonSettings?.currency || '₸'}`;
-                    if (val === 0) return `0 ${salonSettings?.currency || '₸'}`;
-                    return `${formatPrice(val)} ${salonSettings?.currency || '₸'}`;
+                    const currency = salonSettings?.currency || '₸';
+                    if (val >= 1000000000) return `${(val / 1000000000).toFixed(1)}B ${currency}`;
+                    if (val >= 1000000) return `${(val / 1000000).toFixed(1)}M ${currency}`;
+                    if (val >= 1000) return `${Math.round(val / 1000)}K ${currency}`;
+                    if (val === 0) return `0 ${currency}`;
+                    return `${val} ${currency}`;
                 };
                 return (
-                    <Card className="overflow-hidden">
+                    <Card className="overflow-visible">
                         <CardHeader className="pb-4">
                             <div className="flex items-start justify-between">
                                 <CardTitle className="text-base flex items-center gap-2">
                                     📈 {period === 'all' ? analyticsT.revenueByMonth : analyticsT.revenueByDay}
                                 </CardTitle>
                                 {/* Always visible data block - shows placeholder or hovered data */}
-                                <div className="text-sm text-right">
+                                <div className="text-xs text-right whitespace-nowrap">
                                     {hoveredData && revenueByPeriod[hoveredData.index] ? (() => {
                                         const currentRevenue = hoveredData.revenue;
                                         const previousRevenue = hoveredData.index > 0 ? revenueByPeriod[hoveredData.index - 1].revenue : 0;
@@ -433,8 +436,8 @@ export const Analytics = () => {
                                                 <div className="text-muted-foreground">
                                                     👥 {analyticsT.clientsCount}: <span className="font-medium text-foreground">{revenueByPeriod[hoveredData.index].clients.toLocaleString(language)}</span>
                                                 </div>
-                                                <div className="text-muted-foreground flex items-center justify-end gap-2">
-                                                    💰 {analyticsT.revenue}: <span className="font-medium text-green-600">{hoveredData.revenue.toLocaleString(language)} {salonSettings?.currency || '₸'}</span>
+                                                <div className="text-muted-foreground flex items-center justify-end gap-1 flex-wrap">
+                                                    💰 <span className="font-medium text-green-600">{formatPrice(hoveredData.revenue)}{salonSettings?.currency || '₸'}</span>
                                                     <span className={`text-xs font-semibold ${changeColor}`}>{changeText}</span>
                                                 </div>
                                             </>
@@ -449,8 +452,8 @@ export const Analytics = () => {
                                 </div>
                             </div>
                         </CardHeader>
-                        <CardContent className="overflow-hidden">
-                            <div className="flex overflow-hidden">
+                        <CardContent className="overflow-visible py-3">
+                            <div className="flex">
                                 {/* Y-axis labels - positioned exactly on grid lines */}
                                 <div className="relative shrink-0 text-right pr-3 overflow-visible" style={{ width: '110px', height: `${chartHeight}px` }}>
                                     {yLabels.map((val, idx) => {
@@ -462,7 +465,7 @@ export const Analytics = () => {
                                         return (
                                             <span
                                                 key={idx}
-                                                className={`absolute right-3 text-sm text-muted-foreground font-medium transition-opacity whitespace-nowrap ${isClose ? 'opacity-0' : 'opacity-100'}`}
+                                                className={`absolute right-3 text-xs text-muted-foreground font-medium transition-opacity whitespace-nowrap ${isClose ? 'opacity-0' : 'opacity-100'}`}
                                                 style={{
                                                     top: `${labelPercent}%`,
                                                     transform: 'translateY(-50%)'
@@ -475,7 +478,7 @@ export const Analytics = () => {
                                     {/* Dynamic hover value - semi-transparent */}
                                     {hoveredData && (
                                         <span
-                                            className="absolute right-3 text-sm font-medium text-indigo-400 z-20 whitespace-nowrap"
+                                            className="absolute right-3 text-xs font-medium text-indigo-400 z-20 whitespace-nowrap"
                                             style={{
                                                 top: `${100 - hoveredData.heightPercent}%`,
                                                 transform: 'translateY(-50%)'
