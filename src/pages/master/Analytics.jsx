@@ -584,9 +584,9 @@ export const Analytics = () => {
                                                     style={{ filter: 'drop-shadow(0 1px 2px rgba(99, 102, 241, 0.3))' }}
                                                 />
                                             </svg>
-                                            {/* HTML overlay for tooltips - single div with mouse tracking */}
+                                            {/* HTML overlay for tooltips - single div with mouse/touch tracking */}
                                             <div
-                                                className="absolute inset-0 overflow-visible cursor-pointer"
+                                                className="absolute inset-0 overflow-visible cursor-pointer touch-none"
                                                 onMouseMove={(e) => {
                                                     const rect = e.currentTarget.getBoundingClientRect();
                                                     const x = e.clientX - rect.left;
@@ -599,6 +599,31 @@ export const Analytics = () => {
                                                     setHoveredData({ index: clampedIndex, revenue: item.revenue, heightPercent });
                                                 }}
                                                 onMouseLeave={() => setHoveredData(null)}
+                                                onTouchStart={(e) => {
+                                                    const touch = e.touches[0];
+                                                    const rect = e.currentTarget.getBoundingClientRect();
+                                                    const x = touch.clientX - rect.left;
+                                                    const totalWidth = rect.width;
+                                                    const segmentWidth = totalWidth / revenueByPeriod.length;
+                                                    const index = Math.floor(x / segmentWidth);
+                                                    const clampedIndex = Math.max(0, Math.min(revenueByPeriod.length - 1, index));
+                                                    const item = revenueByPeriod[clampedIndex];
+                                                    const heightPercent = niceMax > 0 ? (item.revenue / niceMax) * 100 : 0;
+                                                    setHoveredData({ index: clampedIndex, revenue: item.revenue, heightPercent });
+                                                }}
+                                                onTouchMove={(e) => {
+                                                    const touch = e.touches[0];
+                                                    const rect = e.currentTarget.getBoundingClientRect();
+                                                    const x = touch.clientX - rect.left;
+                                                    const totalWidth = rect.width;
+                                                    const segmentWidth = totalWidth / revenueByPeriod.length;
+                                                    const index = Math.floor(x / segmentWidth);
+                                                    const clampedIndex = Math.max(0, Math.min(revenueByPeriod.length - 1, index));
+                                                    const item = revenueByPeriod[clampedIndex];
+                                                    const heightPercent = niceMax > 0 ? (item.revenue / niceMax) * 100 : 0;
+                                                    setHoveredData({ index: clampedIndex, revenue: item.revenue, heightPercent });
+                                                }}
+                                                onTouchEnd={() => setHoveredData(null)}
                                             >
                                                 {/* Vertical hover highlight */}
                                                 {hoveredData && (
@@ -651,7 +676,34 @@ export const Analytics = () => {
                                         </>
                                     ) : (
                                         /* Bar chart for other periods */
-                                        <div className="flex items-end gap-1 h-full relative z-10 px-1">
+                                        <div
+                                            className="flex items-end gap-1 h-full relative z-10 px-1 touch-none"
+                                            onTouchStart={(e) => {
+                                                const touch = e.touches[0];
+                                                const rect = e.currentTarget.getBoundingClientRect();
+                                                const x = touch.clientX - rect.left;
+                                                const totalWidth = rect.width;
+                                                const segmentWidth = totalWidth / revenueByPeriod.length;
+                                                const index = Math.floor(x / segmentWidth);
+                                                const clampedIndex = Math.max(0, Math.min(revenueByPeriod.length - 1, index));
+                                                const item = revenueByPeriod[clampedIndex];
+                                                const heightPercent = niceMax > 0 ? (item.revenue / niceMax) * 100 : 0;
+                                                setHoveredData({ index: clampedIndex, revenue: item.revenue, heightPercent });
+                                            }}
+                                            onTouchMove={(e) => {
+                                                const touch = e.touches[0];
+                                                const rect = e.currentTarget.getBoundingClientRect();
+                                                const x = touch.clientX - rect.left;
+                                                const totalWidth = rect.width;
+                                                const segmentWidth = totalWidth / revenueByPeriod.length;
+                                                const index = Math.floor(x / segmentWidth);
+                                                const clampedIndex = Math.max(0, Math.min(revenueByPeriod.length - 1, index));
+                                                const item = revenueByPeriod[clampedIndex];
+                                                const heightPercent = niceMax > 0 ? (item.revenue / niceMax) * 100 : 0;
+                                                setHoveredData({ index: clampedIndex, revenue: item.revenue, heightPercent });
+                                            }}
+                                            onTouchEnd={() => setHoveredData(null)}
+                                        >
                                             {revenueByPeriod.map((item, i) => {
                                                 const heightPx = niceMax > 0
                                                     ? Math.max(Math.round((item.revenue / niceMax) * chartHeight), item.revenue > 0 ? 6 : 0)
