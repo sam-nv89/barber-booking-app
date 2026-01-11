@@ -117,7 +117,7 @@ export const Dashboard = () => {
         <div className="space-y-6 pb-20">
             <h1 className="text-2xl font-bold">{t('nav.studio')}</h1>
 
-            <SalonInfo showClock hideActions />
+            <SalonInfo showClock hideActions compact />
 
             {/* Period Filter */}
             <div className="flex p-1 bg-muted rounded-lg w-full">

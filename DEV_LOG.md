@@ -59,3 +59,7 @@ This file tracks the detailed implementation history of the project.
 ### Technical Details
 *   Reused `SalonInfo` component for visual consistency.
 *   Passed `hideActions={true}` in Dashboard to remove "Contact" and "Directions" sections, keeping only the clock and salon identity.
+
+### UI Refinements (Compact Mode)
+*   **`src/components/features/SalonInfo.jsx`**: Added `compact` prop to reduce padding and adjust font sizes for a sleeker look.
+*   **`src/pages/master/Dashboard.jsx`**: Enabled `compact` mode for the studio header.
