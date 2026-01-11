@@ -176,7 +176,14 @@ export const Dashboard = () => {
             {chartData.length > 0 && (
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between">
-                        <CardTitle className="text-lg">{t('dashboard.dynamics')}</CardTitle>
+                        <div>
+                            <CardTitle className="text-base">
+                                📊 {t('dashboard.dynamics')}
+                            </CardTitle>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                                ✓ {period === 'week' ? t('dashboard.week') : period === 'month' ? t('dashboard.month') : t('dashboard.all')}
+                            </p>
+                        </div>
                         {hoveredChartIndex !== null && chartData[hoveredChartIndex] && (
                             <div className="text-xs text-right whitespace-nowrap">
                                 <span className="font-semibold text-foreground">
