@@ -178,31 +178,33 @@ export const Dashboard = () => {
                         <CardTitle className="text-lg">{t('dashboard.dynamics')}</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="flex items-end justify-between h-32 gap-2 mt-2">
-                            {chartData.map((d) => (
-                                <div key={d.date} className="flex flex-col items-center justify-end flex-1 h-full gap-2 group">
-                                    <div className="text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity mb-auto">{d.count}</div>
-                                    <div
-                                        className="w-full bg-primary/20 rounded-t-sm hover:bg-primary/40 transition-colors relative group"
-                                        style={{ height: `${(d.count / maxChartValue) * 100}%` }}
-                                    >
+                        <div className="overflow-x-auto -mx-2 px-2">
+                            <div className="flex items-end justify-between h-32 gap-1 mt-2" style={{ minWidth: chartData.length > 10 ? `${chartData.length * 28}px` : 'auto' }}>
+                                {chartData.map((d) => (
+                                    <div key={d.date} className="flex flex-col items-center justify-end flex-1 h-full gap-2 group">
+                                        <div className="text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity mb-auto">{d.count}</div>
+                                        <div
+                                            className="w-full bg-primary/20 rounded-t-sm hover:bg-primary/40 transition-colors relative group"
+                                            style={{ height: `${(d.count / maxChartValue) * 100}%` }}
+                                        >
+                                        </div>
+                                        <div className="text-xs text-muted-foreground rotate-0 whitespace-nowrap">
+                                            {period === 'all'
+                                                ? (() => {
+                                                    const monthDate = parseISO(d.date + '-01');
+                                                    const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+                                                    // Use abbreviated format if many bars (>6), else full format
+                                                    if (chartData.length > 6) {
+                                                        return capitalize(format(monthDate, 'LLL', { locale: locale() })) + ', ' + format(monthDate, 'yy');
+                                                    } else {
+                                                        return capitalize(format(monthDate, 'LLLL', { locale: locale() })) + ', ' + format(monthDate, 'yyyy');
+                                                    }
+                                                })()
+                                                : format(parseISO(d.date), 'dd.MM')}
+                                        </div>
                                     </div>
-                                    <div className="text-xs text-muted-foreground rotate-0 whitespace-nowrap">
-                                        {period === 'all'
-                                            ? (() => {
-                                                const monthDate = parseISO(d.date + '-01');
-                                                const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
-                                                // Use abbreviated format if many bars (>6), else full format
-                                                if (chartData.length > 6) {
-                                                    return capitalize(format(monthDate, 'LLL', { locale: locale() })) + ', ' + format(monthDate, 'yy');
-                                                } else {
-                                                    return capitalize(format(monthDate, 'LLLL', { locale: locale() })) + ', ' + format(monthDate, 'yyyy');
-                                                }
-                                            })()
-                                            : format(parseISO(d.date), 'dd.MM')}
-                                    </div>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
                     </CardContent>
                 </Card>

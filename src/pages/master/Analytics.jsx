@@ -406,11 +406,11 @@ export const Analytics = () => {
                     return `${formatPrice(val)} ${salonSettings?.currency || '₸'}`;
                 };
                 return (
-                    <Card className="overflow-visible">
+                    <Card className="overflow-hidden">
                         <CardHeader className="pb-4">
                             <div className="flex items-start justify-between">
                                 <CardTitle className="text-base flex items-center gap-2">
-                                    📈 {period === 'all' ? t('analytics.revenueByMonth') : t('analytics.revenueByDay')}
+                                    📈 {period === 'all' ? analyticsT.revenueByMonth : analyticsT.revenueByDay}
                                 </CardTitle>
                                 {/* Always visible data block - shows placeholder or hovered data */}
                                 <div className="text-sm text-right">
@@ -449,8 +449,8 @@ export const Analytics = () => {
                                 </div>
                             </div>
                         </CardHeader>
-                        <CardContent className="overflow-visible">
-                            <div className="flex overflow-visible">
+                        <CardContent className="overflow-hidden">
+                            <div className="flex overflow-hidden">
                                 {/* Y-axis labels - positioned exactly on grid lines */}
                                 <div className="relative shrink-0 text-right pr-3" style={{ width: '90px', height: `${chartHeight}px` }}>
                                     {yLabels.map((val, idx) => {
