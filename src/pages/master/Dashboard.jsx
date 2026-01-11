@@ -188,64 +188,132 @@ export const Dashboard = () => {
                                         })()
                                         : format(parseISO(chartData[hoveredChartIndex].date), 'dd.MM.yyyy')}
                                 </span>
-                                <span className="ml-2 text-primary font-bold">{chartData[hoveredChartIndex].count} {t('dashboard.records')}</span>
+                                <span className="ml-2 text-primary font-bold">📋 {chartData[hoveredChartIndex].count}</span>
                             </div>
                         )}
                     </CardHeader>
                     <CardContent>
                         <div className="overflow-x-auto -mx-2 px-2">
                             <div
-                                className="flex items-end justify-between h-32 gap-1 mt-2 touch-none"
-                                style={{ minWidth: chartData.length > 10 ? `${chartData.length * 28}px` : 'auto' }}
-                                onTouchStart={(e) => {
-                                    const touch = e.touches[0];
-                                    const rect = e.currentTarget.getBoundingClientRect();
-                                    const x = touch.clientX - rect.left;
-                                    const totalWidth = rect.width;
-                                    const segmentWidth = totalWidth / chartData.length;
-                                    const index = Math.floor(x / segmentWidth);
-                                    setHoveredChartIndex(Math.max(0, Math.min(chartData.length - 1, index)));
-                                }}
-                                onTouchMove={(e) => {
-                                    const touch = e.touches[0];
-                                    const rect = e.currentTarget.getBoundingClientRect();
-                                    const x = touch.clientX - rect.left;
-                                    const totalWidth = rect.width;
-                                    const segmentWidth = totalWidth / chartData.length;
-                                    const index = Math.floor(x / segmentWidth);
-                                    setHoveredChartIndex(Math.max(0, Math.min(chartData.length - 1, index)));
-                                }}
-                                onTouchEnd={() => setHoveredChartIndex(null)}
+                                className="relative h-36 mt-2 touch-none"
+                                style={{ minWidth: chartData.length > 10 ? `${chartData.length * 32}px` : 'auto' }}
                             >
-                                {chartData.map((d, idx) => (
-                                    <div
-                                        key={d.date}
-                                        className="flex flex-col items-center justify-end flex-1 h-full gap-2 group"
-                                        onMouseEnter={() => setHoveredChartIndex(idx)}
-                                        onMouseLeave={() => setHoveredChartIndex(null)}
-                                    >
-                                        <div className={`text-xs font-bold transition-opacity mb-auto ${hoveredChartIndex === idx ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>{d.count}</div>
+                                {/* SVG Trend Line */}
+                                <svg
+                                    className="absolute inset-0 w-full h-full pointer-events-none z-10"
+                                    viewBox={`0 0 ${chartData.length * 40} 100`}
+                                    preserveAspectRatio="none"
+                                >
+                                    <defs>
+                                        <linearGradient id="trendGradient" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stopColor="rgb(99, 102, 241)" stopOpacity="0.3" />
+                                            <stop offset="100%" stopColor="rgb(99, 102, 241)" stopOpacity="0.05" />
+                                        </linearGradient>
+                                    </defs>
+                                    {/* Area fill */}
+                                    <path
+                                        d={(() => {
+                                            if (chartData.length < 2) return '';
+                                            const points = chartData.map((d, i) => ({
+                                                x: (i + 0.5) * 40,
+                                                y: maxChartValue > 0 ? 100 - (d.count / maxChartValue) * 85 : 85
+                                            }));
+                                            let path = `M${points[0].x},100 L${points[0].x},${points[0].y}`;
+                                            for (let i = 1; i < points.length; i++) {
+                                                path += ` L${points[i].x},${points[i].y}`;
+                                            }
+                                            path += ` L${points[points.length - 1].x},100 Z`;
+                                            return path;
+                                        })()}
+                                        fill="url(#trendGradient)"
+                                    />
+                                    {/* Trend line */}
+                                    <path
+                                        d={(() => {
+                                            if (chartData.length < 2) return '';
+                                            const points = chartData.map((d, i) => ({
+                                                x: (i + 0.5) * 40,
+                                                y: maxChartValue > 0 ? 100 - (d.count / maxChartValue) * 85 : 85
+                                            }));
+                                            let path = `M${points[0].x},${points[0].y}`;
+                                            for (let i = 1; i < points.length; i++) {
+                                                path += ` L${points[i].x},${points[i].y}`;
+                                            }
+                                            return path;
+                                        })()}
+                                        fill="none"
+                                        stroke="rgb(99, 102, 241)"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    />
+                                </svg>
+
+                                {/* Bars container with touch handlers */}
+                                <div
+                                    className="flex items-end h-full gap-1 relative z-20"
+                                    onTouchStart={(e) => {
+                                        const touch = e.touches[0];
+                                        const rect = e.currentTarget.getBoundingClientRect();
+                                        const x = touch.clientX - rect.left;
+                                        const segmentWidth = rect.width / chartData.length;
+                                        const index = Math.floor(x / segmentWidth);
+                                        setHoveredChartIndex(Math.max(0, Math.min(chartData.length - 1, index)));
+                                    }}
+                                    onTouchMove={(e) => {
+                                        const touch = e.touches[0];
+                                        const rect = e.currentTarget.getBoundingClientRect();
+                                        const x = touch.clientX - rect.left;
+                                        const segmentWidth = rect.width / chartData.length;
+                                        const index = Math.floor(x / segmentWidth);
+                                        setHoveredChartIndex(Math.max(0, Math.min(chartData.length - 1, index)));
+                                    }}
+                                    onTouchEnd={() => setHoveredChartIndex(null)}
+                                >
+                                    {chartData.map((d, idx) => (
                                         <div
-                                            className={`w-full rounded-t-sm transition-colors relative ${hoveredChartIndex === idx ? 'bg-primary/60' : 'bg-primary/20 hover:bg-primary/40'}`}
-                                            style={{ height: `${(d.count / maxChartValue) * 100}%` }}
+                                            key={d.date}
+                                            className="flex-1 flex flex-col items-center justify-end h-full relative"
+                                            onMouseEnter={() => setHoveredChartIndex(idx)}
+                                            onMouseLeave={() => setHoveredChartIndex(null)}
                                         >
+                                            {/* Bar with gradient */}
+                                            <div
+                                                className={`w-full rounded-t-md transition-all duration-150 ${hoveredChartIndex === idx
+                                                        ? 'bg-gradient-to-t from-indigo-600 to-indigo-400 shadow-lg shadow-indigo-500/30'
+                                                        : 'bg-gradient-to-t from-indigo-500/40 to-indigo-400/20'
+                                                    }`}
+                                                style={{
+                                                    height: `${Math.max((d.count / maxChartValue) * 85, d.count > 0 ? 8 : 2)}%`,
+                                                    minHeight: d.count > 0 ? '6px' : '2px'
+                                                }}
+                                            />
+                                            {/* Date label */}
+                                            <div className={`text-xs mt-1 transition-colors ${hoveredChartIndex === idx ? 'text-indigo-600 font-medium' : 'text-muted-foreground'}`}>
+                                                {period === 'all'
+                                                    ? (() => {
+                                                        const monthDate = parseISO(d.date + '-01');
+                                                        const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+                                                        return chartData.length > 6
+                                                            ? capitalize(format(monthDate, 'LLL', { locale: locale() }))
+                                                            : capitalize(format(monthDate, 'MMM', { locale: locale() }));
+                                                    })()
+                                                    : format(parseISO(d.date), 'd')}
+                                            </div>
+                                            {/* Hover dot on trend line */}
+                                            {hoveredChartIndex === idx && (
+                                                <div
+                                                    className="absolute w-3 h-3 bg-indigo-500 rounded-full border-2 border-white shadow-md z-30"
+                                                    style={{
+                                                        bottom: `${Math.max((d.count / maxChartValue) * 85, 5) + 15}%`,
+                                                        left: '50%',
+                                                        transform: 'translateX(-50%)'
+                                                    }}
+                                                />
+                                            )}
                                         </div>
-                                        <div className="text-xs text-muted-foreground rotate-0 whitespace-nowrap">
-                                            {period === 'all'
-                                                ? (() => {
-                                                    const monthDate = parseISO(d.date + '-01');
-                                                    const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
-                                                    // Use abbreviated format if many bars (>6), else full format
-                                                    if (chartData.length > 6) {
-                                                        return capitalize(format(monthDate, 'LLL', { locale: locale() })) + ', ' + format(monthDate, 'yy');
-                                                    } else {
-                                                        return capitalize(format(monthDate, 'LLLL', { locale: locale() })) + ', ' + format(monthDate, 'yyyy');
-                                                    }
-                                                })()
-                                                : format(parseISO(d.date), 'dd.MM')}
-                                        </div>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     </CardContent>
