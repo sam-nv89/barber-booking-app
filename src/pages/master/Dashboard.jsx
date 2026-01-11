@@ -192,10 +192,10 @@ export const Dashboard = () => {
                             </div>
                         )}
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="overflow-visible">
                         <div className="overflow-x-auto -mx-2 px-2">
                             <div
-                                className="relative h-36 mt-2 touch-none"
+                                className="relative h-40 mt-2 pt-4"
                                 style={{ minWidth: chartData.length > 10 ? `${chartData.length * 32}px` : 'auto' }}
                             >
                                 {/* SVG Trend Line */}
@@ -280,8 +280,8 @@ export const Dashboard = () => {
                                             {/* Bar with gradient */}
                                             <div
                                                 className={`w-full rounded-t-md transition-all duration-150 ${hoveredChartIndex === idx
-                                                        ? 'bg-gradient-to-t from-indigo-600 to-indigo-400 shadow-lg shadow-indigo-500/30'
-                                                        : 'bg-gradient-to-t from-indigo-500/40 to-indigo-400/20'
+                                                    ? 'bg-gradient-to-t from-indigo-600 to-indigo-400 shadow-lg shadow-indigo-500/30'
+                                                    : 'bg-gradient-to-t from-indigo-500/40 to-indigo-400/20'
                                                     }`}
                                                 style={{
                                                     height: `${Math.max((d.count / maxChartValue) * 85, d.count > 0 ? 8 : 2)}%`,
