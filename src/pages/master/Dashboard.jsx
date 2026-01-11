@@ -301,9 +301,9 @@ export const Dashboard = () => {
                                                     ? (() => {
                                                         const monthDate = parseISO(d.date + '-01');
                                                         const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
-                                                        return chartData.length > 6
+                                                        return chartData.length > 4
                                                             ? capitalize(format(monthDate, 'LLL', { locale: locale() }))
-                                                            : capitalize(format(monthDate, 'MMM', { locale: locale() }));
+                                                            : capitalize(format(monthDate, 'LLLL', { locale: locale() }));
                                                     })()
                                                     : format(parseISO(d.date), 'd')}
                                             </div>
@@ -322,6 +322,82 @@ export const Dashboard = () => {
                                     ))}
                                 </div>
                             </div>
+
+                            {/* Year Brackets for 'all' period */}
+                            {period === 'all' && chartData.length > 0 && (() => {
+                                const groups = [];
+                                let currentYear = null;
+                                let startIdx = 0;
+
+                                chartData.forEach((item, i) => {
+                                    const year = format(parseISO(item.date), 'yyyy');
+                                    if (year !== currentYear) {
+                                        if (currentYear !== null) {
+                                            groups.push({ label: currentYear, start: startIdx, end: i - 1 });
+                                        }
+                                        currentYear = year;
+                                        startIdx = i;
+                                    }
+                                });
+                                if (currentYear !== null) {
+                                    groups.push({ label: currentYear, start: startIdx, end: chartData.length - 1 });
+                                }
+
+                                return (
+                                    <div
+                                        className="flex mt-1"
+                                        style={{ minWidth: chartData.length > 10 ? `${chartData.length * 32}px` : 'auto' }}
+                                    >
+                                        {chartData.map((_, i) => {
+                                            const group = groups.find(g => i >= g.start && i <= g.end);
+                                            const isFirst = group && i === group.start;
+                                            const isLast = group && i === group.end;
+
+                                            // Ensure we don't render empty spans that break layout, 
+                                            // but we need them to maintain the grid alignment with the bars above.
+                                            // Actually, the bars above are in a flex container with gap-1.
+                                            // To align perfectly, we should replicate the spacing or use the same grid.
+                                            // The bars container uses: flex items-end h-full gap-1
+
+                                            return (
+                                                <div key={i} className="flex-1 relative h-6 mx-0.5">
+                                                    {/* We use mx-0.5 to approximate the gap-1 (0.25rem = 4px, mx-0.5 = 2px each side = 4px total space?) 
+                                                       Actually gap-1 is 0.25rem = 4px between items.
+                                                       flex-1 makes them fill available space. 
+                                                       Let's try to match the structure better. 
+                                                    */}
+
+                                                    {/* Top bracket line */}
+                                                    <div className="absolute top-0 left-0 right-0 border-t border-indigo-200/50" />
+                                                    {/* Left vertical edge */}
+                                                    {isFirst && <div className="absolute top-0 left-0 w-px h-1.5 bg-indigo-200/50" />}
+                                                    {/* Right vertical edge */}
+                                                    {isLast && <div className="absolute top-0 right-0 w-px h-1.5 bg-indigo-200/50" />}
+
+                                                    {/* Year Label */}
+                                                    {isFirst && group && (
+                                                        <div
+                                                            className="absolute top-1.5 flex justify-center w-full text-[10px] text-indigo-300 font-medium"
+                                                            style={{
+                                                                width: `${(group.end - group.start + 1) * 100 + (group.end - group.start) * 4}%`, // approx width adjustment for gaps? 
+                                                                // Actually, since we are inside the first item, we need to span across.
+                                                                // It's tricky with flex gap.
+                                                                // A simpler way: 'left: 0' and specific width is hard with flex-box fluid widths if we rely on %, but standard css width calc might work.
+                                                                // Let's just center it in the group roughly.
+                                                                // Better approach: Position absolute relative to the group start logic?
+                                                                // Let's use the same logic as Analytics but adapted.
+                                                                width: `calc(${(group.end - group.start + 1) * 100}% + ${(group.end - group.start) * 4}px)` // assuming 4px gap
+                                                            }}
+                                                        >
+                                                            {group.label}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                );
+                            })()}
                         </div>
                     </CardContent>
                 </Card>
