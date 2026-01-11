@@ -52,10 +52,10 @@ This file tracks the detailed implementation history of the project.
 **Status:** ✅ Completed
 
 ### Changes
-*   **`src/pages/master/Dashboard.jsx`**: Replaced legacy `ClockWidget` with `SalonInfo` (with clock enabled).
-     *   This unifies the design with the Client interface (Booking Wizard header).
+*   **`src/pages/master/Dashboard.jsx`**: Replaced legacy `ClockWidget` with `SalonInfo` (clock enabled, actions hidden).
+*   **`src/components/features/SalonInfo.jsx`**: Added `hideActions` prop to conditionally hide navigation/contact buttons.
 *   **`src/components/features/ClockWidget.jsx`**: Deleted unused component.
 
 ### Technical Details
-*   Reused `SalonInfo` component to ensure visual consistency between Client and Master views.
-*   Enabled `showClock` prop on `SalonInfo` for the live digital clock.
+*   Reused `SalonInfo` component for visual consistency.
+*   Passed `hideActions={true}` in Dashboard to remove "Contact" and "Directions" sections, keeping only the clock and salon identity.
