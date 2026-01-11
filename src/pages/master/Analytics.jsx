@@ -452,7 +452,7 @@ export const Analytics = () => {
                         <CardContent className="overflow-hidden">
                             <div className="flex overflow-hidden">
                                 {/* Y-axis labels - positioned exactly on grid lines */}
-                                <div className="relative shrink-0 text-right pr-3" style={{ width: '90px', height: `${chartHeight}px` }}>
+                                <div className="relative shrink-0 text-right pr-3 overflow-visible" style={{ width: '110px', height: `${chartHeight}px` }}>
                                     {yLabels.map((val, idx) => {
                                         // Hide label if hover value is close (within 12% of chart height)
                                         const labelPercent = idx * 25; // 0, 25, 50, 75, 100
@@ -462,7 +462,7 @@ export const Analytics = () => {
                                         return (
                                             <span
                                                 key={idx}
-                                                className={`absolute right-3 text-sm text-muted-foreground font-medium transition-opacity ${isClose ? 'opacity-0' : 'opacity-100'}`}
+                                                className={`absolute right-3 text-sm text-muted-foreground font-medium transition-opacity whitespace-nowrap ${isClose ? 'opacity-0' : 'opacity-100'}`}
                                                 style={{
                                                     top: `${labelPercent}%`,
                                                     transform: 'translateY(-50%)'
@@ -475,7 +475,7 @@ export const Analytics = () => {
                                     {/* Dynamic hover value - semi-transparent */}
                                     {hoveredData && (
                                         <span
-                                            className="absolute right-3 text-sm font-medium text-indigo-400 z-20"
+                                            className="absolute right-3 text-sm font-medium text-indigo-400 z-20 whitespace-nowrap"
                                             style={{
                                                 top: `${100 - hoveredData.heightPercent}%`,
                                                 transform: 'translateY(-50%)'
@@ -691,7 +691,7 @@ export const Analytics = () => {
                             </div>
 
                             {/* X-axis: Date labels */}
-                            <div className="flex mt-2" style={{ marginLeft: '90px' }}>
+                            <div className="flex mt-2" style={{ marginLeft: '110px' }}>
                                 {revenueByPeriod.map((item, i) => {
                                     // Capitalize first letter helper
                                     const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -715,8 +715,8 @@ export const Analytics = () => {
                                             </div>
                                         );
                                     } else if (item.isHour) {
-                                        // Hour labels for 'today' period
-                                        const showLabel = i % 2 === 0; // Show every 2nd hour
+                                        // Hour labels for 'today' period - show every 3rd hour
+                                        const showLabel = i % 3 === 0;
                                         return (
                                             <div key={i} className={`flex-1 text-center transition-all duration-75 ${isHovered ? 'bg-indigo-500/10 rounded' : ''}`}>
                                                 <span className={`text-xs font-medium transition-colors duration-75 ${isHovered ? 'text-indigo-600 dark:text-indigo-400' : 'text-muted-foreground'}`}>
@@ -725,8 +725,10 @@ export const Analytics = () => {
                                             </div>
                                         );
                                     } else {
-                                        // Always show all day labels
-                                        const showLabel = true;
+                                        // Day labels - show every Nth day based on total count
+                                        const totalDays = revenueByPeriod.length;
+                                        const showEveryN = totalDays > 20 ? 4 : totalDays > 10 ? 2 : 1;
+                                        const showLabel = i % showEveryN === 0 || isHovered;
 
                                         return (
                                             <div key={i} className={`flex-1 text-center transition-all duration-75 ${isHovered ? 'bg-indigo-500/10 rounded' : ''}`}>
