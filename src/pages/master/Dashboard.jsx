@@ -181,7 +181,7 @@ export const Dashboard = () => {
                                 📊 {t('dashboard.dynamics')}
                             </CardTitle>
                             <p className="text-xs text-muted-foreground mt-0.5">
-                                ✓ {period === 'week' ? t('dashboard.week') : period === 'month' ? t('dashboard.month') : t('dashboard.all')}
+                                ✓ {period === 'week' ? t('dashboard.week') : period === 'month' ? t('dashboard.month') : t('dashboard.allTime')}
                             </p>
                         </div>
                         {hoveredChartIndex !== null && chartData[hoveredChartIndex] && (
