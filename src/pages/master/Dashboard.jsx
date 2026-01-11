@@ -11,6 +11,7 @@ import { motion } from 'framer-motion';
 export const Dashboard = () => {
     const { appointments, services, reviews, t, locale, salonSettings } = useStore();
     const [period, setPeriod] = useState('month'); // 'week' | 'month' | 'all'
+    const [hoveredChartIndex, setHoveredChartIndex] = useState(null);
 
     // Filter appointments based on period
     const filteredAppointments = useMemo(() => {
@@ -174,17 +175,58 @@ export const Dashboard = () => {
             {/* Simple Bar Chart */}
             {chartData.length > 0 && (
                 <Card>
-                    <CardHeader>
+                    <CardHeader className="flex flex-row items-center justify-between">
                         <CardTitle className="text-lg">{t('dashboard.dynamics')}</CardTitle>
+                        {hoveredChartIndex !== null && chartData[hoveredChartIndex] && (
+                            <div className="text-xs text-right whitespace-nowrap">
+                                <span className="font-semibold text-foreground">
+                                    {period === 'all'
+                                        ? (() => {
+                                            const monthDate = parseISO(chartData[hoveredChartIndex].date + '-01');
+                                            const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+                                            return capitalize(format(monthDate, 'LLLL yyyy', { locale: locale() }));
+                                        })()
+                                        : format(parseISO(chartData[hoveredChartIndex].date), 'dd.MM.yyyy')}
+                                </span>
+                                <span className="ml-2 text-primary font-bold">{chartData[hoveredChartIndex].count} {t('dashboard.records')}</span>
+                            </div>
+                        )}
                     </CardHeader>
                     <CardContent>
                         <div className="overflow-x-auto -mx-2 px-2">
-                            <div className="flex items-end justify-between h-32 gap-1 mt-2" style={{ minWidth: chartData.length > 10 ? `${chartData.length * 28}px` : 'auto' }}>
-                                {chartData.map((d) => (
-                                    <div key={d.date} className="flex flex-col items-center justify-end flex-1 h-full gap-2 group">
-                                        <div className="text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity mb-auto">{d.count}</div>
+                            <div
+                                className="flex items-end justify-between h-32 gap-1 mt-2 touch-none"
+                                style={{ minWidth: chartData.length > 10 ? `${chartData.length * 28}px` : 'auto' }}
+                                onTouchStart={(e) => {
+                                    const touch = e.touches[0];
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    const x = touch.clientX - rect.left;
+                                    const totalWidth = rect.width;
+                                    const segmentWidth = totalWidth / chartData.length;
+                                    const index = Math.floor(x / segmentWidth);
+                                    setHoveredChartIndex(Math.max(0, Math.min(chartData.length - 1, index)));
+                                }}
+                                onTouchMove={(e) => {
+                                    const touch = e.touches[0];
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    const x = touch.clientX - rect.left;
+                                    const totalWidth = rect.width;
+                                    const segmentWidth = totalWidth / chartData.length;
+                                    const index = Math.floor(x / segmentWidth);
+                                    setHoveredChartIndex(Math.max(0, Math.min(chartData.length - 1, index)));
+                                }}
+                                onTouchEnd={() => setHoveredChartIndex(null)}
+                            >
+                                {chartData.map((d, idx) => (
+                                    <div
+                                        key={d.date}
+                                        className="flex flex-col items-center justify-end flex-1 h-full gap-2 group"
+                                        onMouseEnter={() => setHoveredChartIndex(idx)}
+                                        onMouseLeave={() => setHoveredChartIndex(null)}
+                                    >
+                                        <div className={`text-xs font-bold transition-opacity mb-auto ${hoveredChartIndex === idx ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>{d.count}</div>
                                         <div
-                                            className="w-full bg-primary/20 rounded-t-sm hover:bg-primary/40 transition-colors relative group"
+                                            className={`w-full rounded-t-sm transition-colors relative ${hoveredChartIndex === idx ? 'bg-primary/60' : 'bg-primary/20 hover:bg-primary/40'}`}
                                             style={{ height: `${(d.count / maxChartValue) * 100}%` }}
                                         >
                                         </div>
