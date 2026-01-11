@@ -5,6 +5,20 @@ This file tracks the detailed implementation history of the project.
 
 ---
 
+## [2026-01-10] - Vercel Integration & Automation
+**Status:** ✅ Completed
+
+### Changes
+*   **Deployment**: Connected repository to Vercel for continuous deployment.
+*   **TMA Integration**: Configured Vercel hosting to sync with Telegram Mini App bot.
+*   **Workflow**: Established "Push to Git -> Auto-Deploy to Vercel" pipeline.
+
+### Technical Details
+*   **Autonomy**: TMA now works autonomously 24/7 via Vercel hosting.
+*   **CI/CD**: Updates are live in Telegram immediately after `git push`.
+
+---
+
 ## [2026-01-11] - Chart Interaction & Design Improvements
 **Status:** ✅ Completed
 
