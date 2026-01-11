@@ -399,14 +399,10 @@ export const Analytics = () => {
                 const yLabels = [niceMax, niceMax * 0.75, niceMax * 0.5, niceMax * 0.25, 0];
                 const chartHeight = 180;
 
-                // Compact number format with currency for Y-axis (K/M/B abbreviations)
+                // Compact number format for Y-axis (no currency symbol)
                 const formatYLabel = (val) => {
-                    const currency = salonSettings?.currency || '₸';
-                    if (val >= 1000000000) return `${(val / 1000000000).toFixed(1)}B ${currency}`;
-                    if (val >= 1000000) return `${(val / 1000000).toFixed(1)}M ${currency}`;
-                    if (val >= 1000) return `${Math.round(val / 1000)}K ${currency}`;
-                    if (val === 0) return `0 ${currency}`;
-                    return `${val} ${currency}`;
+                    if (val === 0) return '0';
+                    return formatPrice(val);
                 };
                 return (
                     <Card className="overflow-visible">
@@ -455,7 +451,7 @@ export const Analytics = () => {
                         <CardContent className="overflow-visible py-3">
                             <div className="flex">
                                 {/* Y-axis labels - positioned exactly on grid lines */}
-                                <div className="relative shrink-0 text-right pr-3 overflow-visible" style={{ width: '110px', height: `${chartHeight}px` }}>
+                                <div className="relative shrink-0 text-right pr-2 overflow-visible" style={{ width: '55px', height: `${chartHeight}px` }}>
                                     {yLabels.map((val, idx) => {
                                         // Hide label if hover value is close (within 12% of chart height)
                                         const labelPercent = idx * 25; // 0, 25, 50, 75, 100
@@ -465,7 +461,7 @@ export const Analytics = () => {
                                         return (
                                             <span
                                                 key={idx}
-                                                className={`absolute right-3 text-xs text-muted-foreground font-medium transition-opacity whitespace-nowrap ${isClose ? 'opacity-0' : 'opacity-100'}`}
+                                                className={`absolute right-1 text-xs text-muted-foreground font-medium transition-opacity whitespace-nowrap ${isClose ? 'opacity-0' : 'opacity-100'}`}
                                                 style={{
                                                     top: `${labelPercent}%`,
                                                     transform: 'translateY(-50%)'
@@ -478,7 +474,7 @@ export const Analytics = () => {
                                     {/* Dynamic hover value - semi-transparent */}
                                     {hoveredData && (
                                         <span
-                                            className="absolute right-3 text-xs font-medium text-indigo-400 z-20 whitespace-nowrap"
+                                            className="absolute right-1 text-xs font-medium text-indigo-400 z-20 whitespace-nowrap"
                                             style={{
                                                 top: `${100 - hoveredData.heightPercent}%`,
                                                 transform: 'translateY(-50%)'
@@ -694,7 +690,7 @@ export const Analytics = () => {
                             </div>
 
                             {/* X-axis: Date labels */}
-                            <div className="flex mt-2" style={{ marginLeft: '110px' }}>
+                            <div className="flex mt-2" style={{ marginLeft: '55px' }}>
                                 {revenueByPeriod.map((item, i) => {
                                     // Capitalize first letter helper
                                     const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -809,7 +805,7 @@ export const Analytics = () => {
                                 if (groups.length === 0) return null;
 
                                 return (
-                                    <div className="flex mt-1" style={{ marginLeft: '90px' }}>
+                                    <div className="flex mt-1" style={{ marginLeft: '55px' }}>
                                         {revenueByPeriod.map((item, i) => {
                                             const group = groups.find(g => i >= g.start && i <= g.end);
                                             const isFirst = group && i === group.start;
