@@ -24,16 +24,25 @@ export const Layout = ({ children }) => {
             navigate(-1);
         };
 
-        if (isRoot) {
-            webApp.BackButton.hide();
-        } else {
-            webApp.BackButton.show();
-        }
+        const updateBackButton = () => {
+            if (isRoot) {
+                webApp.BackButton.hide();
+            } else {
+                webApp.BackButton.show();
+            }
+        };
+
+        // Initial call
+        updateBackButton();
+
+        // Retry safety for Android
+        const timer = setTimeout(updateBackButton, 100);
 
         webApp.BackButton.onClick(handleBack);
 
         return () => {
             webApp.BackButton.offClick(handleBack);
+            clearTimeout(timer);
         };
     }, [isTelegram, location.pathname, navigate]);
 

@@ -18,43 +18,42 @@ export function useTelegramTheme() {
 
         // Backgrounds
         if (themeParams.bg_color) {
-            root.style.setProperty('--background', hexToHsl(themeParams.bg_color));
-            root.style.setProperty('--card', hexToHsl(themeParams.secondary_bg_color || themeParams.bg_color));
-            root.style.setProperty('--popover', hexToHsl(themeParams.bg_color));
+            root.style.setProperty('--background', hexToHsl(themeParams.bg_color), 'important');
+            root.style.setProperty('--card', hexToHsl(themeParams.secondary_bg_color || themeParams.bg_color), 'important');
+            root.style.setProperty('--popover', hexToHsl(themeParams.bg_color), 'important');
         }
 
         // Text
         if (themeParams.text_color) {
-            root.style.setProperty('--foreground', hexToHsl(themeParams.text_color));
-            root.style.setProperty('--card-foreground', hexToHsl(themeParams.text_color));
-            root.style.setProperty('--popover-foreground', hexToHsl(themeParams.text_color));
+            root.style.setProperty('--foreground', hexToHsl(themeParams.text_color), 'important');
+            root.style.setProperty('--card-foreground', hexToHsl(themeParams.text_color), 'important');
+            root.style.setProperty('--popover-foreground', hexToHsl(themeParams.text_color), 'important');
         }
 
         // Hint / Muted
         if (themeParams.hint_color) {
-            root.style.setProperty('--muted', hexToHsl(themeParams.secondary_bg_color || '#f5f5f5')); // approximation
-            root.style.setProperty('--muted-foreground', hexToHsl(themeParams.hint_color));
+            root.style.setProperty('--muted', hexToHsl(themeParams.secondary_bg_color || '#f5f5f5'), 'important'); // approximation
+            root.style.setProperty('--muted-foreground', hexToHsl(themeParams.hint_color), 'important');
         }
 
         // Primary / Accent (Buttons)
         if (themeParams.button_color) {
-            root.style.setProperty('--primary', hexToHsl(themeParams.button_color));
-            root.style.setProperty('--ring', hexToHsl(themeParams.button_color));
+            root.style.setProperty('--primary', hexToHsl(themeParams.button_color), 'important');
+            root.style.setProperty('--ring', hexToHsl(themeParams.button_color), 'important');
         }
 
         if (themeParams.button_text_color) {
-            root.style.setProperty('--primary-foreground', hexToHsl(themeParams.button_text_color));
+            root.style.setProperty('--primary-foreground', hexToHsl(themeParams.button_text_color), 'important');
         }
 
         // Header
         if (themeParams.header_bg_color) {
-            // Some components might use a separate header variable if we define it, 
-            // but for now let's ensure body matches if it's the main bg
-            // root.style.setProperty('--header-background', hexToHsl(themeParams.header_bg_color));
+            // Ensure header matches if needed, though standard components use bg-background
+            root.style.setProperty('--header-background', hexToHsl(themeParams.header_bg_color), 'important');
         }
 
         // Force apply to ensure overrides work
-        root.style.setProperty('color-scheme', colorScheme);
+        // root.style.setProperty('color-scheme', colorScheme, 'important');
 
     }, [isTelegram, themeParams, colorScheme]);
 }

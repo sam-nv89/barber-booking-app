@@ -12,6 +12,7 @@ export const DebugInfo = () => {
         ready,
         themeParams,
         path: window.location.pathname,
+        bgStyle: document.documentElement.style.getPropertyValue('--background'),
         userAgent: navigator.userAgent
     }, null, 2);
 
