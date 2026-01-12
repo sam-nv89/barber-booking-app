@@ -100,6 +100,13 @@ export function useTelegramTheme({ isTelegram, themeParams, colorScheme }) {
                 ${vars.join('\n                ')}
                 color-scheme: ${colorScheme} !important;
             }
+
+            /* Fix native time inputs */
+            [type="time"]::-webkit-calendar-picker-indicator {
+                filter: ${colorScheme === 'dark' ? 'invert(1)' : 'invert(0)'};
+                opacity: 0.6;
+                cursor: pointer;
+            }
         `;
 
         styleTag.textContent = css;
