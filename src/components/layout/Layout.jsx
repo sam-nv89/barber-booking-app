@@ -9,26 +9,26 @@ export const Layout = ({ children }) => {
     const { isTelegram } = useTMA();
     const location = useLocation();
     const navigate = useNavigate();
-
+    // Native Back Button synchronization
     useEffect(() => {
-        if (!isTelegram) return;
+        if (!isTelegram || !window.Telegram?.WebApp?.BackButton) return;
 
-        const webApp = window.Telegram?.WebApp;
-        if (!webApp?.BackButton) return;
+        const webApp = window.Telegram.WebApp;
 
-        // Show back button on all pages except root
-        // Also check if we have history (state not null) or if we are deep in navigation
-        const canGoBack = location.pathname !== '/' && location.pathname !== '/master/dashboard';
-
-        if (canGoBack) {
-            webApp.BackButton.show();
-        } else {
-            webApp.BackButton.hide();
-        }
+        // Define root paths where Back Button should be HIDDEN
+        const rootPaths = ['/', '/master/dashboard', '/master/dashboard/'];
+        const currentPath = location.pathname;
+        const isRoot = rootPaths.includes(currentPath);
 
         const handleBack = () => {
             navigate(-1);
         };
+
+        if (isRoot) {
+            webApp.BackButton.hide();
+        } else {
+            webApp.BackButton.show();
+        }
 
         webApp.BackButton.onClick(handleBack);
 

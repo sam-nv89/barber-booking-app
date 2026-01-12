@@ -11,6 +11,7 @@ export const DebugInfo = () => {
         platform,
         ready,
         themeParams,
+        path: window.location.pathname,
         userAgent: navigator.userAgent
     }, null, 2);
 

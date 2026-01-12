@@ -46,41 +46,44 @@ export function useTelegramTheme() {
             root.style.setProperty('--primary-foreground', hexToHsl(themeParams.button_text_color));
         }
 
-        // Links / Accent
-        if (themeParams.link_color) {
-            // We can use link color for some accents if needed
-            // root.style.setProperty('--accent', hexToHsl(themeParams.link_color));
+        // Header
+        if (themeParams.header_bg_color) {
+            // Some components might use a separate header variable if we define it, 
+            // but for now let's ensure body matches if it's the main bg
+            // root.style.setProperty('--header-background', hexToHsl(themeParams.header_bg_color));
         }
 
-        // Force cleanup when unmounting or switching context - though usually this persists
-        return () => {
-            // Optional: reset styles if we want to fallback to defaults when leaving TMA mode
-            // For now, we keep them to avoid flashing
-        }
+        // Force apply to ensure overrides work
+        root.style.setProperty('color-scheme', colorScheme);
 
     }, [isTelegram, themeParams, colorScheme]);
 }
 
 /**
- * Helper to convert HEX to HSL string (which Tailwind uses for variables)
- * Tailwind vars are often in format "222.2 84% 4.9%" (without hsl() wrapper)
+ * Helper to convert HEX to HSL string
  */
 function hexToHsl(hex) {
+    // Strip hash if present
+    hex = hex.replace(/^#/, '');
+
     let r = 0, g = 0, b = 0;
-    if (hex.length === 4) {
-        r = "0x" + hex[1] + hex[1];
-        g = "0x" + hex[2] + hex[2];
-        b = "0x" + hex[3] + hex[3];
-    } else if (hex.length === 7) {
-        r = "0x" + hex[1] + hex[2];
-        g = "0x" + hex[3] + hex[4];
-        b = "0x" + hex[5] + hex[6];
+
+    if (hex.length === 3) {
+        r = parseInt(hex[0] + hex[0], 16);
+        g = parseInt(hex[1] + hex[1], 16);
+        b = parseInt(hex[2] + hex[2], 16);
+    } else if (hex.length === 6) {
+        r = parseInt(hex.substring(0, 2), 16);
+        g = parseInt(hex.substring(2, 4), 16);
+        b = parseInt(hex.substring(4, 6), 16);
+    } else {
+        return '0 0% 0%'; // Fallback
     }
 
-    // Then to HSL
     r /= 255;
     g /= 255;
     b /= 255;
+
     let cmin = Math.min(r, g, b),
         cmax = Math.max(r, g, b),
         delta = cmax - cmin,
@@ -88,19 +91,13 @@ function hexToHsl(hex) {
         s = 0,
         l = 0;
 
-    if (delta === 0)
-        h = 0;
-    else if (cmax === r)
-        h = ((g - b) / delta) % 6;
-    else if (cmax === g)
-        h = (b - r) / delta + 2;
-    else
-        h = (r - g) / delta + 4;
+    if (delta === 0) h = 0;
+    else if (cmax === r) h = ((g - b) / delta) % 6;
+    else if (cmax === g) h = (b - r) / delta + 2;
+    else h = (r - g) / delta + 4;
 
     h = Math.round(h * 60);
-
-    if (h < 0)
-        h += 360;
+    if (h < 0) h += 360;
 
     l = (cmax + cmin) / 2;
     s = delta === 0 ? 0 : delta / (1 - Math.abs(2 * l - 1));
@@ -108,7 +105,5 @@ function hexToHsl(hex) {
     s = +(s * 100).toFixed(1);
     l = +(l * 100).toFixed(1);
 
-    // Return format compatible with ShadCN/Tailwind CSS variables
-    // e.g., "222.2 84% 4.9%"
     return `${h} ${s}% ${l}%`;
 }
