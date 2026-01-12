@@ -56,6 +56,22 @@ export function useTelegramTheme({ isTelegram, themeParams, colorScheme }) {
             addVar('primary-foreground', themeParams.button_text_color);
         }
 
+        // Borders & Separators
+        // Use section_separator_color for borders if available, otherwise hint_color
+        const borderColor = themeParams.section_separator_color || themeParams.hint_color;
+        if (borderColor) {
+            addVar('border', borderColor);
+            addVar('input', borderColor);
+            // Ring is usually focus ring, can act as border
+            // addVar('ring', borderColor); 
+        }
+
+        // Secondary / Accent
+        if (themeParams.link_color) {
+            // Optional: use link color for accents
+            // addVar('accent', themeParams.link_color); 
+        }
+
         // Construct CSS rule
         // targeting :root and .dark (to override Tailwind class specificity)
         const css = `
