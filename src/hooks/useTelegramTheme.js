@@ -1,13 +1,10 @@
 import { useEffect } from 'react';
-import { useTMA } from '@/components/providers/TMAProvider';
 
 /**
  * Hook to synchronize Telegram theme params using a dedicated <style> tag
- * This avoids issues with inline style priorities and React re-renders wiping styles
+ * Accepts params directly to avoid Context dependency cycles when used inside Provider
  */
-export function useTelegramTheme() {
-    const { isTelegram, themeParams, colorScheme } = useTMA();
-
+export function useTelegramTheme({ isTelegram, themeParams, colorScheme }) {
     useEffect(() => {
         if (!isTelegram || !themeParams) return;
 

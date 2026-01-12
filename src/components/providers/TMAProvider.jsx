@@ -26,8 +26,8 @@ export function TMAProvider({ children }) {
 
     const { user, setUser } = useStore();
 
-    // Initialize theme synchronization
-    useTelegramTheme();
+    // Initialize theme synchronization - Pass state directly!
+    useTelegramTheme(state);
 
     // Function to request phone permission
     const requestPhonePermission = useCallback(async () => {
