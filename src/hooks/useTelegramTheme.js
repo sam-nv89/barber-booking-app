@@ -61,28 +61,31 @@ export function useTelegramTheme({ isTelegram, themeParams, colorScheme }) {
         }
 
         /**
-         * Smart Border Calculation
-         * Instead of relying on theme params which might be invisible or too harsh,
-         * we algorithmically shift the background color to create a subtle border.
+         * Smart Border Calculation -> Now "Safe Neutral"
+         * User feedback: Algorithmic borders "shimmer" or merge. 
+         * Fix: Use neutral greys to ensure structural boundaries are visible and hard.
          */
-        if (themeParams.bg_color) {
-            const bgHsl = hexToHslObject(themeParams.bg_color);
-            let borderL = bgHsl.l;
 
-            // Algorithm:
-            // Light Theme: Darken the border (decrease L)
-            // Dark Theme: Lighten the border (increase L)
-            if (colorScheme === 'dark') {
-                borderL = Math.min(borderL + 12, 100); // Lighten by 12%
-            } else {
-                borderL = Math.max(borderL - 12, 0);   // Darken by 12%
-            }
+        let borderString;
 
-            const borderString = `${bgHsl.h} ${bgHsl.s}% ${borderL}%`;
-            addVar('border', null, borderString);
-            addVar('input', null, borderString);
-            addVar('ring', null, `${bgHsl.h} ${bgHsl.s}% ${Math.min(borderL + 10, 100)}%`); // Slightly clearer ring
+        if (colorScheme === 'dark') {
+            // visible dark mode border (approx #2e2e2e or similar, depending on bg)
+            // safer to use a fixed neutral grey that stands out against typical dark backgrounds
+            // L=20-25% is usually safe for dark mode
+            borderString = '0 0% 25%';
+        } else {
+            // visible light mode border (approx #e5e5e5)
+            // L=85-90% is safe for light mode
+            borderString = '0 0% 85%';
         }
+
+        addVar('border', null, borderString);
+        addVar('input', null, borderString);
+
+        // Ring can take the button color for focus states, or fallback to border
+        addVar('ring', themeParams.button_color || null, themeParams.button_color ? null : borderString);
+
+        // Secondary / Accent
 
         // Secondary / Accent
         if (themeParams.link_color) {
