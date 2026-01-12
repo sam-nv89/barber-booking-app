@@ -19,8 +19,12 @@ export function useTelegramTheme({ isTelegram, themeParams, colorScheme }) {
         const vars = [];
 
         // Helper to push var
-        const addVar = (name, hex) => {
-            if (hex) vars.push(`--${name}: ${hexToHsl(hex)} !important;`);
+        const addVar = (name, hex, rawValue = null) => {
+            if (rawValue) {
+                vars.push(`--${name}: ${rawValue} !important;`);
+            } else if (hex) {
+                vars.push(`--${name}: ${hexToHsl(hex)} !important;`);
+            }
         };
 
         // Backgrounds
@@ -56,23 +60,28 @@ export function useTelegramTheme({ isTelegram, themeParams, colorScheme }) {
             addVar('primary-foreground', themeParams.button_text_color);
         }
 
-        // Borders & Separators
-        // In Light mode, section_separator is often too light (almost white). 
-        // Use hint_color (grey text) for borders to ensure visibility.
-        // In Dark mode, separators usually provide enough contrast against dark bg.
-        let borderColor = themeParams.section_separator_color;
+        /**
+         * Smart Border Calculation
+         * Instead of relying on theme params which might be invisible or too harsh,
+         * we algorithmically shift the background color to create a subtle border.
+         */
+        if (themeParams.bg_color) {
+            const bgHsl = hexToHslObject(themeParams.bg_color);
+            let borderL = bgHsl.l;
 
-        if (colorScheme === 'light' && themeParams.hint_color) {
-            borderColor = themeParams.hint_color;
-        }
+            // Algorithm:
+            // Light Theme: Darken the border (decrease L)
+            // Dark Theme: Lighten the border (increase L)
+            if (colorScheme === 'dark') {
+                borderL = Math.min(borderL + 12, 100); // Lighten by 12%
+            } else {
+                borderL = Math.max(borderL - 12, 0);   // Darken by 12%
+            }
 
-        // Fallback
-        if (!borderColor) borderColor = themeParams.hint_color;
-
-        if (borderColor) {
-            addVar('border', borderColor);
-            addVar('input', borderColor);
-            addVar('ring', themeParams.button_color || borderColor); // Ring follows primary or border
+            const borderString = `${bgHsl.h} ${bgHsl.s}% ${borderL}%`;
+            addVar('border', null, borderString);
+            addVar('input', null, borderString);
+            addVar('ring', null, `${bgHsl.h} ${bgHsl.s}% ${Math.min(borderL + 10, 100)}%`); // Slightly clearer ring
         }
 
         // Secondary / Accent
@@ -100,13 +109,10 @@ export function useTelegramTheme({ isTelegram, themeParams, colorScheme }) {
 }
 
 /**
- * Helper to convert HEX to HSL string
- * Returns "H S% L%" format
+ * Helper to convert HEX to HSL object {h, s, l}
  */
-function hexToHsl(hex) {
-    if (!hex) return '0 0% 100%';
-
-    // Strip hash if present
+function hexToHslObject(hex) {
+    if (!hex) return { h: 0, s: 0, l: 0 };
     hex = hex.replace(/^#/, '');
 
     let r = 0, g = 0, b = 0;
@@ -120,19 +126,15 @@ function hexToHsl(hex) {
         g = parseInt(hex.substring(2, 4), 16);
         b = parseInt(hex.substring(4, 6), 16);
     } else {
-        return '0 0% 0%';
+        return { h: 0, s: 0, l: 0 };
     }
 
-    r /= 255;
-    g /= 255;
-    b /= 255;
+    r /= 255; g /= 255; b /= 255;
 
     let cmin = Math.min(r, g, b),
         cmax = Math.max(r, g, b),
         delta = cmax - cmin,
-        h = 0,
-        s = 0,
-        l = 0;
+        h = 0, s = 0, l = 0;
 
     if (delta === 0) h = 0;
     else if (cmax === r) h = ((g - b) / delta) % 6;
@@ -148,5 +150,14 @@ function hexToHsl(hex) {
     s = +(s * 100).toFixed(1);
     l = +(l * 100).toFixed(1);
 
+    return { h, s, l };
+}
+
+/**
+ * Helper to convert HEX to HSL string
+ * Returns "H S% L%" format
+ */
+function hexToHsl(hex) {
+    const { h, s, l } = hexToHslObject(hex);
     return `${h} ${s}% ${l}%`;
 }
