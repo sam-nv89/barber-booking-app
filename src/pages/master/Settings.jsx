@@ -15,6 +15,7 @@ import { WelcomeAnimation } from '@/components/features/WelcomeAnimation';
 import { format } from 'date-fns';
 import { Trash2, UserX, Plus, Clock, Play, Globe, ChevronDown, Edit, Check } from 'lucide-react';
 import { translateToAllLanguages, detectSourceLanguage } from '@/lib/translate';
+import { DebugInfo } from '@/components/features/DebugInfo';
 
 export const Settings = () => {
     const { t, salonSettings, setSalonSettings, setWorkScheduleOverrides, workScheduleOverrides, clearWorkScheduleOverrides, language, blockedPhones, addBlockedPhone, removeBlockedPhone } = useStore();
@@ -491,6 +492,9 @@ export const Settings = () => {
             <TeamManager onSuccess={setSuccessMessage} />
             <ServicesManager onSuccess={setSuccessMessage} />
             <MarketingManager onSuccess={setSuccessMessage} />
+
+            {/* DEBUG PANEL */}
+            <DebugInfo />
 
             <Modal isOpen={isScheduleModalOpen} onClose={() => setIsScheduleModalOpen(false)} title={t('settings.editSchedule')}>
                 <div className="space-y-6">

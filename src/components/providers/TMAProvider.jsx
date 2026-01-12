@@ -9,6 +9,7 @@ const TMAContext = createContext({
     telegramUser: null,
     themeParams: null,
     colorScheme: 'light',
+    platform: 'unknown',
     ready: true,
     requestPhonePermission: () => Promise.resolve(null),
 });
@@ -19,6 +20,7 @@ export function TMAProvider({ children }) {
         telegramUser: null,
         themeParams: null,
         colorScheme: 'light',
+        platform: 'unknown',
         ready: true,
     });
 
@@ -112,6 +114,7 @@ export function TMAProvider({ children }) {
                 const tgUser = webApp.initDataUnsafe?.user;
                 const colorScheme = webApp.colorScheme || 'light';
                 const themeParams = webApp.themeParams || {};
+                const platform = webApp.platform || 'unknown';
 
                 // Apply theme
                 if (colorScheme === 'dark') {
@@ -134,6 +137,7 @@ export function TMAProvider({ children }) {
                     telegramUser,
                     themeParams,
                     colorScheme,
+                    platform,
                     ready: true,
                 });
 
