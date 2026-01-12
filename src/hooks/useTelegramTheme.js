@@ -57,13 +57,22 @@ export function useTelegramTheme({ isTelegram, themeParams, colorScheme }) {
         }
 
         // Borders & Separators
-        // Use section_separator_color for borders if available, otherwise hint_color
-        const borderColor = themeParams.section_separator_color || themeParams.hint_color;
+        // In Light mode, section_separator is often too light (almost white). 
+        // Use hint_color (grey text) for borders to ensure visibility.
+        // In Dark mode, separators usually provide enough contrast against dark bg.
+        let borderColor = themeParams.section_separator_color;
+
+        if (colorScheme === 'light' && themeParams.hint_color) {
+            borderColor = themeParams.hint_color;
+        }
+
+        // Fallback
+        if (!borderColor) borderColor = themeParams.hint_color;
+
         if (borderColor) {
             addVar('border', borderColor);
             addVar('input', borderColor);
-            // Ring is usually focus ring, can act as border
-            // addVar('ring', borderColor); 
+            addVar('ring', themeParams.button_color || borderColor); // Ring follows primary or border
         }
 
         // Secondary / Accent
