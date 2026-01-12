@@ -2,6 +2,7 @@
 // Provides fallback for browser environment
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useStore } from '@/store/useStore';
+import { useTelegramTheme } from '@/hooks/useTelegramTheme';
 
 const TMAContext = createContext({
     isTelegram: false,
@@ -22,6 +23,9 @@ export function TMAProvider({ children }) {
     });
 
     const { user, setUser } = useStore();
+
+    // Initialize theme synchronization
+    useTelegramTheme();
 
     // Function to request phone permission
     const requestPhonePermission = useCallback(async () => {
