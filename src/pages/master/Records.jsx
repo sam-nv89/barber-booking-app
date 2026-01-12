@@ -1022,23 +1022,35 @@ export const Records = () => {
             </div>
 
             {/* View Mode Switcher */}
-            <div className="flex gap-1 p-1 bg-muted rounded-lg">
+            <div className="flex gap-1 p-1 bg-muted rounded-lg border border-border/50">
                 <button
-                    className={cn("flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-all", viewMode === 'list' ? "bg-background shadow" : "text-muted-foreground")}
+                    className={cn("flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-all",
+                        viewMode === 'list'
+                            ? "bg-background text-foreground shadow-sm ring-1 ring-border"
+                            : "text-muted-foreground hover:bg-background/50 hover:text-foreground"
+                    )}
                     onClick={() => setViewMode('list')}
                 >
                     <List className="w-4 h-4" />
                     {t('records.viewList') || 'Список'}
                 </button>
                 <button
-                    className={cn("flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-all", viewMode === 'calendar' ? "bg-background shadow" : "text-muted-foreground")}
+                    className={cn("flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-all",
+                        viewMode === 'calendar'
+                            ? "bg-background text-foreground shadow-sm ring-1 ring-border"
+                            : "text-muted-foreground hover:bg-background/50 hover:text-foreground"
+                    )}
                     onClick={() => setViewMode('calendar')}
                 >
                     <Calendar className="w-4 h-4" />
                     {t('records.viewCalendar') || 'Календарь'}
                 </button>
                 <button
-                    className={cn("flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-all", viewMode === 'timeline' ? "bg-background shadow" : "text-muted-foreground")}
+                    className={cn("flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-all",
+                        viewMode === 'timeline'
+                            ? "bg-background text-foreground shadow-sm ring-1 ring-border"
+                            : "text-muted-foreground hover:bg-background/50 hover:text-foreground"
+                    )}
                     onClick={() => setViewMode('timeline')}
                 >
                     <Clock className="w-4 h-4" />
@@ -1049,18 +1061,20 @@ export const Records = () => {
             {/* Status Tabs (only for list view) */}
             {viewMode === 'list' && (
                 <>
-                    <div className="flex p-1 bg-muted rounded-lg overflow-x-auto">
+                    <div className="flex p-1 gap-1 bg-muted/50 rounded-lg overflow-x-auto border border-border/50">
                         {['pending', 'active', 'archive'].map((tab) => (
                             <button
                                 key={tab}
                                 className={cn(
                                     "flex-1 py-2 px-4 text-sm font-medium rounded-md transition-all whitespace-nowrap flex items-center justify-center gap-2",
-                                    activeTab === tab ? "bg-background shadow" : "text-muted-foreground"
+                                    activeTab === tab
+                                        ? "bg-background text-foreground shadow-sm ring-1 ring-border"
+                                        : "text-muted-foreground hover:bg-background/40 hover:text-foreground"
                                 )}
                                 onClick={() => setActiveTab(tab)}
                             >
                                 <span className={cn("w-2 h-2 rounded-full", tab === 'pending' ? 'bg-yellow-500' : tab === 'active' ? 'bg-green-500' : 'bg-gray-400')} />
-                                {t(`records.${tab}`)} ({tab === 'pending' ? pending.length : tab === 'active' ? active.length : archive.length})
+                                {t(`records.${tab}`)} <span className="text-xs opacity-70 ml-1">({tab === 'pending' ? pending.length : tab === 'active' ? active.length : archive.length})</span>
                             </button>
                         ))}
                     </div>
