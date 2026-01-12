@@ -12,7 +12,7 @@ export const DebugInfo = () => {
         ready,
         themeParams,
         path: window.location.pathname,
-        bgStyle: document.documentElement.style.getPropertyValue('--background'),
+        styleTagContent: document.getElementById('tma-theme-styles')?.textContent?.slice(0, 50) + '...',
         userAgent: navigator.userAgent
     }, null, 2);
 

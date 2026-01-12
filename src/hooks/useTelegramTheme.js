@@ -2,8 +2,8 @@ import { useEffect } from 'react';
 import { useTMA } from '@/components/providers/TMAProvider';
 
 /**
- * Hook to synchronize Telegram theme params with CSS variables
- * This creates a "native" feel by using the exact colors from the user's Telegram client
+ * Hook to synchronize Telegram theme params using a dedicated <style> tag
+ * This avoids issues with inline style priorities and React re-renders wiping styles
  */
 export function useTelegramTheme() {
     const { isTelegram, themeParams, colorScheme } = useTMA();
@@ -11,57 +11,79 @@ export function useTelegramTheme() {
     useEffect(() => {
         if (!isTelegram || !themeParams) return;
 
-        const root = document.documentElement;
+        // Create or get our style tag
+        let styleTag = document.getElementById('tma-theme-styles');
+        if (!styleTag) {
+            styleTag = document.createElement('style');
+            styleTag.id = 'tma-theme-styles';
+            document.head.appendChild(styleTag);
+        }
 
-        // Map Telegram theme params to our CSS variables
-        // Format: var(--tg-theme-param-name)
+        const vars = [];
+
+        // Helper to push var
+        const addVar = (name, hex) => {
+            if (hex) vars.push(`--${name}: ${hexToHsl(hex)} !important;`);
+        };
 
         // Backgrounds
-        if (themeParams.bg_color) {
-            root.style.setProperty('--background', hexToHsl(themeParams.bg_color), 'important');
-            root.style.setProperty('--card', hexToHsl(themeParams.secondary_bg_color || themeParams.bg_color), 'important');
-            root.style.setProperty('--popover', hexToHsl(themeParams.bg_color), 'important');
+        addVar('background', themeParams.bg_color);
+        addVar('card', themeParams.secondary_bg_color || themeParams.bg_color);
+        addVar('popover', themeParams.bg_color);
+
+        // Header - Specific handling
+        if (themeParams.header_bg_color) {
+            addVar('header-background', themeParams.header_bg_color);
+            // Also override main background if it looks like a full screen view
+            // But usually bg_color is safer for global background
+        }
+
+        // Sections (iOS style grouped lists often use these)
+        if (themeParams.section_bg_color) {
+            addVar('muted', themeParams.section_bg_color);
         }
 
         // Text
-        if (themeParams.text_color) {
-            root.style.setProperty('--foreground', hexToHsl(themeParams.text_color), 'important');
-            root.style.setProperty('--card-foreground', hexToHsl(themeParams.text_color), 'important');
-            root.style.setProperty('--popover-foreground', hexToHsl(themeParams.text_color), 'important');
-        }
+        addVar('foreground', themeParams.text_color);
+        addVar('card-foreground', themeParams.text_color);
+        addVar('popover-foreground', themeParams.text_color);
 
-        // Hint / Muted
-        if (themeParams.hint_color) {
-            root.style.setProperty('--muted', hexToHsl(themeParams.secondary_bg_color || '#f5f5f5'), 'important'); // approximation
-            root.style.setProperty('--muted-foreground', hexToHsl(themeParams.hint_color), 'important');
-        }
+        // Hint / Subtitle
+        addVar('muted-foreground', themeParams.hint_color);
 
         // Primary / Accent (Buttons)
-        if (themeParams.button_color) {
-            root.style.setProperty('--primary', hexToHsl(themeParams.button_color), 'important');
-            root.style.setProperty('--ring', hexToHsl(themeParams.button_color), 'important');
-        }
+        addVar('primary', themeParams.button_color);
+        addVar('ring', themeParams.button_color);
 
         if (themeParams.button_text_color) {
-            root.style.setProperty('--primary-foreground', hexToHsl(themeParams.button_text_color), 'important');
+            addVar('primary-foreground', themeParams.button_text_color);
         }
 
-        // Header
-        if (themeParams.header_bg_color) {
-            // Ensure header matches if needed, though standard components use bg-background
-            root.style.setProperty('--header-background', hexToHsl(themeParams.header_bg_color), 'important');
-        }
+        // Construct CSS rule
+        // targeting :root and .dark (to override Tailwind class specificity)
+        const css = `
+            :root, .dark, body {
+                ${vars.join('\n                ')}
+                color-scheme: ${colorScheme} !important;
+            }
+        `;
 
-        // Force apply to ensure overrides work
-        // root.style.setProperty('color-scheme', colorScheme, 'important');
+        styleTag.textContent = css;
+
+        // Cleanup isn't strictly necessary as we want theme to persist, 
+        // but if we unmount the provider we might want to clean up.
+        // For now, let's leave it to avoid flashing.
 
     }, [isTelegram, themeParams, colorScheme]);
 }
 
 /**
  * Helper to convert HEX to HSL string
+ * Returns "H S% L%" format
  */
 function hexToHsl(hex) {
+    if (!hex) return '0 0% 100%';
+
     // Strip hash if present
     hex = hex.replace(/^#/, '');
 
@@ -76,7 +98,7 @@ function hexToHsl(hex) {
         g = parseInt(hex.substring(2, 4), 16);
         b = parseInt(hex.substring(4, 6), 16);
     } else {
-        return '0 0% 0%'; // Fallback
+        return '0 0% 0%';
     }
 
     r /= 255;
