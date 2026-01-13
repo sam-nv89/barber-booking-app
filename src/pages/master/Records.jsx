@@ -13,7 +13,7 @@ import { cn, formatPrice, formatPhoneNumber } from '@/lib/utils';
 import { format, addDays, startOfWeek, isSameDay, isToday, isTomorrow, parseISO } from 'date-fns';
 
 export const Records = () => {
-    const { appointments, updateAppointmentStatus, t, language, locale, salonSettings, workSchedule, getMasters, getNextAvailableMaster, updateAppointment } = useStore();
+    const { appointments, updateAppointmentStatus, t, language, locale, salonSettings, workSchedule, getMasters, getNextAvailableMaster, updateAppointment, services } = useStore();
     const location = useLocation();
     const navigate = useNavigate();
 
@@ -656,8 +656,8 @@ export const Records = () => {
                                                                     {format(new Date(app.date), 'dd.MM.yyyy')}, {app.time}
                                                                 </span>
                                                             </div>
-                                                            <div className="truncate opacity-75 mt-0.5">{getServiceNames(app)}</div>
-                                                            <div className="absolute bottom-1 right-2 opacity-50 font-mono">{formatPrice(getAppointmentPrice(app))} {salonSettings?.currency || '₸'}</div>
+                                                            <div className="truncate opacity-75 mt-0.5">{getServiceNames(app, services, t, language)}</div>
+                                                            <div className="absolute bottom-1 right-2 opacity-50 font-mono">{formatPrice(getAppointmentPrice(app, services))} {salonSettings?.currency || '₸'}</div>
                                                         </div>
                                                     );
                                                 })}
