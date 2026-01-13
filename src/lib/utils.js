@@ -1,6 +1,7 @@
 import { clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 import * as XLSX from 'xlsx'
+import { useDebugStore } from '@/components/ui/DebugConsole';
 
 export function cn(...inputs) {
     return twMerge(clsx(inputs));
