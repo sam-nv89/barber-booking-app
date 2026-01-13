@@ -379,13 +379,7 @@ export const Dashboard = () => {
                                                         <div
                                                             className="absolute top-1.5 flex justify-center w-full text-[10px] text-indigo-300 font-medium"
                                                             style={{
-                                                                width: `${(group.end - group.start + 1) * 100 + (group.end - group.start) * 4}%`, // approx width adjustment for gaps? 
-                                                                // Actually, since we are inside the first item, we need to span across.
-                                                                // It's tricky with flex gap.
-                                                                // A simpler way: 'left: 0' and specific width is hard with flex-box fluid widths if we rely on %, but standard css width calc might work.
-                                                                // Let's just center it in the group roughly.
-                                                                // Better approach: Position absolute relative to the group start logic?
-                                                                // Let's use the same logic as Analytics but adapted.
+                                                                // Width spans across the group items, accounting for gaps
                                                                 width: `calc(${(group.end - group.start + 1) * 100}% + ${(group.end - group.start) * 4}px)` // assuming 4px gap
                                                             }}
                                                         >

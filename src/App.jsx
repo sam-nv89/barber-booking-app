@@ -17,7 +17,7 @@ import { TMAProvider, useTMA } from '@/components/providers/TMAProvider'
 import { WelcomeAnimation } from '@/components/features/WelcomeAnimation'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { useAuth } from '@/hooks/useAuth';
-// import { useAuth } from '@/hooks/useAuth';
+
 
 function AppContent() {
     const { theme, setTheme, user } = useStore();
@@ -98,12 +98,7 @@ function AppContent() {
 
     return (
         <HashRouter>
-            {/* Debug Status - Remove before production */}
-            <div className="fixed top-0 left-0 z-50 bg-black/80 text-white text-[10px] p-1 pointer-events-none">
-                {ready ? 'TMA:OK ' : 'TMA:Wait '}
-                {isAuthLoading ? 'Auth:Load ' : 'Auth:Done '}
-                {user?.telegramId ? `ID:${user.telegramId} ` : 'NoID '}
-            </div>
+
             <Layout>
                 <Routes>
                     {/* Client Routes */}
