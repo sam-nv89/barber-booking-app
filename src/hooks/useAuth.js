@@ -66,8 +66,8 @@ export const useAuth = () => {
                     useDebugStore.getState().addLog('info', 'Auth: Creating New Profile');
                     const newProfile = {
                         tg_id: tgId,
-                        name: tmaUser?.first_name || 'Master',
-                        avatar_url: tmaUser?.photo_url || null,
+                        name: tmaUser?.firstName || '',
+                        avatar_url: tmaUser?.photoUrl || null,
                         settings: { currency: '₸', workHours: { start: '10:00', end: '20:00' } }
                     };
 

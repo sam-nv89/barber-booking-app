@@ -25,14 +25,14 @@ function AppContent() {
     const { isAuthLoading } = useAuth(); // <--- Auth Sync
     const [showWelcome, setShowWelcome] = useState(false);
 
-    // Check if this is a new session and user has a name
+    // Check if this is a new session and user has a name (only after auth completes)
     useEffect(() => {
         const hasSeenWelcome = sessionStorage.getItem('hasSeenWelcome');
-        if (!hasSeenWelcome && user?.name && ready) {
+        if (!hasSeenWelcome && user?.name && ready && !isAuthLoading) {
             setShowWelcome(true);
             sessionStorage.setItem('hasSeenWelcome', 'true');
         }
-    }, [user?.name, ready]);
+    }, [user?.name, ready, isAuthLoading]);
 
     // Self-healing: Restore user object if corrupted/null
     const { setUser } = useStore();
