@@ -151,3 +151,29 @@ This file tracks the detailed implementation history of the project.
 
 ### Technical Details
 *   **Root Cause of Crash:** Identified that `user` state could become null due to persistence/hydration timing, causing `BottomNav` to crash immediately. The "Self-Healing" effect in `App.jsx` acts as a fail-safe for this data corruption.
+
+---
+
+## [2026-01-13 23:00] - Evening Audit & Critical Fixes
+**Status:** ✅ Completed
+
+### Build Fixes
+*   **`src/pages/master/Dashboard.jsx`**: Fixed duplicate `width` key in style object.
+*   **`package.json`**: Installed missing `@supabase/supabase-js` dependency.
+*   **`src/App.jsx`**: Removed debug div and dead code.
+
+### Name Flickering & State Contamination Fixes
+*   **`src/hooks/useAuth.js`**: Fixed Telegram SDK property names (`first_name` → `firstName`, `photo_url` → `photoUrl`).
+*   **`src/App.jsx`**: Removed "self-healing" effect that caused state contamination.
+*   **`src/pages/client/BookingWizard.jsx`**: Added `useMemo` to capture client info at mount, preventing auth sync from overwriting data mid-booking.
+
+### Animation Jitter Fix
+*   **`src/main.jsx`**: Removed `React.StrictMode` (caused double renders).
+*   **`src/App.jsx`**: Restructured conditional rendering:
+    - `showWelcome` now initialized synchronously from `sessionStorage`.
+    - Loading check comes FIRST, then welcome animation.
+    - Prevents animation remounts during state changes.
+
+### Technical Details
+*   **Root Cause of Animation Jitter:** The welcome check was before the loading check, causing component switches when auth state changed. Now animation runs only after full load.
+
