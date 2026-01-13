@@ -289,7 +289,7 @@ export const Records = () => {
                         </div>
                     ) : (
                         selectedDateApps.sort((a, b) => a.time.localeCompare(b.time)).map(app => (
-                            <AppointmentCard key={app.id} app={app} showActions={false} />
+                            <AppointmentCard key={app.id} app={app} showActions={false} activeTab={activeTab} />
                         ))
                     )}
                 </div>
@@ -886,7 +886,7 @@ const getStatusDot = (status) => {
 
 // Extracted AppointmentCard Component
 // This prevents remounting when Records state updates
-const AppointmentCard = ({ app, showActions = true, activeTab }) => {
+const AppointmentCard = ({ app, showActions = true, activeTab = 'pending' }) => {
     const { appointments, updateAppointmentStatus, t, language, locale, salonSettings, getMasters, getNextAvailableMaster, updateAppointment, services } = useStore();
     const [isAssigning, setIsAssigning] = React.useState(false);
     const [pendingMaster, setPendingMaster] = React.useState(null);
