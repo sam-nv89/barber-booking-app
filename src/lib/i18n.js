@@ -439,6 +439,8 @@ export const TRANSLATIONS = {
             clientArrivedTransferredMessage: '{clientName} (перенесено с {originalDate})',
             masterBusy: 'Мастер занят',
             masterBusyMessage: 'Мастер не может принять вас сейчас. Приходите в назначенное время.',
+            masterAssignedTitle: 'Назначен специалист',
+            masterAssignedMessage: 'На вашу запись назначен специалист: {masterName}',
         },
         checkin: {
             title: 'Регистрация прихода',

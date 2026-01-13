@@ -244,283 +244,7 @@ export const Records = () => {
         );
     };
 
-    // Appointment Card Component
-    const AppointmentCard = ({ app, showActions = true }) => {
-        const [isAssigning, setIsAssigning] = React.useState(false);
-        const [pendingMaster, setPendingMaster] = React.useState(null);
-        const masters = getMasters();
-
-        const handleInteraction = () => {
-            if (app.unreadChanges) {
-                useStore.getState().updateAppointment(app.id, { unreadChanges: false });
-            }
-        };
-
-        // Get appointments at the same date/time to check availability
-        const conflictingApps = appointments.filter(a =>
-            a.date === app.date &&
-            a.time === app.time &&
-            a.id !== app.id &&
-            a.status !== 'cancelled'
-        );
-
-        // Get available masters (not booked at this time)
-        const getAvailableMasters = () => {
-            return masters.map(m => {
-                const masterId = m.tgUserId || m.id;
-                const isBusy = conflictingApps.some(a => a.masterId === masterId);
-                return { ...m, id: masterId, isBusy };
-            });
-        };
-
-        const availableMasters = getAvailableMasters();
-
-        const handleAutoAssign = (e) => {
-            e.stopPropagation();
-            // Use Round Robin algorithm from store
-            const master = getNextAvailableMaster(null, app.date, app.time);
-            if (master) {
-                // Format master object consistently
-                const formattedMaster = {
-                    ...master,
-                    id: master.tgUserId || master.id,
-                };
-                setPendingMaster(formattedMaster);
-            } else {
-                if (window.Telegram?.WebApp) {
-                    window.Telegram.WebApp.showAlert(t('records.noMasters'));
-                } else {
-                    alert(t('records.noMasters'));
-                }
-            }
-        };
-
-        const handleSelectMaster = (e, master) => {
-            e.stopPropagation();
-            if (master.isBusy) return; // Don't allow selecting busy masters
-            setPendingMaster(master);
-        };
-
-        const handleConfirmAssignment = (e) => {
-            e.stopPropagation();
-            if (pendingMaster) {
-                updateAppointment(app.id, { masterId: pendingMaster.id, masterName: pendingMaster.name });
-                setPendingMaster(null);
-                setIsAssigning(false);
-            }
-        };
-
-        const handleCancelAssignment = (e) => {
-            e.stopPropagation();
-            setPendingMaster(null);
-            setIsAssigning(false);
-        };
-
-        const assignedMaster = masters.find(m => (m.tgUserId || m.id) === app.masterId);
-        // Fallback name if master deleted but name preserved, or just use stored name
-        const masterName = assignedMaster?.name || app.masterName;
-
-        return (
-            <Card
-                id={`record-${app.id}`}
-                className={cn("transition-all duration-500", getStatusColor(app.status), app.unreadChanges && "shadow-md ring-1 ring-blue-500/20")}
-                onClick={handleInteraction}
-            >
-                <CardContent className="p-4 space-y-3 relative">
-                    {app.unreadChanges && (
-                        <span className="absolute top-4 right-4 h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-                    )}
-
-                    {/* Header: Time & Status */}
-                    <div className="flex justify-between items-start border-b pb-2 mb-2">
-                        <div className="w-full flex justify-between items-center">
-                            <div className="flex flex-col">
-                                <span className="text-xs text-muted-foreground capitalize">{format(new Date(app.date), 'd MMMM', { locale: locale() })}</span>
-                                <span className="font-bold text-foreground text-sm">{app.time}</span>
-                            </div>
-                            <Badge variant={
-                                app.status === 'pending' ? 'warning' :
-                                    app.status === 'confirmed' ? 'success' :
-                                        app.status === 'in_progress' ? 'info' :
-                                            app.status === 'cancelled' ? 'destructive' : 'secondary'
-                            }>
-                                {t(`status.${app.status}`) || app.status}
-                            </Badge>
-                        </div>
-                    </div>
-
-                    {/* Details Grid */}
-                    <div className="space-y-1.5 text-sm">
-                        <div className="grid grid-cols-[80px,1fr] items-baseline gap-2">
-                            <span className="text-muted-foreground text-xs">{t('roles.client')}:</span>
-                            <span className="font-medium truncate">{app.clientName}</span>
-                        </div>
-
-                        <div className="grid grid-cols-[80px,1fr] items-baseline gap-2">
-                            <span className="text-muted-foreground text-xs">{t('profile.phone')}:</span>
-                            <span className="font-mono text-xs">{formatPhoneNumber(app.clientPhone)}</span>
-                        </div>
-
-                        <div className="grid grid-cols-[80px,1fr] items-center gap-2">
-                            <span className="text-muted-foreground text-xs">{t('roles.specialist')}:</span>
-                            <div className="flex-1 min-w-0">
-                                {isAssigning ? (
-                                    <div className="text-primary animate-pulse">{t('records.selectMaster')}...</div>
-                                ) : masterName ? (
-                                    <div className="flex items-center gap-2">
-                                        {assignedMaster?.avatar && (
-                                            <img src={assignedMaster.avatar} alt="" className="w-4 h-4 rounded-full object-cover" />
-                                        )}
-                                        <span className="truncate">{masterName}</span>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-5 w-5 text-muted-foreground hover:text-primary"
-                                            onClick={(e) => { e.stopPropagation(); setIsAssigning(true); setPendingMaster(null); }}
-                                        >
-                                            <Pencil className="h-3 w-3" />
-                                        </Button>
-                                    </div>
-                                ) : (
-                                    <Button
-                                        variant="link"
-                                        className="p-0 h-auto font-medium text-muted-foreground hover:text-primary"
-                                        onClick={(e) => { e.stopPropagation(); setIsAssigning(true); }}
-                                    >
-                                        {t('records.assignMaster')}
-                                    </Button>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Selection UI with confirmation */}
-                    {isAssigning && (
-                        <div className="p-2 bg-muted/50 rounded-md space-y-2 animate-in fade-in slide-in-from-top-2">
-                            {pendingMaster ? (
-                                // Confirmation step
-                                <div className="space-y-2">
-                                    <div className="text-sm text-center">
-                                        {t('records.confirmAssignment') || 'Подтвердите назначение'}:
-                                    </div>
-                                    <div className="flex items-center justify-center gap-2 p-2 bg-background rounded">
-                                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
-                                            {pendingMaster.avatar ? <img src={pendingMaster.avatar} className="h-full w-full object-cover" /> : <span className="text-sm">{pendingMaster.name?.[0]}</span>}
-                                        </div>
-                                        <span className="font-medium">{pendingMaster.name}</span>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            className="flex-1"
-                                            onClick={handleCancelAssignment}
-                                        >
-                                            {t('common.cancel')}
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            className="flex-1"
-                                            onClick={handleConfirmAssignment}
-                                        >
-                                            {t('common.confirm')}
-                                        </Button>
-                                    </div>
-                                </div>
-                            ) : (
-                                // Selection step
-                                <>
-                                    <Button
-                                        size="sm"
-                                        variant="secondary"
-                                        className="w-full justify-start"
-                                        onClick={handleAutoAssign}
-                                    >
-                                        <span className="mr-2">⚡</span> {t('records.autoAssign')}
-                                    </Button>
-                                    <div className="h-px bg-border my-1" />
-                                    <div className="max-h-32 overflow-y-auto space-y-1">
-                                        {availableMasters.map(m => (
-                                            <Button
-                                                key={m.id}
-                                                size="sm"
-                                                variant="ghost"
-                                                className={cn("w-full justify-start px-2 py-1.5 h-auto", m.isBusy && "opacity-50 cursor-not-allowed")}
-                                                onClick={(e) => handleSelectMaster(e, m)}
-                                                disabled={m.isBusy}
-                                            >
-                                                <div className="flex items-center gap-2">
-                                                    <div className="h-6 w-6 shrink-0 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
-                                                        {m.avatar ? <img src={m.avatar} className="h-full w-full object-cover" /> : <span className="text-xs font-medium">{m.name?.[0]}</span>}
-                                                    </div>
-                                                    <span className="text-sm truncate">{m.name}</span>
-                                                    {m.isBusy && <span className="text-[10px] text-destructive ml-auto">{t('records.busy') || 'Занят'}</span>}
-                                                </div>
-                                            </Button>
-                                        ))}
-                                    </div>
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        className="w-full mt-2"
-                                        onClick={handleCancelAssignment}
-                                    >
-                                        {t('common.cancel')}
-                                    </Button>
-                                </>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Service Info */}
-                    <div className="flex justify-between items-center bg-muted p-2 rounded">
-                        <span className="text-sm font-medium">{getServiceNames(app)}</span>
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-primary">{formatPrice(getAppointmentPrice(app))} {salonSettings?.currency || '₸'}</span>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 ml-1" onClick={(e) => {
-                                e.stopPropagation();
-                                setChatOpen(app.id);
-                                handleInteraction();
-                            }}>
-                                <MessageCircle className="h-4 w-4" />
-                            </Button>
-                        </div>
-                    </div>
-
-                    {showActions && activeTab === 'pending' && (
-                        <div className="flex gap-2 pt-2">
-                            <Button className="flex-1" size="sm" onClick={(e) => {
-                                e.stopPropagation();
-                                updateAppointmentStatus(app.id, 'confirmed');
-                                handleInteraction();
-                            }}>
-                                {t('records.accept')}
-                            </Button>
-                            <Button variant="outline" className="flex-1" size="sm" onClick={(e) => {
-                                e.stopPropagation();
-                                updateAppointmentStatus(app.id, 'cancelled');
-                                handleInteraction();
-                            }}>
-                                {t('records.reject')}
-                            </Button>
-                        </div>
-                    )}
-
-                    {showActions && activeTab === 'active' && (
-                        <div className="pt-2">
-                            <Button className="w-full" size="sm" onClick={(e) => {
-                                e.stopPropagation();
-                                updateAppointmentStatus(app.id, 'completed');
-                                handleInteraction();
-                            }}>
-                                {t('records.complete')}
-                            </Button>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
-        );
-    };
+    // Appointment Card Component extraction is handled by append below
 
     // List View with Date Grouping
     const ListView = () => (
@@ -1142,5 +866,337 @@ export const Records = () => {
                 onClose={() => setSelectedMaster(null)}
             />
         </div>
+    );
+};
+
+// Helper functions (extracted outside component)
+const getService = (id, services) => services.find(s => s.id === id);
+
+const getServiceName = (service, language) => {
+    if (!service) return '';
+    if (typeof service.name === 'object') {
+        return service.name[language] || service.name['ru'] || Object.values(service.name)[0];
+    }
+    return service.name;
+};
+
+const getServiceNames = (app, services, t, language) => {
+    const ids = app.serviceIds || (app.serviceId ? [app.serviceId] : []);
+    if (ids.length === 0) return t('booking.service');
+    return ids.map(id => {
+        const service = services.find(s => s.id === id);
+        return getServiceName(service, language);
+    }).filter(Boolean).join(' + ');
+};
+
+const getAppointmentPrice = (app, services) => {
+    if (app.price) return app.price;
+    const ids = app.serviceIds || (app.serviceId ? [app.serviceId] : []);
+    return ids.reduce((sum, id) => {
+        const service = services.find(s => s.id === id);
+        return sum + (service?.price || 0);
+    }, 0);
+};
+
+// Status color mapping
+const getStatusColor = (status) => {
+    switch (status) {
+        case 'pending': return 'border-l-4 border-l-yellow-500';
+        case 'confirmed': return 'border-l-4 border-l-green-500';
+        case 'in_progress': return 'border-l-4 border-l-blue-500';
+        case 'completed': return 'border-l-4 border-l-gray-400';
+        case 'cancelled': return 'border-l-4 border-l-red-400';
+        default: return '';
+    }
+};
+
+const getStatusDot = (status) => {
+    switch (status) {
+        case 'pending': return 'bg-yellow-500';
+        case 'confirmed': return 'bg-green-500';
+        case 'in_progress': return 'bg-blue-500';
+        case 'completed': return 'bg-gray-400';
+        case 'cancelled': return 'bg-red-400';
+        default: return 'bg-gray-300';
+    }
+};
+
+// Extracted AppointmentCard Component
+// This prevents remounting when Records state updates
+const AppointmentCard = ({ app, showActions = true }) => {
+    const { appointments, updateAppointmentStatus, t, language, locale, salonSettings, getMasters, getNextAvailableMaster, updateAppointment, services } = useStore();
+    const [isAssigning, setIsAssigning] = React.useState(false);
+    const [pendingMaster, setPendingMaster] = React.useState(null);
+    const masters = getMasters();
+
+    const handleInteraction = () => {
+        if (app.unreadChanges) {
+            useStore.getState().updateAppointment(app.id, { unreadChanges: false });
+        }
+    };
+
+    // Get appointments at the same date/time to check availability
+    const conflictingApps = appointments.filter(a =>
+        a.date === app.date &&
+        a.time === app.time &&
+        a.id !== app.id &&
+        a.status !== 'cancelled'
+    );
+
+    // Get available masters (not booked at this time)
+    const getAvailableMasters = () => {
+        return masters.map(m => {
+            const masterId = m.tgUserId || m.id;
+            const isBusy = conflictingApps.some(a => a.masterId === masterId);
+            return { ...m, id: masterId, isBusy };
+        });
+    };
+
+    const availableMasters = getAvailableMasters();
+
+    const handleAutoAssign = (e) => {
+        e.stopPropagation();
+        // Use Round Robin algorithm from store
+        const master = getNextAvailableMaster(null, app.date, app.time);
+        if (master) {
+            // Format master object consistently
+            const formattedMaster = {
+                ...master,
+                id: master.tgUserId || master.id,
+            };
+            setPendingMaster(formattedMaster);
+        } else {
+            if (window.Telegram?.WebApp) {
+                window.Telegram.WebApp.showAlert(t('records.noMasters'));
+            } else {
+                alert(t('records.noMasters'));
+            }
+        }
+    };
+
+    const handleSelectMaster = (e, master) => {
+        e.stopPropagation();
+        if (master.isBusy) return; // Don't allow selecting busy masters
+        setPendingMaster(master);
+    };
+
+    const handleConfirmAssignment = (e) => {
+        e.stopPropagation();
+        if (pendingMaster) {
+            updateAppointment(app.id, { masterId: pendingMaster.id, masterName: pendingMaster.name });
+            setPendingMaster(null);
+            setIsAssigning(false);
+        }
+    };
+
+    const handleCancelAssignment = (e) => {
+        e.stopPropagation();
+        setPendingMaster(null);
+        setIsAssigning(false);
+    };
+
+    const assignedMaster = masters.find(m => (m.tgUserId || m.id) === app.masterId);
+    // Fallback name if master deleted but name preserved, or just use stored name
+    const masterName = assignedMaster?.name || app.masterName;
+
+    return (
+        <Card
+            id={`record-${app.id}`}
+            className={cn("transition-all duration-500", getStatusColor(app.status), app.unreadChanges && "shadow-md ring-1 ring-blue-500/20")}
+            onClick={handleInteraction}
+        >
+            <CardContent className="p-4 space-y-3 relative">
+                {app.unreadChanges && (
+                    <span className="absolute top-4 right-4 h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                )}
+
+                {/* Header: Time & Status */}
+                <div className="flex justify-between items-start border-b pb-2 mb-2">
+                    <div className="w-full flex justify-between items-center">
+                        <div className="flex flex-col">
+                            <span className="text-xs text-muted-foreground capitalize">{format(new Date(app.date), 'd MMMM', { locale: locale() })}</span>
+                            <span className="font-bold text-foreground text-sm">{app.time}</span>
+                        </div>
+                        <Badge variant={
+                            app.status === 'pending' ? 'warning' :
+                                app.status === 'confirmed' ? 'success' :
+                                    app.status === 'in_progress' ? 'info' :
+                                        app.status === 'cancelled' ? 'destructive' : 'secondary'
+                        }>
+                            {t(`status.${app.status}`) || app.status}
+                        </Badge>
+                    </div>
+                </div>
+
+                {/* Details Grid */}
+                <div className="space-y-1.5 text-sm">
+                    <div className="grid grid-cols-[80px,1fr] items-baseline gap-2">
+                        <span className="text-muted-foreground text-xs">{t('roles.client')}:</span>
+                        <span className="font-medium truncate">{app.clientName}</span>
+                    </div>
+
+                    <div className="grid grid-cols-[80px,1fr] items-baseline gap-2">
+                        <span className="text-muted-foreground text-xs">{t('profile.phone')}:</span>
+                        <span className="font-mono text-xs">{formatPhoneNumber(app.clientPhone)}</span>
+                    </div>
+
+                    <div className="grid grid-cols-[80px,1fr] items-center gap-2">
+                        <span className="text-muted-foreground text-xs">{t('roles.specialist')}:</span>
+                        <div className="flex-1 min-w-0">
+                            {isAssigning ? (
+                                <div className="text-primary animate-pulse">{t('records.selectMaster')}...</div>
+                            ) : masterName ? (
+                                <div className="flex items-center gap-2">
+                                    {assignedMaster?.avatar && (
+                                        <img src={assignedMaster.avatar} alt="" className="w-4 h-4 rounded-full object-cover" />
+                                    )}
+                                    <span className="truncate">{masterName}</span>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-5 w-5 text-muted-foreground hover:text-primary"
+                                        onClick={(e) => { e.stopPropagation(); setIsAssigning(true); setPendingMaster(null); }}
+                                    >
+                                        <Pencil className="h-3 w-3" />
+                                    </Button>
+                                </div>
+                            ) : (
+                                <Button
+                                    variant="link"
+                                    className="p-0 h-auto font-medium text-muted-foreground hover:text-primary"
+                                    onClick={(e) => { e.stopPropagation(); setIsAssigning(true); }}
+                                >
+                                    {t('records.assignMaster')}
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Selection UI with confirmation */}
+                {isAssigning && (
+                    <div className="p-2 bg-muted/50 rounded-md space-y-2 animate-in fade-in slide-in-from-top-2">
+                        {pendingMaster ? (
+                            // Confirmation step
+                            <div className="space-y-2">
+                                <div className="text-sm text-center">
+                                    {t('records.confirmAssignment') || 'Подтвердите назначение'}:
+                                </div>
+                                <div className="flex items-center justify-center gap-2 p-2 bg-background rounded">
+                                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                                        {pendingMaster.avatar ? <img src={pendingMaster.avatar} className="h-full w-full object-cover" /> : <span className="text-sm">{pendingMaster.name?.[0]}</span>}
+                                    </div>
+                                    <span className="font-medium">{pendingMaster.name}</span>
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="flex-1"
+                                        onClick={handleCancelAssignment}
+                                    >
+                                        {t('common.cancel')}
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        className="flex-1"
+                                        onClick={handleConfirmAssignment}
+                                    >
+                                        {t('common.confirm')}
+                                    </Button>
+                                </div>
+                            </div>
+                        ) : (
+                            // Selection step
+                            <>
+                                <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    className="w-full justify-start"
+                                    onClick={handleAutoAssign}
+                                >
+                                    <span className="mr-2">⚡</span> {t('records.autoAssign')}
+                                </Button>
+                                <div className="h-px bg-border my-1" />
+                                <div className="max-h-32 overflow-y-auto space-y-1">
+                                    {availableMasters.map(m => (
+                                        <Button
+                                            key={m.id}
+                                            size="sm"
+                                            variant="ghost"
+                                            className={cn("w-full justify-start px-2 py-1.5 h-auto", m.isBusy && "opacity-50 cursor-not-allowed")}
+                                            onClick={(e) => handleSelectMaster(e, m)}
+                                            disabled={m.isBusy}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-6 w-6 shrink-0 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                                                    {m.avatar ? <img src={m.avatar} className="h-full w-full object-cover" /> : <span className="text-xs font-medium">{m.name?.[0]}</span>}
+                                                </div>
+                                                <span className="text-sm truncate">{m.name}</span>
+                                                {m.isBusy && <span className="text-[10px] text-destructive ml-auto">{t('records.busy') || 'Занят'}</span>}
+                                            </div>
+                                        </Button>
+                                    ))}
+                                </div>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="w-full mt-2"
+                                    onClick={handleCancelAssignment}
+                                >
+                                    {t('common.cancel')}
+                                </Button>
+                            </>
+                        )}
+                    </div>
+                )}
+
+                {/* Service Info */}
+                <div className="flex justify-between items-center bg-muted p-2 rounded">
+                    <span className="text-sm font-medium">{getServiceNames(app, services, t, language)}</span>
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-primary">{formatPrice(getAppointmentPrice(app, services))} {salonSettings?.currency || '₸'}</span>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 ml-1" onClick={(e) => {
+                            e.stopPropagation();
+                            setChatOpen(app.id);
+                            handleInteraction();
+                        }}>
+                            <MessageCircle className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
+
+                {showActions && activeTab === 'pending' && (
+                    <div className="flex gap-2 pt-2">
+                        <Button className="flex-1" size="sm" onClick={(e) => {
+                            e.stopPropagation();
+                            updateAppointmentStatus(app.id, 'confirmed');
+                            handleInteraction();
+                        }}>
+                            {t('records.accept')}
+                        </Button>
+                        <Button variant="outline" className="flex-1" size="sm" onClick={(e) => {
+                            e.stopPropagation();
+                            updateAppointmentStatus(app.id, 'cancelled');
+                            handleInteraction();
+                        }}>
+                            {t('records.reject')}
+                        </Button>
+                    </div>
+                )}
+
+                {showActions && activeTab === 'active' && (
+                    <div className="pt-2">
+                        <Button className="w-full" size="sm" onClick={(e) => {
+                            e.stopPropagation();
+                            updateAppointmentStatus(app.id, 'completed');
+                            handleInteraction();
+                        }}>
+                            {t('records.complete')}
+                        </Button>
+                    </div>
+                )}
+            </CardContent>
+        </Card>
     );
 };
