@@ -34,20 +34,7 @@ function AppContent() {
         }
     }, [user?.name, ready, isAuthLoading]);
 
-    // Self-healing: Restore user object if corrupted/null
-    const { setUser } = useStore();
-    useEffect(() => {
-        if (!user) {
-            console.warn('User state corrupted, resetting to default');
-            setUser({
-                role: 'client',
-                name: '',
-                phone: '',
-                avatar: null,
-                telegramId: null
-            });
-        }
-    }, [user, setUser]);
+    // Note: Self-healing removed to prevent state contamination during auth sync
 
     useEffect(() => {
         // Sync theme with Telegram if in TMA

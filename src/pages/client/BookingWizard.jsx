@@ -24,6 +24,13 @@ export const BookingWizard = () => {
     const [showSuccess, setShowSuccess] = React.useState(false);
     const [bookingError, setBookingError] = React.useState(null);
 
+    // Capture client info at mount to prevent contamination from auth sync
+    const clientInfo = React.useMemo(() => ({
+        name: user?.name || '',
+        phone: user?.phone || '',
+        telegramUsername: user?.telegramUsername || ''
+    }), []); // Empty deps = captured once at mount
+
     // TMA hooks
     const { isTelegram } = useTMA();
     const { impact, notification } = useHaptic();
@@ -126,9 +133,9 @@ export const BookingWizard = () => {
             serviceIds: selectedServices.map(s => s.id),
             date: format(selectedDate, 'yyyy-MM-dd'),
             time: selectedTime,
-            clientName: user.name,
-            clientPhone: user.phone,
-            telegramUsername: user.telegramUsername,
+            clientName: clientInfo.name,
+            clientPhone: clientInfo.phone,
+            telegramUsername: clientInfo.telegramUsername,
             totalPrice: totalPrice,
             totalDuration: totalDuration,
             masterId: assignedMaster?.tgUserId || null,
