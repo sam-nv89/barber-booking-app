@@ -288,6 +288,14 @@ export const getSlotsForDate = (date, salonSettings, appointments = [], services
         return true;
     });
 
+    if (typeof window !== 'undefined') {
+        useDebugStore.getState().addLog('success', 'Slots Done', {
+            count: finalSlots.length,
+            first: finalSlots[0],
+            all: finalSlots.join(', ')
+        });
+    }
+
     return finalSlots;
 };
 
