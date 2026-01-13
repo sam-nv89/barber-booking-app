@@ -8,6 +8,7 @@ import { Chat } from '@/components/features/Chat';
 import { MasterBookingModal } from '@/components/features/MasterBookingModal';
 import { MasterDetailsModal } from '@/components/features/MasterDetailsModal';
 import { MessageCircle, Plus, QrCode, CheckCheck, List, Calendar, Clock, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, User, Pencil } from 'lucide-react';
+import { Badge } from '@/components/ui/Badge';
 import { cn, formatPrice, formatPhoneNumber } from '@/lib/utils';
 import { format, addDays, startOfWeek, isSameDay, isToday, isTomorrow, parseISO } from 'date-fns';
 
@@ -286,7 +287,11 @@ export const Records = () => {
                 };
                 setPendingMaster(formattedMaster);
             } else {
-                alert(t('records.noMasters'));
+                if (window.Telegram?.WebApp) {
+                    window.Telegram.WebApp.showAlert(t('records.noMasters'));
+                } else {
+                    alert(t('records.noMasters'));
+                }
             }
         };
 
@@ -326,11 +331,21 @@ export const Records = () => {
                         <span className="absolute top-4 right-4 h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
                     )}
 
-                    {/* Header: Time */}
+                    {/* Header: Time & Status */}
                     <div className="flex justify-between items-start border-b pb-2 mb-2">
-                        <div className="text-xs text-muted-foreground w-full flex justify-between">
-                            <span className="capitalize">{format(new Date(app.date), 'd MMMM', { locale: locale() })}</span>
-                            <span className="font-bold text-foreground text-sm">{app.time}</span>
+                        <div className="w-full flex justify-between items-center">
+                            <div className="flex flex-col">
+                                <span className="text-xs text-muted-foreground capitalize">{format(new Date(app.date), 'd MMMM', { locale: locale() })}</span>
+                                <span className="font-bold text-foreground text-sm">{app.time}</span>
+                            </div>
+                            <Badge variant={
+                                app.status === 'pending' ? 'warning' :
+                                    app.status === 'confirmed' ? 'success' :
+                                        app.status === 'in_progress' ? 'info' :
+                                            app.status === 'cancelled' ? 'destructive' : 'secondary'
+                            }>
+                                {t(`status.${app.status}`) || app.status}
+                            </Badge>
                         </div>
                     </div>
 
@@ -524,9 +539,16 @@ export const Records = () => {
                             </span>
                             <div className="h-px flex-1 bg-border" />
                         </div>
-                        <div className="space-y-3">
-                            {apps.sort((a, b) => a.time.localeCompare(b.time)).map(app => (
-                                <AppointmentCard key={app.id} app={app} />
+                        <div className="space-y-0 divide-y divide-border/50 border rounded-lg bg-level-1/30 overflow-hidden">
+                            {apps.sort((a, b) => a.time.localeCompare(b.time)).map((app, index) => (
+                                <AppointmentCard
+                                    key={app.id}
+                                    app={app}
+                                    className={cn(
+                                        "rounded-none border-0 shadow-none",
+                                        index % 2 === 0 ? "bg-level-1/50" : "bg-transparent hover:bg-level-1/30"
+                                    )}
+                                />
                             ))}
                         </div>
                     </div>
@@ -618,14 +640,8 @@ export const Records = () => {
                 <div className="flex items-center justify-between">
                     <h3 className="font-medium capitalize">{formatDateHeader(format(selectedDate, 'yyyy-MM-dd'))}</h3>
                     <div className="flex gap-2">
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <div className="w-3 h-3 rounded bg-yellow-500" />
-                            <span>{t('status.pending')}</span>
-                        </div>
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <div className="w-3 h-3 rounded bg-green-500" />
-                            <span>{t('status.confirmed')}</span>
-                        </div>
+                        <Badge variant="warning">{t('status.pending')}</Badge>
+                        <Badge variant="success">{t('status.confirmed')}</Badge>
                     </div>
                 </div>
 

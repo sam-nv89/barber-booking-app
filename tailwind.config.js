@@ -45,9 +45,11 @@ export default {
                     foreground: "hsl(var(--popover-foreground))",
                 },
                 card: {
-                    DEFAULT: "hsl(var(--card))",
+                    DEFAULT: "hsl(var(--bg-level-1))", // Override default card to use our surface system
                     foreground: "hsl(var(--card-foreground))",
                 },
+                "level-1": "hsl(var(--bg-level-1))",
+                "level-2": "hsl(var(--bg-level-2))",
             },
             borderRadius: {
                 lg: "var(--radius)",
