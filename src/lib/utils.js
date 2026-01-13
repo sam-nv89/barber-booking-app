@@ -187,9 +187,14 @@ export const getSlotsForDate = (date, salonSettings, appointments = [], services
         if (dateStr === todayStr) {
             const currentMinutes = now.getHours() * 60 + now.getMinutes();
             if (slotStartMin <= currentMinutes) {
-                // Log the first rejection to see what "now" is
-                if (slotStartMin + slotInterval > currentMinutes) { // Log boundary
-                    console.log(`[DEBUG_SLOTS] Rejected ${slot} (${slotStartMin}m) <= Now ${Math.floor(currentMinutes / 60)}:${currentMinutes % 60} (${currentMinutes}m). Full Date: ${now.toString()}`);
+                // Log boundary to UI
+                if (slotStartMin + slotInterval > currentMinutes) {
+                    useDebugStore.getState().addLog('warn', 'Slot Passed', {
+                        slot,
+                        slotStartMin,
+                        nowMinutes: currentMinutes,
+                        nowArr: [now.getHours(), now.getMinutes()]
+                    });
                 }
                 return false;
             }
