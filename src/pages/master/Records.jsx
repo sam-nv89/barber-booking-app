@@ -51,59 +51,7 @@ export const Records = () => {
     const archive = appointments.filter(app => ['completed', 'cancelled'].includes(app.status));
     const displayed = activeTab === 'pending' ? pending : activeTab === 'active' ? active : archive;
 
-    // Helper functions
-    const getService = (id) => useStore.getState().services.find(s => s.id === id);
 
-    const getServiceName = (service) => {
-        if (!service) return '';
-        if (typeof service.name === 'object') {
-            return service.name[language] || service.name['ru'] || Object.values(service.name)[0];
-        }
-        return service.name;
-    };
-
-    const getServiceNames = (app) => {
-        const allServices = useStore.getState().services;
-        const ids = app.serviceIds || (app.serviceId ? [app.serviceId] : []);
-        if (ids.length === 0) return t('booking.service');
-        return ids.map(id => {
-            const service = allServices.find(s => s.id === id);
-            return getServiceName(service);
-        }).filter(Boolean).join(' + ');
-    };
-
-    const getAppointmentPrice = (app) => {
-        if (app.price) return app.price;
-        const allServices = useStore.getState().services;
-        const ids = app.serviceIds || (app.serviceId ? [app.serviceId] : []);
-        return ids.reduce((sum, id) => {
-            const service = allServices.find(s => s.id === id);
-            return sum + (service?.price || 0);
-        }, 0);
-    };
-
-    // Status color mapping
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'pending': return 'border-l-4 border-l-yellow-500';
-            case 'confirmed': return 'border-l-4 border-l-green-500';
-            case 'in_progress': return 'border-l-4 border-l-blue-500';
-            case 'completed': return 'border-l-4 border-l-gray-400';
-            case 'cancelled': return 'border-l-4 border-l-red-400';
-            default: return '';
-        }
-    };
-
-    const getStatusDot = (status) => {
-        switch (status) {
-            case 'pending': return 'bg-yellow-500';
-            case 'confirmed': return 'bg-green-500';
-            case 'in_progress': return 'bg-blue-500';
-            case 'completed': return 'bg-gray-400';
-            case 'cancelled': return 'bg-red-400';
-            default: return 'bg-gray-300';
-        }
-    };
 
     // Group appointments by date
     const groupedByDate = useMemo(() => {
@@ -880,7 +828,7 @@ const getServiceName = (service, language) => {
     return service.name;
 };
 
-const getServiceNames = (app, services, t, language) => {
+const getServiceNames = (app, services = [], t, language) => {
     const ids = app.serviceIds || (app.serviceId ? [app.serviceId] : []);
     if (ids.length === 0) return t('booking.service');
     return ids.map(id => {
