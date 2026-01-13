@@ -162,6 +162,11 @@ export const getSlotsForDate = (date, salonSettings, appointments = [], services
     // 3. Filter Availability
     const buffer = salonSettings.bufferTime || 0;
 
+    // [DEBUG] Log parameters once per call
+    if (typeof window !== 'undefined' && window.location.hash.includes('debug') || true) { // Force log for now
+        console.log(`[DEBUG_PARAMS] Date=${dateStr}, Buffer=${buffer}, Duration=${serviceDuration}, Sched=${schedule.start}-${schedule.end}, Offset=${new Date().getTimezoneOffset()}`);
+    }
+
     const finalSlots = slots.filter(slot => {
         const slotStartMin = timeToMinutes(slot);
         const slotEndMin = slotStartMin + serviceDuration + buffer;
