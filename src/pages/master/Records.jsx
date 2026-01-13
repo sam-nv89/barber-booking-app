@@ -818,7 +818,11 @@ export const Records = () => {
 };
 
 // Helper functions (extracted outside component)
-const getService = (id, services) => services.find(s => s.id === id);
+// Helper functions (extracted outside component)
+const getService = (id, services = []) => {
+    if (!services) return undefined;
+    return services.find(s => s.id === id);
+};
 
 const getServiceName = (service, language) => {
     if (!service) return '';
@@ -829,19 +833,21 @@ const getServiceName = (service, language) => {
 };
 
 const getServiceNames = (app, services = [], t, language) => {
+    services = services || [];
     const ids = app.serviceIds || (app.serviceId ? [app.serviceId] : []);
     if (ids.length === 0) return t('booking.service');
     return ids.map(id => {
-        const service = services.find(s => s.id === id);
+        const service = getService(id, services);
         return getServiceName(service, language);
     }).filter(Boolean).join(' + ');
 };
 
-const getAppointmentPrice = (app, services) => {
+const getAppointmentPrice = (app, services = []) => {
+    services = services || [];
     if (app.price) return app.price;
     const ids = app.serviceIds || (app.serviceId ? [app.serviceId] : []);
     return ids.reduce((sum, id) => {
-        const service = services.find(s => s.id === id);
+        const service = getService(id, services);
         return sum + (service?.price || 0);
     }, 0);
 };
@@ -1149,59 +1155,4 @@ const AppointmentCard = ({ app, showActions = true }) => {
     );
 };
 
-// --- Helper Functions ---
 
-const getService = (serviceId, services = []) => {
-    return services.find(s => s.id === serviceId);
-};
-
-// Modified to be safe against undefined services or app properties
-const getServiceNames = (app, services = [], t, language) => {
-    if (!app) return '';
-    services = services || []; // Safety fallbacks
-
-    if (app.serviceIds && Array.isArray(app.serviceIds) && app.serviceIds.length > 0) {
-        const names = app.serviceIds.map(id => {
-            const s = getService(id, services);
-            return s ? s.name : '';
-        }).filter(Boolean);
-        if (names.length > 0) return names.join(', ');
-    }
-    // Fallback
-    if (app.serviceName) return app.serviceName;
-    // Single serviceId fallback
-    if (app.serviceId) {
-        const s = getService(app.serviceId, services);
-        return s ? s.name : '';
-    }
-    return t ? t('records.noService') : 'Услуга не указана';
-};
-
-const getAppointmentPrice = (app, services = []) => {
-    if (!app) return 0;
-    if (app.price) return app.price; // Defined price overrides calculated
-    services = services || [];
-
-    let total = 0;
-    if (app.serviceIds && Array.isArray(app.serviceIds)) {
-        app.serviceIds.forEach(id => {
-            const s = getService(id, services);
-            if (s) total += Number(s.price || 0);
-        });
-    } else if (app.serviceId) {
-        const s = getService(app.serviceId, services);
-        if (s) total += Number(s.price || 0);
-    }
-    return total;
-};
-
-const getStatusColor = (status) => {
-    switch (status) {
-        case 'pending': return 'border-l-4 border-l-yellow-500 bg-yellow-50/50 dark:bg-yellow-900/10';
-        case 'confirmed': return 'border-l-4 border-l-green-500 bg-green-50/50 dark:bg-green-900/10';
-        case 'in_progress': return 'border-l-4 border-l-blue-500 bg-blue-50/50 dark:bg-blue-900/10';
-        case 'completed': return 'border-l-4 border-l-purple-500 bg-purple-50/50 dark:bg-purple-900/10';
-        case 'cancelled': return 'border-l-4 border-l-red-500 bg-red-50/50 dark:bg-red-900/10';
-        default: return 'border-l-4 border-l-gray-500';
-    }
-};
