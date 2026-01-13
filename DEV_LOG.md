@@ -128,3 +128,26 @@ This file tracks the detailed implementation history of the project.
 ### Technical Details
 *   **Native Integration**: The app now feels like a native part of Telegram, respecting user themes (dark/light/custom) effectively.
 *   **Performance**: Used direct CSS variable injection on `document.documentElement` for instant theme switching without re-renders.
+
+---
+
+## [2026-01-13] - Critical Stability & Role Switching Fixes
+**Status:** ✅ Completed
+
+### Changes
+*   **`src/App.jsx`**:
+    *   **New Feature:** Added "Self-Healing" mechanism for `user` state. If `user` becomes null/corrupted, it auto-resets to a default 'client' state to prevent app crash.
+    *   **Fix:** Resolved critical syntax error (import inside function body) that prevented app startup.
+    *   **Feature:** Wrapped application in global `ErrorBoundary`.
+*   **`src/components/ui/ErrorBoundary.jsx`**:
+    *   **New Component:** Catches React render errors and displays a user-friendly "Something went wrong" screen with stack trace instead of a white screen.
+*   **`src/pages/master/Records.jsx`**:
+    *   **Fix (`ReferenceError`):** Fixed crash where `AppointmentCard` accessed undefined `activeTab`. Added proper prop passing and default values.
+    *   **Stability:** Added auto-redirect to `/` if a user with 'client' role tries to view Master pages (prevents state mismatch crashes).
+*   **`src/components/layout/BottomNav.jsx` & `Header.jsx`**:
+    *   **Hardening:** Added null-checks (`user?.role`) to prevent crashes during role transition or logout.
+*   **`src/components/features/Notifications.jsx`**:
+    *   **Hardening:** Protected against `null` notifications array to prevent filter crashes.
+
+### Technical Details
+*   **Root Cause of Crash:** Identified that `user` state could become null due to persistence/hydration timing, causing `BottomNav` to crash immediately. The "Self-Healing" effect in `App.jsx` acts as a fail-safe for this data corruption.
