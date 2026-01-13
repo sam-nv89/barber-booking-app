@@ -1,7 +1,7 @@
 import { clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 import * as XLSX from 'xlsx'
-import { useDebugStore } from '@/components/ui/DebugConsole';
+// import { useDebugStore } from '@/components/ui/DebugConsole';
 
 export function cn(...inputs) {
     return twMerge(clsx(inputs));
@@ -151,14 +151,7 @@ export const getSlotsForDate = (date, salonSettings, appointments = [], services
     // 2. Generate Raw Slots (configurable interval, default 30 min)
     const slots = [];
 
-    // [DEBUG] Log Existing Appointments for Today
-    if (typeof window !== 'undefined' && dateStr.includes(new Date().toISOString().split('T')[0])) {
-        const todayAppts = appointments.filter(a => a.date === dateStr && a.status !== 'cancelled');
-        useDebugStore.getState().addLog('info', 'Day Appointments', {
-            count: todayAppts.length,
-            appts: todayAppts.map(a => `${a.time} (${a.totalDuration || services.find(s => s.id === a.serviceId)?.duration}m) [${a.status}]`)
-        });
-    }
+    // [DEBUG] Log Existing Appointments for Today - REMOVED
 
     const slotInterval = salonSettings.slotInterval || 30; // minutes
     const startMinutes = timeToMinutes(schedule.start);
@@ -174,23 +167,7 @@ export const getSlotsForDate = (date, salonSettings, appointments = [], services
     const buffer = salonSettings.bufferTime || 0;
 
     // [DEBUG] Log parameters via DebugConsole (ONLY FOR TODAY to avoid spam)
-    if (typeof window !== 'undefined') {
-        const now = new Date();
-        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-
-        if (dateStr === todayStr) {
-            try {
-                useDebugStore.getState().addLog('info', 'SlotParams (Today)', {
-                    date: dateStr,
-                    buffer,
-                    duration: serviceDuration,
-                    sched: `${schedule.start}-${schedule.end}`,
-                    localTime: now.toLocaleTimeString(),
-                    offset: now.getTimezoneOffset()
-                });
-            } catch (e) { console.error('Log failed', e); }
-        }
-    }
+    // [DEBUG] Log parameters via DebugConsole - REMOVED
 
     const finalSlots = slots.filter(slot => {
         const slotStartMin = timeToMinutes(slot);
@@ -202,14 +179,9 @@ export const getSlotsForDate = (date, salonSettings, appointments = [], services
         if (dateStr === todayStr) {
             const currentMinutes = now.getHours() * 60 + now.getMinutes();
             if (slotStartMin <= currentMinutes) {
-                // Log boundary to UI
+                // Log boundary to UI - REMOVED
                 if (slotStartMin + slotInterval > currentMinutes) {
-                    useDebugStore.getState().addLog('warn', 'Slot Passed', {
-                        slot,
-                        slotStartMin,
-                        nowMinutes: currentMinutes,
-                        nowArr: [now.getHours(), now.getMinutes()]
-                    });
+                    // Passed
                 }
                 return false;
             }
@@ -269,17 +241,7 @@ export const getSlotsForDate = (date, salonSettings, appointments = [], services
             const overlap = slotStartMin < apptEndMin && slotEndMin > apptStartMin;
 
             // [DEBUG] Trace 16:00 appointment
-            if (typeof window !== 'undefined' && appt.time === '16:00' && window.location.hash.includes('debug')) {
-                useDebugStore.getState().addLog('info', 'Overlap Trace', {
-                    slot,
-                    status: appt.status,
-                    hasCompletedAt: !!appt.completedAt,
-                    duration: apptDuration,
-                    start: apptStartMin,
-                    end: apptEndMin,
-                    overlap
-                });
-            }
+            // [DEBUG] Trace 16:00 appointment - REMOVED
 
             return overlap;
         };
@@ -319,20 +281,7 @@ export const getSlotsForDate = (date, salonSettings, appointments = [], services
         return true;
     });
 
-    if (typeof window !== 'undefined') {
-        const nowLog = new Date();
-        const todayLogStr = `${nowLog.getFullYear()}-${String(nowLog.getMonth() + 1).padStart(2, '0')}-${String(nowLog.getDate()).padStart(2, '0')}`;
-
-        if (dateStr === todayLogStr) {
-            try {
-                useDebugStore.getState().addLog('success', 'Slots Done (Today)', {
-                    count: finalSlots.length,
-                    first: finalSlots[0],
-                    all: finalSlots.join(', ')
-                });
-            } catch (e) { console.error(e); }
-        }
-    }
+    // [DEBUG] Log Result - REMOVED
 
     return finalSlots;
 };
