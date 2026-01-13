@@ -37,6 +37,22 @@ export const useAuth = () => {
 
                 if (profile) {
                     useDebugStore.getState().addLog('success', 'Auth: Profile Found', profile.name);
+
+                    // [SYNC] Self-heal: If DB has default/old name but we have real Telegram data, update DB
+                    if (tmaUser && (tmaUser.firstName !== profile.name || tmaUser.photoUrl !== profile.avatar_url)) {
+                        const updates = {};
+                        if (tmaUser.firstName && tmaUser.firstName !== 'Master') updates.name = tmaUser.firstName;
+                        if (tmaUser.photoUrl) updates.avatar_url = tmaUser.photoUrl;
+
+                        if (Object.keys(updates).length > 0) {
+                            useDebugStore.getState().addLog('info', 'Auth: Syncing Telegram Data to DB', updates);
+                            await supabase.from('master_profiles').update(updates).eq('id', profile.id);
+                            // Update local profile object so UI reflects it immediately
+                            if (updates.name) profile.name = updates.name;
+                            if (updates.avatar_url) profile.avatar_url = updates.avatar_url;
+                        }
+                    }
+
                     setUser({
                         ...profile,
                         role: 'master',
