@@ -102,7 +102,7 @@ export const Notifications = () => {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
                         transition={{ duration: 0.2 }}
-                        className="fixed inset-x-2 top-14 sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-96 max-w-[calc(100vw-1rem)] bg-card border rounded-xl shadow-xl z-50 overflow-hidden"
+                        className="fixed inset-x-2 top-14 sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-96 max-w-[calc(100vw-1rem)] bg-background border rounded-xl shadow-xl z-50 overflow-hidden"
                     >
                         <div className="flex items-center justify-between p-4 border-b bg-muted/50">
                             <h3 className="font-semibold">{t('notifications.title')}</h3>
