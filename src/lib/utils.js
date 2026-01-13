@@ -150,6 +150,16 @@ export const getSlotsForDate = (date, salonSettings, appointments = [], services
 
     // 2. Generate Raw Slots (configurable interval, default 30 min)
     const slots = [];
+
+    // [DEBUG] Log Existing Appointments for Today
+    if (typeof window !== 'undefined' && dateStr.includes(new Date().toISOString().split('T')[0])) {
+        const todayAppts = appointments.filter(a => a.date === dateStr && a.status !== 'cancelled');
+        useDebugStore.getState().addLog('info', 'Day Appointments', {
+            count: todayAppts.length,
+            appts: todayAppts.map(a => `${a.time} (${a.totalDuration || services.find(s => s.id === a.serviceId)?.duration}m) [${a.status}]`)
+        });
+    }
+
     const slotInterval = salonSettings.slotInterval || 30; // minutes
     const startMinutes = timeToMinutes(schedule.start);
     const endMinutes = timeToMinutes(schedule.end);
