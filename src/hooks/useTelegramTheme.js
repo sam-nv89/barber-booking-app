@@ -68,19 +68,35 @@ export function useTelegramTheme({ isTelegram, themeParams, colorScheme }) {
          */
 
         let borderString;
+        let bgLevel1; // Cards
+        let bgLevel2; // Inputs, Secondary
 
         if (colorScheme === 'dark') {
-            // White with 15% opacity
-            // Syntax: H S L / Alpha
-            // Tailwind consumes this as: hsl(var(--border)) -> hsl(0 0% 100% / 0.15)
+            // Dark Mode Surfaces
+            // Level 0 (Background): Default theme bg
+            // Level 1 (Card): White 6% opacity (Material Design elevation) -> hsl(0 0% 100% / 0.06)
+            // Level 2 (Input/Nested): White 12% opacity -> hsl(0 0% 100% / 0.12)
+
             borderString = '0 0% 100% / 0.15';
+            bgLevel1 = '0 0% 100% / 0.06';
+            bgLevel2 = '0 0% 100% / 0.12';
         } else {
-            // Black with 15% opacity
-            borderString = '0 0% 0% / 0.15';
+            // Light Mode Surfaces
+            // Level 0 (Background): Default theme bg
+            // Level 1 (Card): Pure White
+            // Level 2 (Input): Light Gray
+
+            borderString = '0 0% 0% / 0.15'; // Keep border contrast high
+            bgLevel1 = '0 0% 100%'; // White
+            bgLevel2 = '0 0% 96%'; // Light Gray (~#F3F4F6)
         }
 
         addVar('border', null, borderString);
         addVar('input', null, borderString);
+
+        // New Surface Vars
+        addVar('bg-level-1', null, bgLevel1);
+        addVar('bg-level-2', null, bgLevel2);
 
         // Ring needs to be solid for focus visibility usually, but let's try matching border
         // or use the button color if available
