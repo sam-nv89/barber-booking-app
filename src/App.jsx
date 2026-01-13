@@ -16,10 +16,13 @@ import { CheckIn } from '@/pages/master/CheckIn'
 import { TMAProvider, useTMA } from '@/components/providers/TMAProvider'
 import { WelcomeAnimation } from '@/components/features/WelcomeAnimation'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+import { useAuth } from '@/hooks/useAuth';
+import { DebugConsole } from '@/components/ui/DebugConsole';
 
 function AppContent() {
     const { theme, setTheme, user } = useStore();
     const { isTelegram, colorScheme, ready } = useTMA();
+    const { isAuthLoading } = useAuth(); // <--- Auth Sync
     const [showWelcome, setShowWelcome] = useState(false);
 
     // Check if this is a new session and user has a name
@@ -81,8 +84,8 @@ function AppContent() {
         return <WelcomeAnimation onComplete={() => setShowWelcome(false)} />;
     }
 
-    // Show loading while TMA initializes
-    if (!ready) {
+    // Show loading while TMA initializes or Supabase is syncing
+    if (!ready || isAuthLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-background">
                 <div className="text-center">
@@ -95,6 +98,12 @@ function AppContent() {
 
     return (
         <HashRouter>
+            {/* Debug Status - Remove before production */}
+            <div className="fixed top-0 left-0 z-50 bg-black/80 text-white text-[10px] p-1 pointer-events-none">
+                {ready ? 'TMA:OK ' : 'TMA:Wait '}
+                {isAuthLoading ? 'Auth:Load ' : 'Auth:Done '}
+                {user?.telegramId ? `ID:${user.telegramId} ` : 'NoID '}
+            </div>
             <Layout>
                 <Routes>
                     {/* Client Routes */}
@@ -124,6 +133,7 @@ function App() {
         <TMAProvider>
             <ErrorBoundary>
                 <AppContent />
+                <DebugConsole />
             </ErrorBoundary>
         </TMAProvider>
     )

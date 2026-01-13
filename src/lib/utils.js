@@ -171,7 +171,15 @@ export const getSlotsForDate = (date, salonSettings, appointments = [], services
         const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         if (dateStr === todayStr) {
             const currentMinutes = now.getHours() * 60 + now.getMinutes();
-            if (slotStartMin <= currentMinutes) return false; // Slot has passed
+            if (slotStartMin <= currentMinutes) {
+                // Log the first rejection to see what "now" is
+                if (slotStartMin + slotInterval > currentMinutes) { // Log boundary
+                    console.log(`[DEBUG_SLOTS] Rejected ${slot} (${slotStartMin}m) <= Now ${Math.floor(currentMinutes / 60)}:${currentMinutes % 60} (${currentMinutes}m). Full Date: ${now.toString()}`);
+                }
+                return false;
+            }
+            // Log buffer/interval issues if needed
+            // console.log(`Check Slot ${slot}: Start=${slotStartMin}, Gap=${slotStartMin - currentMinutes}`);
         }
 
         // B. Check if slot fits within working hours
@@ -200,6 +208,25 @@ export const getSlotsForDate = (date, salonSettings, appointments = [], services
             }
 
             const apptStartMin = timeToMinutes(appt.time);
+
+            // NEW: If completed, use actual completion time to free up slots
+            if (appt.status === 'completed' && appt.completedAt) {
+                const apptDate = new Date(appt.date + 'T' + appt.time);
+                const completeDate = new Date(appt.completedAt);
+
+                // Calculate actual minutes used
+                // We assume appointments happen on the scheduled date for simplicity in this logic
+                if (isSameDay(apptDate, completeDate)) {
+                    const diffMs = completeDate - apptDate;
+                    const diffMins = Math.ceil(diffMs / 1000 / 60);
+                    // Use actual duration, but at least 1 minute (so it doesn't vanish completely if completed instantly?)
+                    // Actually if finished instantly, slot is free.
+                    if (diffMins < apptDuration) {
+                        apptDuration = diffMins > 0 ? diffMins : 0;
+                    }
+                }
+            }
+
             const apptEndMin = apptStartMin + apptDuration + buffer;
 
             // Check if slot overlaps with appointment
