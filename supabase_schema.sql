@@ -1,10 +1,10 @@
 -- 1. Enable Row Level Security (RLS)
-alter default privileges revoke execute on functions from public;
+-- alter default privileges revoke execute on functions from public;
 
--- 2. Create Tables
+-- 2. Create Tables (If they don't exist, this script handles updates)
 
 -- TABLE: master_profiles
-create table public.master_profiles (
+create table if not exists public.master_profiles (
   id uuid default gen_random_uuid() primary key,
   tg_id bigint unique not null,
   name text,
@@ -17,18 +17,13 @@ create table public.master_profiles (
 -- Enable RLS for master_profiles
 alter table public.master_profiles enable row level security;
 
--- Policy: Masters can see and edit only their own profile
-create policy "Masters can view own profile" on public.master_profiles
-  for select using (tg_id::text = auth.uid()::text); -- Using text comparison for simplicity with basic auth
-
-create policy "Masters can update own profile" on public.master_profiles
-  for update using (tg_id::text = auth.uid()::text);
-
-create policy "Masters can insert own profile" on public.master_profiles
-  for insert with check (true); -- Allow insert, valid logic handled in app or trigger
+-- DEVELOPMENT POLICY: Allow ALL access to master_profiles
+drop policy if exists "Enable all for master_profiles" on public.master_profiles;
+create policy "Enable all for master_profiles" on public.master_profiles
+  for all using (true) with check (true);
 
 -- TABLE: services
-create table public.services (
+create table if not exists public.services (
   id uuid default gen_random_uuid() primary key,
   master_id uuid references public.master_profiles(id) on delete cascade not null,
   title text not null,
@@ -40,14 +35,14 @@ create table public.services (
 
 alter table public.services enable row level security;
 
-create policy "Masters can manage own services" on public.services
-  for all using (
-    master_id in (select id from public.master_profiles where tg_id::text = auth.uid()::text)
-  );
+-- DEVELOPMENT POLICY: Allow ALL access to services
+drop policy if exists "Enable all for services" on public.services;
+create policy "Enable all for services" on public.services
+  for all using (true) with check (true);
 
 
 -- TABLE: clients
-create table public.clients (
+create table if not exists public.clients (
   id uuid default gen_random_uuid() primary key,
   master_id uuid references public.master_profiles(id) on delete cascade not null,
   name text not null,
@@ -61,14 +56,14 @@ create table public.clients (
 
 alter table public.clients enable row level security;
 
-create policy "Masters can manage own clients" on public.clients
-  for all using (
-    master_id in (select id from public.master_profiles where tg_id::text = auth.uid()::text)
-  );
+-- DEVELOPMENT POLICY: Allow ALL access to clients
+drop policy if exists "Enable all for clients" on public.clients;
+create policy "Enable all for clients" on public.clients
+  for all using (true) with check (true);
 
 
 -- TABLE: appointments
-create table public.appointments (
+create table if not exists public.appointments (
   id uuid default gen_random_uuid() primary key,
   master_id uuid references public.master_profiles(id) on delete cascade not null,
   client_id uuid references public.clients(id) on delete set null,
@@ -84,7 +79,7 @@ create table public.appointments (
 
 alter table public.appointments enable row level security;
 
-create policy "Masters can manage own appointments" on public.appointments
-  for all using (
-    master_id in (select id from public.master_profiles where tg_id::text = auth.uid()::text)
-  );
+-- DEVELOPMENT POLICY: Allow ALL access to appointments
+drop policy if exists "Enable all for appointments" on public.appointments;
+create policy "Enable all for appointments" on public.appointments
+  for all using (true) with check (true);
