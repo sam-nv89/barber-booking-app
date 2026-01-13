@@ -5,7 +5,7 @@ import { useTMA } from '@/components/providers/TMAProvider';
 import { useDebugStore } from '@/components/ui/DebugConsole';
 
 export const useAuth = () => {
-    const { user: tmaUser, isLoaded: isTMALoaded } = useTMA();
+    const { telegramUser: tmaUser, ready: isTMALoaded } = useTMA();
     const { setUser, setSalonSettings } = useStore();
     const [isAuthLoading, setIsAuthLoading] = useState(true);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
