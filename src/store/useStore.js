@@ -713,6 +713,18 @@ export const useStore = create(
                     completedAt = new Date().toISOString();
                 }
 
+                // [SYNC] Cloud Update
+                if (app) {
+                    supabase.from('appointments')
+                        .update({ status: status, completed_at: completedAt }) // snake_case for DB
+                        .eq('id', id) // Assumption: id is UUID. If local temp ID, this will fail but harmlessly.
+                        .eq('master_id', state.user?.id) // Security check
+                        .then(({ error }) => {
+                            if (error) console.error('☁️ Status Sync Failed:', error);
+                            else console.log('☁️ Status Synced:', status);
+                        });
+                }
+
                 return {
                     appointments: state.appointments.map(app =>
                         app.id === id ? {
