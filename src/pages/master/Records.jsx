@@ -224,6 +224,7 @@ export const Records = () => {
                                 <AppointmentCard
                                     key={app.id}
                                     app={app}
+                                    activeTab={activeTab}
                                     className={cn(
                                         "rounded-none border-0 shadow-none",
                                         index % 2 === 0 ? "bg-level-1/50" : "bg-transparent hover:bg-level-1/30"
@@ -885,7 +886,7 @@ const getStatusDot = (status) => {
 
 // Extracted AppointmentCard Component
 // This prevents remounting when Records state updates
-const AppointmentCard = ({ app, showActions = true }) => {
+const AppointmentCard = ({ app, showActions = true, activeTab }) => {
     const { appointments, updateAppointmentStatus, t, language, locale, salonSettings, getMasters, getNextAvailableMaster, updateAppointment, services } = useStore();
     const [isAssigning, setIsAssigning] = React.useState(false);
     const [pendingMaster, setPendingMaster] = React.useState(null);
