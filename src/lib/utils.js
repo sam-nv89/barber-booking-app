@@ -250,16 +250,17 @@ export const getSlotsForDate = (date, salonSettings, appointments = [], services
                 const completeDate = new Date(appt.completedAt);
 
                 // Calculate actual minutes used
-                // We assume appointments happen on the scheduled date for simplicity in this logic
                 if (isSameDay(apptDate, completeDate)) {
                     const diffMs = completeDate - apptDate;
                     const diffMins = Math.ceil(diffMs / 1000 / 60);
-                    // Use actual duration, but at least 1 minute (so it doesn't vanish completely if completed instantly?)
-                    // Actually if finished instantly, slot is free.
+
                     if (diffMins < apptDuration) {
                         apptDuration = diffMins > 0 ? diffMins : 0;
                     }
                 }
+            } else if (appt.status === 'completed' && !appt.completedAt) {
+                // FALLBACK: If completed but no timestamp (legacy/bug), assume it's freed immediately
+                apptDuration = 0;
             }
 
             const apptEndMin = apptStartMin + apptDuration + buffer;
