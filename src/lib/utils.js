@@ -266,7 +266,22 @@ export const getSlotsForDate = (date, salonSettings, appointments = [], services
             const apptEndMin = apptStartMin + apptDuration + buffer;
 
             // Check if slot overlaps with appointment
-            return slotStartMin < apptEndMin && slotEndMin > apptStartMin;
+            const overlap = slotStartMin < apptEndMin && slotEndMin > apptStartMin;
+
+            // [DEBUG] Trace 16:00 appointment
+            if (typeof window !== 'undefined' && appt.time === '16:00' && window.location.hash.includes('debug')) {
+                useDebugStore.getState().addLog('info', 'Overlap Trace', {
+                    slot,
+                    status: appt.status,
+                    hasCompletedAt: !!appt.completedAt,
+                    duration: apptDuration,
+                    start: apptStartMin,
+                    end: apptEndMin,
+                    overlap
+                });
+            }
+
+            return overlap;
         };
 
         if (masterId) {
