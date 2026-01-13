@@ -15,6 +15,7 @@ import { Analytics } from '@/pages/master/Analytics'
 import { CheckIn } from '@/pages/master/CheckIn'
 import { TMAProvider, useTMA } from '@/components/providers/TMAProvider'
 import { WelcomeAnimation } from '@/components/features/WelcomeAnimation'
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 function AppContent() {
     const { theme, setTheme, user } = useStore();
@@ -117,8 +118,6 @@ function AppContent() {
         </HashRouter>
     )
 }
-
-import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 function App() {
     return (
