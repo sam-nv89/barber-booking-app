@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useStore } from '@/store/useStore';
 import { useTMA } from '@/components/providers/TMAProvider';
+import { useDebugStore } from '@/components/ui/DebugConsole';
 
 export const useAuth = () => {
     const { user: tmaUser, isLoaded: isTMALoaded } = useTMA();
@@ -10,33 +11,35 @@ export const useAuth = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
     useEffect(() => {
-        if (!isTMALoaded) return;
+        // [DEBUG] Check TMA status
+        // useDebugStore.getState().addLog('info', 'Auth Effect Triggered', { isTMALoaded, hasUser: !!tmaUser });
+
+        if (!isTMALoaded) {
+            // useDebugStore.getState().addLog('warn', 'TMA Not Loaded Yet');
+            return;
+        }
 
         const syncUser = async () => {
+            useDebugStore.getState().addLog('info', 'Starting Auth Sync', { tgId: tmaUser?.id });
             try {
-                // If no TMA user (browser dev mode), we might want a mock user or just stay anon
-                // For now, let's assume we need a tg_id.
-                // In dev mode without TMA, use a mock ID or fallback from localStorage if it exists
-                const tgId = tmaUser?.id || 123456789; // Fallback for dev
+                const tgId = tmaUser?.id || 123456789;
 
-                // 1. Check if master exists
                 const { data: profile, error } = await supabase
                     .from('master_profiles')
                     .select('*')
                     .eq('tg_id', tgId)
                     .single();
 
-                if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-                    console.error('Error fetching profile:', error);
+                if (error && error.code !== 'PGRST116') {
+                    useDebugStore.getState().addLog('error', 'Auth: Profile Fetch Error', error);
                     throw error;
                 }
 
                 if (profile) {
-                    // User exists - sync store
-                    console.log('Found Supabase Profile:', profile);
+                    useDebugStore.getState().addLog('success', 'Auth: Profile Found', profile.name);
                     setUser({
                         ...profile,
-                        role: 'master', // Enforce master role for now or read from DB
+                        role: 'master',
                         telegramId: profile.tg_id
                     });
                     if (profile.settings) {
@@ -44,13 +47,12 @@ export const useAuth = () => {
                     }
                     setIsAuthenticated(true);
                 } else {
-                    // User does not exist - Create new
-                    console.log('Creating new Supabase Profile for ID:', tgId);
+                    useDebugStore.getState().addLog('info', 'Auth: Creating New Profile');
                     const newProfile = {
                         tg_id: tgId,
                         name: tmaUser?.first_name || 'Master',
                         avatar_url: tmaUser?.photo_url || null,
-                        settings: { currency: '₸', workHours: { start: '10:00', end: '20:00' } } // Defaults
+                        settings: { currency: '₸', workHours: { start: '10:00', end: '20:00' } }
                     };
 
                     const { data: createdUser, error: createError } = await supabase
@@ -62,6 +64,7 @@ export const useAuth = () => {
                     if (createError) throw createError;
 
                     if (createdUser) {
+                        useDebugStore.getState().addLog('success', 'Auth: Profile Created');
                         setUser({
                             ...createdUser,
                             role: 'master',
@@ -71,17 +74,15 @@ export const useAuth = () => {
                     }
                 }
 
-                // After auth logic (login or register), trigger data sync
-                // We use setTimeout to allow store state to settle first if needed
                 setTimeout(() => {
                     useStore.getState().fetchCloudData();
                 }, 100);
 
             } catch (err) {
                 console.error('Auth sequence failed:', err);
-                // Fallback: If network fails, maybe we just trust localStorage? 
-                // For now, let's not block access but log error.
+                useDebugStore.getState().addLog('error', 'Auth Failed', err.message);
             } finally {
+                useDebugStore.getState().addLog('info', 'Auth Loading Finished');
                 setIsAuthLoading(false);
             }
         };
