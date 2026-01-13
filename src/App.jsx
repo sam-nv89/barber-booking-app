@@ -30,6 +30,21 @@ function AppContent() {
         }
     }, [user?.name, ready]);
 
+    // Self-healing: Restore user object if corrupted/null
+    const { setUser } = useStore();
+    useEffect(() => {
+        if (!user) {
+            console.warn('User state corrupted, resetting to default');
+            setUser({
+                role: 'client',
+                name: '',
+                phone: '',
+                avatar: null,
+                telegramId: null
+            });
+        }
+    }, [user, setUser]);
+
     useEffect(() => {
         // Sync theme with Telegram if in TMA
         if (isTelegram && colorScheme) {

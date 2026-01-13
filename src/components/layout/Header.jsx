@@ -21,7 +21,8 @@ export const Header = () => {
     const navigate = useNavigate();
 
     const toggleRole = () => {
-        const newRole = user.role === 'client' ? 'master' : 'client';
+        const currentRole = user?.role || 'client';
+        const newRole = currentRole === 'client' ? 'master' : 'client';
         setRole(newRole);
         if (newRole === 'master') {
             navigate('/master/records');
@@ -30,6 +31,8 @@ export const Header = () => {
         }
     };
 
+    const displayRole = user?.role || 'client';
+
     return (
         <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="container flex h-14 items-center justify-between px-4">
@@ -37,7 +40,7 @@ export const Header = () => {
 
                 <div className="flex items-center gap-2">
                     <Button variant="ghost" size="sm" onClick={toggleRole}>
-                        {user.role === 'client' ? t('roles.client') : t('roles.master')}
+                        {displayRole === 'client' ? t('roles.client') : t('roles.master')}
                     </Button>
 
                     <Notifications />

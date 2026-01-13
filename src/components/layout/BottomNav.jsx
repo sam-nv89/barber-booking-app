@@ -22,7 +22,8 @@ export const BottomNav = () => {
         { href: '/master/settings', icon: Settings, label: t('nav.settings') },
     ];
 
-    const links = user.role === 'client' ? clientLinks : masterLinks;
+    const userRole = user?.role || 'client';
+    const links = userRole === 'client' ? clientLinks : masterLinks;
 
     return (
         <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background px-4 pb-safe">
