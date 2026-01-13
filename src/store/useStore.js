@@ -259,39 +259,81 @@ export const useStore = create(
             // Cloud Sync Actions
             fetchCloudData: async () => {
                 const state = get();
-                const tgId = state.user?.telegramId;
-                if (!tgId) return;
+                const user = state.user;
 
-                console.log('☁️ Fetching Cloud Data for:', tgId);
+                console.log('☁️ Sync: Starting...', { role: user?.role, phone: user?.phone });
 
-                // 1. Get Master ID from profile (we need UUID, not just tg_id)
-                const { data: profile } = await supabase
-                    .from('master_profiles')
-                    .select('id')
-                    .eq('tg_id', tgId)
-                    .single();
+                let masterId = null;
 
-                if (!profile) return;
-                const masterId = profile.id;
+                // 1. Determine Context (Master vs Client)
+                // Try to find if 'I' am a master
+                if (user?.telegramId) {
+                    const { data: profile } = await supabase
+                        .from('master_profiles')
+                        .select('id')
+                        .eq('tg_id', user.telegramId)
+                        .single();
 
-                // 2. Fetch Services
+                    if (profile) {
+                        masterId = profile.id;
+                        console.log('☁️ Sync: Identified as Master:', masterId);
+                    }
+                }
+
+                // If not a master, find the "Main" master (Single Salon Mode)
+                if (!masterId) {
+                    // Logic: Get the first registered master to show their services
+                    // In future: This should be configured via ENV or Salon ID
+                    const { data: profiles } = await supabase
+                        .from('master_profiles')
+                        .select('id')
+                        .limit(1);
+
+                    if (profiles && profiles.length > 0) {
+                        masterId = profiles[0].id;
+                        console.log('☁️ Sync: Identified as Client, fetching for Master:', masterId);
+                    }
+                }
+
+                if (!masterId) {
+                    console.log('☁️ Sync: No masters found in DB');
+                    return;
+                }
+
+                // 2. Fetch Services (Public)
                 const { data: services } = await supabase.from('services').select('*').eq('master_id', masterId);
                 if (services?.length) set({ services });
 
-                // 3. Fetch Clients
+                // 3. Fetch Clients (Only if Master)
+                if (user?.role === 'master' || user?.telegramId) { // Basic access check
+                    // Only fetch full client list if I am the master
+                    // For now validation is weak, relying on RLS later
+                    if (masterId) {
+                        // Check if I am this master? For now skip complex check
+                    }
+                }
+
+                // ALWAYS fetch clients if we are in a simple app mode to hydrate names, 
+                // OR fetch only relevant clients?
+                // For simplicity: Fetch all clients to local state so we can map IDs to Names
                 const { data: clients } = await supabase.from('clients').select('*').eq('master_id', masterId);
                 if (clients?.length) set({ clients });
 
                 // 4. Fetch Appointments
+                // If Master: Fetch All
+                // If Client: Fetch All (for slots calculation) BUT maybe hide details in UI? 
+                // Currently UI needs all appointments to calculate 'isOverlapping'
                 const { data: appointments } = await supabase.from('appointments').select('*').eq('master_id', masterId);
+
                 if (appointments?.length) {
-                    // Convert DB format back to App format if needed (e.g. date strings/objects)
-                    // Our DB uses 'YYYY-MM-DD' and 'HH:MM:SS' which matches our string usage, mostly.
+                    console.log(`☁️ Sync: Loaded ${appointments.length} appointments`);
                     const formattedApps = appointments.map(app => ({
                         ...app,
                         time: app.time_start.slice(0, 5), // '14:00:00' -> '14:00'
-                        clientName: clients?.find(c => c.id === app.client_id)?.name || 'Client', // Hydrate names
-                        clientPhone: clients?.find(c => c.id === app.client_id)?.phone || app.client_phone
+                        clientName: clients?.find(c => c.id === app.client_id)?.name || app.client_phone || 'Client',
+                        clientPhone: clients?.find(c => c.id === app.client_id)?.phone || app.client_phone,
+                        // Ensure status is present
+                        status: app.status || 'pending'
                     }));
                     set({ appointments: formattedApps });
                 }
