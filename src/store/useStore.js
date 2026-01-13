@@ -22,7 +22,8 @@ export const useStore = create(
             ],
             dismissedPrompts: [], // IDs of appointments where user clicked "Later"
             dismissedPrompts: [], // IDs of appointments where user clicked "Later"
-
+            services: [], // List of available services
+            // ===== MULTI-SALON STATE =====
             // ===== MULTI-SALON STATE =====
             // Version flag for migration
             dataVersion: 2, // v2 = multi-salon support

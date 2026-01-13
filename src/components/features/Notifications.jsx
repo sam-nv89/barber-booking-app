@@ -100,6 +100,7 @@ export const Notifications = () => {
                     <>
                         {/* Backdrop */}
                         <motion.div
+                            key="backdrop"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
@@ -109,6 +110,7 @@ export const Notifications = () => {
 
                         {/* Popup */}
                         <motion.div
+                            key="popup"
                             initial={{ opacity: 0, y: 10, scale: 0.95 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 10, scale: 0.95 }}
