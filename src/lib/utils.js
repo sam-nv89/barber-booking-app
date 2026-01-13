@@ -163,9 +163,18 @@ export const getSlotsForDate = (date, salonSettings, appointments = [], services
     // 3. Filter Availability
     const buffer = salonSettings.bufferTime || 0;
 
-    // [DEBUG] Log parameters once per call
-    if (typeof window !== 'undefined' && window.location.hash.includes('debug') || true) { // Force log for now
-        console.log(`[DEBUG_PARAMS] Date=${dateStr}, Buffer=${buffer}, Duration=${serviceDuration}, Sched=${schedule.start}-${schedule.end}, Offset=${new Date().getTimezoneOffset()}`);
+    // [DEBUG] Log parameters via DebugConsole
+    if (typeof window !== 'undefined') {
+        try {
+            useDebugStore.getState().addLog('info', 'SlotParams', {
+                date: dateStr,
+                buffer,
+                duration: serviceDuration,
+                sched: `${schedule.start}-${schedule.end}`,
+                localTime: new Date().toLocaleTimeString(),
+                offset: new Date().getTimezoneOffset()
+            });
+        } catch (e) { console.error('Log failed', e); }
     }
 
     const finalSlots = slots.filter(slot => {
