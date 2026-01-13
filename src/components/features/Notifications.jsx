@@ -13,7 +13,8 @@ export const Notifications = () => {
     const containerRef = React.useRef(null);
     const navigate = useNavigate();
 
-    const userNotifications = notifications.filter(n => n.recipient === user.role || (!n.recipient && user.role === 'master'));
+    const userRole = user?.role || 'client'; // Fallback
+    const userNotifications = (notifications || []).filter(n => n.recipient === userRole || (!n.recipient && userRole === 'master'));
     const unreadCount = userNotifications.filter(n => !n.read).length;
 
     // Close on click outside

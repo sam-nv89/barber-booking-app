@@ -16,6 +16,14 @@ export const Records = () => {
     const { appointments, updateAppointmentStatus, t, language, locale, salonSettings, workSchedule, getMasters, getNextAvailableMaster, updateAppointment, services } = useStore();
     const location = useLocation();
     const navigate = useNavigate();
+    const { user } = useStore(); // destructure user
+
+    // Redirect if not master
+    useEffect(() => {
+        if (user?.role !== 'master') {
+            navigate('/');
+        }
+    }, [user?.role, navigate]);
 
     // State
     const [activeTab, setActiveTab] = React.useState('pending');
