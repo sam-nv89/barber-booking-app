@@ -833,6 +833,23 @@ export const useStore = create(
                     unreadChanges = updates.unreadChanges;
                 }
 
+                // [SYNC] Cloud Update for Generic Changes
+                if (app) {
+                    supabase.from('appointments')
+                        .update({
+                            date: updates.date || app.date,
+                            time_start: updates.time || app.time, // Map to DB column
+                            master_id: updates.masterId || app.masterId,
+                            status: updates.status || app.status
+                        })
+                        .eq('id', id)
+                        .eq('master_id', state.user?.id) // Security check
+                        .then(({ error }) => {
+                            if (error) console.error('☁️ Update Sync Failed:', error);
+                            else console.log('☁️ Update Synced');
+                        });
+                }
+
                 return {
                     appointments: state.appointments.map(app => app.id === id ? { ...app, ...updates, unreadChanges: unreadChanges !== undefined ? unreadChanges : app.unreadChanges } : app),
                     notifications
