@@ -23,18 +23,18 @@ function AppContent() {
     const { theme, setTheme, user } = useStore();
     const { isTelegram, colorScheme, ready } = useTMA();
     const { isAuthLoading } = useAuth(); // <--- Auth Sync
-    const [showWelcome, setShowWelcome] = useState(false);
 
-    // Check if this is a new session and user has a name (only after auth completes)
-    useEffect(() => {
+    // Initialize showWelcome synchronously from sessionStorage (no effect needed)
+    const [showWelcome, setShowWelcome] = useState(() => {
         const hasSeenWelcome = sessionStorage.getItem('hasSeenWelcome');
-        if (!hasSeenWelcome && user?.name && ready && !isAuthLoading) {
-            setShowWelcome(true);
-            sessionStorage.setItem('hasSeenWelcome', 'true');
-        }
-    }, [user?.name, ready, isAuthLoading]);
+        return !hasSeenWelcome;
+    });
 
-    // Note: Self-healing removed to prevent state contamination during auth sync
+    // Handle welcome completion - set sessionStorage here, not in effect
+    const handleWelcomeComplete = () => {
+        sessionStorage.setItem('hasSeenWelcome', 'true');
+        setShowWelcome(false);
+    };
 
     useEffect(() => {
         // Sync theme with Telegram if in TMA
@@ -66,12 +66,7 @@ function AppContent() {
         }
     }, [salonSettings, setSalonSettings]);
 
-    // Show welcome animation for new session
-    if (showWelcome) {
-        return <WelcomeAnimation onComplete={() => setShowWelcome(false)} />;
-    }
-
-    // Show loading while TMA initializes or Supabase is syncing
+    // FIRST: Show loading while TMA initializes or Supabase is syncing
     if (!ready || isAuthLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-background">
@@ -81,6 +76,11 @@ function AppContent() {
                 </div>
             </div>
         );
+    }
+
+    // THEN: Show welcome animation (only after everything is loaded)
+    if (showWelcome && user?.name) {
+        return <WelcomeAnimation onComplete={handleWelcomeComplete} />;
     }
 
     return (
