@@ -734,6 +734,33 @@ export const useStore = create(
                     }
                 }
 
+                // 3. Detect Master Change (Re-assignment)
+                if (updates.masterId && app.masterId && updates.masterId !== app.masterId) {
+                    const status = updates.status || app.status;
+                    // Only notify if appointment is confirmed (or remaining confirmed)
+                    if (status === 'confirmed') {
+                        const master = get().getMasters().find(m => (m.tgUserId || m.id) === updates.masterId);
+                        const masterName = master?.name || updates.masterName || 'Специалист';
+
+                        notifications = [{
+                            id: Date.now().toString() + '_change',
+                            type: 'info',
+                            recipient: 'client',
+                            appointmentId: id,
+                            titleKey: 'notifications.masterChangedTitle',
+                            messageKey: 'notifications.masterChangedMessage',
+                            params: { masterName: masterName, date: app.date, time: app.time },
+
+                            title: 'Смена специалиста',
+                            message: `Специалист заменен на: ${masterName}`,
+                            date: new Date().toISOString(),
+                            read: false
+                        }, ...notifications];
+                        unreadChanges = true;
+                    }
+                }
+
+
                 // If explicitly setting unreadChanges (e.g. clearing it), use that value
                 if (updates.unreadChanges !== undefined) {
                     unreadChanges = updates.unreadChanges;
