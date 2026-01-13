@@ -21,9 +21,7 @@ export const useStore = create(
                 { id: 2, clientId: 'client2', clientName: 'Елена С.', rating: 4, comment: 'Все понравилось, но пришлось подождать.', date: '2025-10-20', reply: null, isRead: false }
             ],
             dismissedPrompts: [], // IDs of appointments where user clicked "Later"
-            dismissedPrompts: [], // IDs of appointments where user clicked "Later"
             services: [], // List of available services
-            // ===== MULTI-SALON STATE =====
             // ===== MULTI-SALON STATE =====
             // Version flag for migration
             dataVersion: 2, // v2 = multi-salon support

@@ -118,10 +118,14 @@ function AppContent() {
     )
 }
 
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+
 function App() {
     return (
         <TMAProvider>
-            <AppContent />
+            <ErrorBoundary>
+                <AppContent />
+            </ErrorBoundary>
         </TMAProvider>
     )
 }
