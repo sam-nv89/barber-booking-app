@@ -163,18 +163,23 @@ export const getSlotsForDate = (date, salonSettings, appointments = [], services
     // 3. Filter Availability
     const buffer = salonSettings.bufferTime || 0;
 
-    // [DEBUG] Log parameters via DebugConsole
+    // [DEBUG] Log parameters via DebugConsole (ONLY FOR TODAY to avoid spam)
     if (typeof window !== 'undefined') {
-        try {
-            useDebugStore.getState().addLog('info', 'SlotParams', {
-                date: dateStr,
-                buffer,
-                duration: serviceDuration,
-                sched: `${schedule.start}-${schedule.end}`,
-                localTime: new Date().toLocaleTimeString(),
-                offset: new Date().getTimezoneOffset()
-            });
-        } catch (e) { console.error('Log failed', e); }
+        const now = new Date();
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+        if (dateStr === todayStr) {
+            try {
+                useDebugStore.getState().addLog('info', 'SlotParams (Today)', {
+                    date: dateStr,
+                    buffer,
+                    duration: serviceDuration,
+                    sched: `${schedule.start}-${schedule.end}`,
+                    localTime: now.toLocaleTimeString(),
+                    offset: now.getTimezoneOffset()
+                });
+            } catch (e) { console.error('Log failed', e); }
+        }
     }
 
     const finalSlots = slots.filter(slot => {
@@ -289,11 +294,18 @@ export const getSlotsForDate = (date, salonSettings, appointments = [], services
     });
 
     if (typeof window !== 'undefined') {
-        useDebugStore.getState().addLog('success', 'Slots Done', {
-            count: finalSlots.length,
-            first: finalSlots[0],
-            all: finalSlots.join(', ')
-        });
+        const nowLog = new Date();
+        const todayLogStr = `${nowLog.getFullYear()}-${String(nowLog.getMonth() + 1).padStart(2, '0')}-${String(nowLog.getDate()).padStart(2, '0')}`;
+
+        if (dateStr === todayLogStr) {
+            try {
+                useDebugStore.getState().addLog('success', 'Slots Done (Today)', {
+                    count: finalSlots.length,
+                    first: finalSlots[0],
+                    all: finalSlots.join(', ')
+                });
+            } catch (e) { console.error(e); }
+        }
     }
 
     return finalSlots;
