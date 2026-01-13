@@ -17,7 +17,7 @@ import { TMAProvider, useTMA } from '@/components/providers/TMAProvider'
 import { WelcomeAnimation } from '@/components/features/WelcomeAnimation'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { useAuth } from '@/hooks/useAuth';
-import { useAuth } from '@/hooks/useAuth';
+// import { useAuth } from '@/hooks/useAuth';
 
 function AppContent() {
     const { theme, setTheme, user } = useStore();
