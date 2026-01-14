@@ -544,7 +544,7 @@
 @keyframes sunrise {
   0% {
     opacity: 0;
-    transform: translateY(40px) scale(0.8);
+    transform: translateY(100px) scale(0.7);
   }
 
   100% {
@@ -556,19 +556,19 @@
 @keyframes sunset {
   0% {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 
   100% {
-    opacity: 0.8;
-    transform: translateY(20px);
+    opacity: 0.6;
+    transform: translateY(60px) scale(0.9);
   }
 }
 
 @keyframes moonrise {
   0% {
     opacity: 0;
-    transform: translateY(40px) scale(0.9);
+    transform: translateY(100px) scale(0.8);
   }
 
   100% {
