@@ -540,6 +540,43 @@
   animation: pulse-sun-smooth 6s ease-in-out infinite;
 }
 
+/* Celestial Animations */
+@keyframes sunrise {
+  0% {
+    opacity: 0;
+    transform: translateY(40px) scale(0.8);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes sunset {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  100% {
+    opacity: 0.8;
+    transform: translateY(20px);
+  }
+}
+
+@keyframes moonrise {
+  0% {
+    opacity: 0;
+    transform: translateY(40px) scale(0.9);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @keyframes pulse-sun-smooth {
 
   0%,

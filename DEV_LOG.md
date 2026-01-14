@@ -177,3 +177,15 @@ This file tracks the detailed implementation history of the project.
 ### Technical Details
 *   **Root Cause of Animation Jitter:** The welcome check was before the loading check, causing component switches when auth state changed. Now animation runs only after full load.
 
+
+---
+
+## [2026-01-14 10:45] - Animation Flickering Fix
+**Status:** ✅ Completed
+
+### Changes
+*   **\src/index.css\**: Added missing \@keyframes sunrise\, \@keyframes sunset\, \@keyframes moonrise\.
+
+### Technical Details
+*   **Root Cause:** The CSS classes were defined but their corresponding keyframes were missing. This caused the animation to fail, leading to abrupt element appearance (flicker).
+*   **Fix:** Added proper keyframes with \opacity\ and \	ransform\ transitions for smooth fade/rise effects.
