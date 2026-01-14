@@ -271,12 +271,25 @@ export const useStore = create(
 
                         // Also sync to clients table (if user exists there as a client)
                         if (updatedUser.phone && updates.name) {
+                            // Normalize phone: try both formatted and digits-only
+                            const phoneRaw = updatedUser.phone.replace(/\D/g, '');
+
+                            // Try with formatted phone first
                             supabase.from('clients')
                                 .update({ name: updates.name })
                                 .eq('phone', updatedUser.phone)
-                                .then(({ error }) => {
-                                    if (error) console.error('[setUser] clients sync error:', error);
-                                    else console.log('[setUser] clients synced:', { name: updates.name, phone: updatedUser.phone });
+                                .then(({ error, count }) => {
+                                    if (error) console.error('[setUser] clients sync error (formatted):', error);
+                                    else console.log('[setUser] clients synced (formatted):', { name: updates.name, phone: updatedUser.phone });
+                                });
+
+                            // Also try with raw digits phone (in case stored differently)
+                            supabase.from('clients')
+                                .update({ name: updates.name })
+                                .eq('phone', phoneRaw)
+                                .then(({ error, count }) => {
+                                    if (error) console.error('[setUser] clients sync error (raw):', error);
+                                    else console.log('[setUser] clients synced (raw):', { name: updates.name, phone: phoneRaw });
                                 });
                         }
                     }
