@@ -203,3 +203,18 @@ This file tracks the detailed implementation history of the project.
 ### Technical Details
 *   **Root Cause:** The `animation-fill-mode: both` caused the element to briefly show in its initial keyframe state (off-screen) before the animation started, creating a "double rise" visual effect.
 *   **Fix:** Added opacity fade-in at the start of the animation and switched to `forwards` fill-mode so the element starts invisible and smoothly appears during the animation.
+
+---
+
+## [2026-01-14 23:10] - Deep Fix: Animation Remount Issue
+**Status:** ✅ Completed
+
+### Changes
+*   **`src/components/features/WelcomeAnimation.jsx`**: 
+    *   Moved `MorningSun`, `DaySun`, `EveningSun`, `NaturalMoon`, `CloudSVG` components **outside** the `WelcomeAnimation` function to module scope.
+    *   Components are now stable references that don't change on parent re-renders.
+
+### Technical Details
+*   **Root Cause:** Celestial components were defined **inside** `WelcomeAnimation`, causing new function references on every re-render. When `useStore` selectors (`storeUser`, `storeLanguage`) updated, React unmounted and remounted these components, restarting CSS animations.
+*   **Fix:** By moving components to module scope, their references are stable across renders, preventing remounts and animation restarts.
+
