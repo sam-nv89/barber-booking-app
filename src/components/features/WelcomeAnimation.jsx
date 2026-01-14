@@ -3,20 +3,28 @@ import { useStore } from '@/store/useStore';
 import { X, Moon } from 'lucide-react';
 
 export const WelcomeAnimation = ({ previewTimeOfDay, onComplete }) => {
-    const { user, language } = useStore();
+    const storeUser = useStore(state => state.user);
+    const storeLanguage = useStore(state => state.language);
+
+    // CRITICAL: Capture values at mount time to prevent animation restarts
+    // when useAuth updates the store during the animation
+    const [initialData] = React.useState(() => ({
+        userName: storeUser?.name || '',
+        language: storeLanguage || 'ru'
+    }));
+
     const [isVisible, setIsVisible] = React.useState(true);
 
-    // Determine time of day
-    const getTimeOfDay = () => {
+    // Determine time of day - also memoized at mount
+    const [timeOfDay] = React.useState(() => {
         if (previewTimeOfDay) return previewTimeOfDay;
         const hour = new Date().getHours();
         if (hour >= 5 && hour < 12) return 'morning';
         if (hour >= 12 && hour < 17) return 'afternoon';
         if (hour >= 17 && hour < 22) return 'evening';
         return 'night';
-    };
+    });
 
-    const timeOfDay = getTimeOfDay();
     const isNight = timeOfDay === 'night' || timeOfDay === 'evening';
 
     // Greetings
@@ -28,8 +36,8 @@ export const WelcomeAnimation = ({ previewTimeOfDay, onComplete }) => {
         tr: { morning: 'Günaydın', afternoon: 'İyi günler', evening: 'İyi akşamlar', night: 'İyi geceler' }
     };
 
-    const greeting = greetings[language?.split('-')[0]]?.[timeOfDay] || greetings.ru[timeOfDay];
-    const userName = user?.name || '';
+    const greeting = greetings[initialData.language?.split('-')[0]]?.[timeOfDay] || greetings.ru[timeOfDay];
+    const userName = initialData.userName;
 
     // Sky Gradients
     const skyGradients = {
