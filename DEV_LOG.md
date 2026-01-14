@@ -189,3 +189,17 @@ This file tracks the detailed implementation history of the project.
 ### Technical Details
 *   **Root Cause:** The CSS classes were defined but their corresponding keyframes were missing. This caused the animation to fail, leading to abrupt element appearance (flicker).
 *   **Fix:** Added proper keyframes with \opacity\ and \	ransform\ transitions for smooth fade/rise effects.
+
+---
+
+## [2026-01-14 22:55] - Double Moonrise Animation Fix
+**Status:** ✅ Completed
+
+### Changes
+*   **`src/index.css`**: 
+    *   Updated `@keyframes moonrise` to include `opacity` transition (0% at start → 100% at 20% → 100% at end).
+    *   Changed `.animate-moonrise` fill-mode from `both` to `forwards` to prevent initial state jump.
+
+### Technical Details
+*   **Root Cause:** The `animation-fill-mode: both` caused the element to briefly show in its initial keyframe state (off-screen) before the animation started, creating a "double rise" visual effect.
+*   **Fix:** Added opacity fade-in at the start of the animation and switched to `forwards` fill-mode so the element starts invisible and smoothly appears during the animation.
