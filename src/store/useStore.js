@@ -252,6 +252,24 @@ export const useStore = create(
                     return client;
                 });
 
+                // Sync to Supabase if master user with profile ID
+                if (updatedUser.role === 'master' && updatedUser.id) {
+                    const updates = {};
+                    if (userData.name !== undefined) updates.name = userData.name;
+                    if (userData.avatar !== undefined) updates.avatar_url = userData.avatar;
+                    if (userData.phone !== undefined) updates.phone = userData.phone;
+
+                    if (Object.keys(updates).length > 0) {
+                        supabase.from('master_profiles')
+                            .update(updates)
+                            .eq('id', updatedUser.id)
+                            .then(({ error }) => {
+                                if (error) console.error('[setUser] Supabase sync error:', error);
+                                else console.log('[setUser] Profile synced to Supabase:', updates);
+                            });
+                    }
+                }
+
                 return { user: updatedUser, clients: updatedClients };
             }),
             setRole: (role) => set((state) => ({ user: { ...state.user, role } })),
