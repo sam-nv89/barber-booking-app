@@ -100,7 +100,7 @@ export const Profile = () => {
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 pb-40"> {/* Increased padding for nav + save button */}
             <h1 className="text-2xl font-bold">{t('nav.profile')}</h1>
 
 
@@ -201,13 +201,17 @@ export const Profile = () => {
             </Card>
 
             {isDirty && (
-                <div className="fixed bottom-20 left-4 right-4 animate-in slide-in-from-bottom-5">
-                    <Button className="w-full shadow-lg" onClick={handleSave}>
-                        {t('common.save')}
-                    </Button>
+                <div className="fixed bottom-16 left-0 right-0 p-4 bg-background/80 backdrop-blur-md border-t border-border/50 z-40 animate-in slide-in-from-bottom duration-300">
+                    <div className="max-w-md mx-auto">
+                        <Button
+                            className="w-full h-12 text-lg font-medium shadow-lg hover:shadow-xl transition-all active:scale-[0.98]"
+                            onClick={handleSave}
+                        >
+                            {t('common.save')}
+                        </Button>
+                    </div>
                 </div>
-            )
-            }
+            )}
             {
                 showSuccess && (
                     <SuccessAnimation
