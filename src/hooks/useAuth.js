@@ -4,18 +4,23 @@ import { useStore } from '@/store/useStore';
 import { useTMA } from '@/components/providers/TMAProvider';
 import { useDebugStore } from '@/components/ui/DebugConsole';
 
+// Module-level guard to prevent multiple syncs across remounts
+let hasSynced = false;
+
 export const useAuth = () => {
     const { telegramUser: tmaUser, ready: isTMALoaded } = useTMA();
-    const { setUser, setSalonSettings } = useStore();
-    const [isAuthLoading, setIsAuthLoading] = useState(true);
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const { setUser, setSalonSettings, user: storeUser } = useStore();
+    const [isAuthLoading, setIsAuthLoading] = useState(!hasSynced); // If already synced, start as false
+    const [isAuthenticated, setIsAuthenticated] = useState(hasSynced);
 
     useEffect(() => {
-        // [DEBUG] Check TMA status
-        // useDebugStore.getState().addLog('info', 'Auth Effect Triggered', { isTMALoaded, hasUser: !!tmaUser });
-
+        // Don't run if TMA not loaded or already synced
         if (!isTMALoaded) {
-            // useDebugStore.getState().addLog('warn', 'TMA Not Loaded Yet');
+            return;
+        }
+
+        // Prevent duplicate syncs (module-level guard survives remounts)
+        if (hasSynced) {
             return;
         }
 
@@ -103,9 +108,10 @@ export const useAuth = () => {
             }
         };
 
+        hasSynced = true; // Mark as synced BEFORE starting (module-level)
         syncUser();
 
-    }, [isTMALoaded, tmaUser, setUser, setSalonSettings]);
+    }, [isTMALoaded]); // Removed tmaUser from deps to prevent re-runs
 
     return { isAuthLoading, isAuthenticated };
 };
