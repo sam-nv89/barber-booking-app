@@ -201,7 +201,7 @@ export const Profile = () => {
             </Card>
 
             {isDirty && (
-                <div className="fixed bottom-16 left-0 right-0 p-4 bg-background/80 backdrop-blur-md border-t border-border/50 z-40 animate-in slide-in-from-bottom duration-300">
+                <div className="fixed bottom-16 left-0 right-0 p-4 bg-background/80 backdrop-blur-md z-40 animate-in slide-in-from-bottom duration-300">
                     <div className="max-w-md mx-auto">
                         <Button
                             className="w-full h-12 text-lg font-medium shadow-lg hover:shadow-xl transition-all active:scale-[0.98]"
