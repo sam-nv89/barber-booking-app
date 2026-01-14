@@ -260,13 +260,25 @@ export const useStore = create(
                     if (userData.phone !== undefined) updates.phone = userData.phone;
 
                     if (Object.keys(updates).length > 0) {
+                        // Sync to master_profiles
                         supabase.from('master_profiles')
                             .update(updates)
                             .eq('id', updatedUser.id)
                             .then(({ error }) => {
-                                if (error) console.error('[setUser] Supabase sync error:', error);
-                                else console.log('[setUser] Profile synced to Supabase:', updates);
+                                if (error) console.error('[setUser] master_profiles sync error:', error);
+                                else console.log('[setUser] master_profiles synced:', updates);
                             });
+
+                        // Also sync to clients table (if user exists there as a client)
+                        if (updatedUser.telegramId && updates.name) {
+                            supabase.from('clients')
+                                .update({ name: updates.name })
+                                .eq('telegram_id', updatedUser.telegramId)
+                                .then(({ error }) => {
+                                    if (error) console.error('[setUser] clients sync error:', error);
+                                    else console.log('[setUser] clients synced:', { name: updates.name });
+                                });
+                        }
                     }
                 }
 
