@@ -521,7 +521,7 @@
 }
 
 .animate-sunrise {
-  animation: sunrise 3s ease-out forwards;
+  animation: sunrise 3s ease-out both;
 }
 
 .animate-sunset {
@@ -529,7 +529,7 @@
 }
 
 .animate-moonrise {
-  animation: moonrise 3s ease-out forwards;
+  animation: moonrise 3s ease-out both;
 }
 
 .animate-pulse-sun {
@@ -540,42 +540,6 @@
   animation: pulse-sun-smooth 6s ease-in-out infinite;
 }
 
-/* Celestial Animations */
-@keyframes sunrise {
-  0% {
-    opacity: 0;
-    transform: translateY(100px) scale(0.7);
-  }
-
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes sunset {
-  0% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-
-  100% {
-    opacity: 0.6;
-    transform: translateY(60px) scale(0.9);
-  }
-}
-
-@keyframes moonrise {
-  0% {
-    opacity: 0;
-    transform: translateY(100px) scale(0.8);
-  }
-
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
 
 @keyframes pulse-sun-smooth {
 

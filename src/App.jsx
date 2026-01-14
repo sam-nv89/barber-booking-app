@@ -79,8 +79,9 @@ function AppContent() {
     }
 
     // THEN: Show welcome animation (only after everything is loaded)
-    if (showWelcome && user?.name) {
-        return <WelcomeAnimation onComplete={handleWelcomeComplete} />;
+    // Note: We don't wait for user?.name to avoid delays and remounts
+    if (showWelcome) {
+        return <WelcomeAnimation key="welcome-animation" onComplete={handleWelcomeComplete} />;
     }
 
     return (
