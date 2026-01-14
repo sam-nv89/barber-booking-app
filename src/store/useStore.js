@@ -270,13 +270,13 @@ export const useStore = create(
                             });
 
                         // Also sync to clients table (if user exists there as a client)
-                        if (updatedUser.telegramId && updates.name) {
+                        if (updatedUser.phone && updates.name) {
                             supabase.from('clients')
                                 .update({ name: updates.name })
-                                .eq('telegram_id', updatedUser.telegramId)
+                                .eq('phone', updatedUser.phone)
                                 .then(({ error }) => {
                                     if (error) console.error('[setUser] clients sync error:', error);
-                                    else console.log('[setUser] clients synced:', { name: updates.name });
+                                    else console.log('[setUser] clients synced:', { name: updates.name, phone: updatedUser.phone });
                                 });
                         }
                     }
