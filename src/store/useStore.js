@@ -253,6 +253,7 @@ export const useStore = create(
                 });
 
                 // Sync to Supabase if master user with profile ID
+                console.log('[setUser] Sync check:', { role: updatedUser.role, id: updatedUser.id, userData });
                 if (updatedUser.role === 'master' && updatedUser.id) {
                     const updates = {};
                     if (userData.name !== undefined) updates.name = userData.name;
