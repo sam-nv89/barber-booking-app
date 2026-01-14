@@ -499,10 +499,16 @@
 @keyframes moonrise {
   0% {
     transform: translateY(100vh) rotate(-10deg);
+    opacity: 0;
+  }
+
+  20% {
+    opacity: 1;
   }
 
   100% {
     transform: translateY(0) rotate(0deg);
+    opacity: 1;
   }
 }
 
@@ -529,7 +535,7 @@
 }
 
 .animate-moonrise {
-  animation: moonrise 3s ease-out both;
+  animation: moonrise 3s ease-out forwards;
 }
 
 .animate-pulse-sun {
